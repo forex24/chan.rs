@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::Common::CEnum::TRADE_INFO_LST;
 
 pub struct CTradeInfo {
-    metric: HashMap<String, Option<f64>>,
+    pub metric: HashMap<String, Option<f64>>,
 }
 
 impl CTradeInfo {
@@ -26,4 +26,3 @@ impl CTradeInfo {
 }
 
 // ... existing code ...
-

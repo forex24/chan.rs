@@ -1,15 +1,16 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{FxType, KlineDir};
 use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CBiList {
-    bi_list: Vec<Rc<RefCell<CBi>>>,
-    last_end: Option<Rc<RefCell<CKLine>>>,
-    config: CBiConfig,
-    free_klc_lst: Vec<Rc<RefCell<CKLine>>>,
+    pub bi_list: Vec<SharedCell<CBi>>,
+    pub last_end: Option<SharedCell<CKLine>>,
+    pub config: CBiConfig,
+    pub free_klc_lst: Vec<SharedCell<CKLine>>,
 }
 
 impl CBiList {
@@ -34,16 +35,16 @@ impl CBiList {
         self.bi_list.len()
     }
 
-    pub fn get(&self, index: usize) -> Option<Rc<RefCell<CBi>>> {
+    pub fn get(&self, index: usize) -> Option<SharedCell<CBi>> {
         self.bi_list.get(index).cloned()
     }
 
-    pub fn try_create_first_bi(&mut self, klc: Rc<RefCell<CKLine>>) -> bool {
+    pub fn try_create_first_bi(&mut self, klc: SharedCell<CKLine>) -> bool {
         for exist_free_klc in &self.free_klc_lst {
             if exist_free_klc.borrow().fx == klc.borrow().fx {
                 continue;
             }
-            if self.can_make_bi(Rc::clone(&klc), Rc::clone(exist_free_klc)) {
+            if self.can_make_bi(Rc::clone(&klc), Rc::clone(exist_free_klc), false) {
                 self.add_new_bi(Rc::clone(exist_free_klc), Rc::clone(&klc), true);
                 self.last_end = Some(Rc::clone(&klc));
                 return true;
@@ -56,8 +57,8 @@ impl CBiList {
 
     pub fn update_bi(
         &mut self,
-        klc: Rc<RefCell<CKLine>>,
-        last_klc: Rc<RefCell<CKLine>>,
+        klc: SharedCell<CKLine>,
+        last_klc: SharedCell<CKLine>,
         cal_virtual: bool,
     ) -> bool {
         let flag1 = self.update_bi_sure(Rc::clone(&klc));
@@ -69,7 +70,7 @@ impl CBiList {
         }
     }
 
-    pub fn can_update_peak(&self, klc: &Rc<RefCell<CKLine>>) -> bool {
+    pub fn can_update_peak(&self, klc: &SharedCell<CKLine>) -> bool {
         if self.config.bi_allow_sub_peak || self.bi_list.len() < 2 {
             return false;
         }
@@ -97,7 +98,7 @@ impl CBiList {
         true
     }
 
-    pub fn update_peak(&mut self, klc: Rc<RefCell<CKLine>>, for_virtual: bool) -> bool {
+    pub fn update_peak(&mut self, klc: SharedCell<CKLine>, for_virtual: bool) -> bool {
         if !self.can_update_peak(&klc) {
             return false;
         }
@@ -117,7 +118,7 @@ impl CBiList {
         }
     }
 
-    pub fn update_bi_sure(&mut self, klc: Rc<RefCell<CKLine>>) -> bool {
+    pub fn update_bi_sure(&mut self, klc: SharedCell<CKLine>) -> bool {
         let tmp_end = self.get_last_klu_of_last_bi();
         self.delete_virtual_bi();
         if klc.borrow().fx == FxType::Unknown {
@@ -128,7 +129,11 @@ impl CBiList {
         }
         if klc.borrow().fx == self.last_end.as_ref().unwrap().borrow().fx {
             return self.try_update_end(klc, false);
-        } else if self.can_make_bi(Rc::clone(&klc), Rc::clone(self.last_end.as_ref().unwrap())) {
+        } else if self.can_make_bi(
+            Rc::clone(&klc),
+            Rc::clone(self.last_end.as_ref().unwrap()),
+            false,
+        ) {
             self.add_new_bi(
                 Rc::clone(self.last_end.as_ref().unwrap()),
                 Rc::clone(&klc),
@@ -183,7 +188,7 @@ impl CBiList {
         }
     }
 
-    pub fn try_add_virtual_bi(&mut self, klc: Rc<RefCell<CKLine>>, need_del_end: bool) -> bool {
+    pub fn try_add_virtual_bi(&mut self, klc: SharedCell<CKLine>, need_del_end: bool) -> bool {
         if need_del_end {
             self.delete_virtual_bi();
         }
@@ -228,8 +233,8 @@ impl CBiList {
 
     pub fn add_new_bi(
         &mut self,
-        pre_klc: Rc<RefCell<CKLine>>,
-        cur_klc: Rc<RefCell<CKLine>>,
+        pre_klc: SharedCell<CKLine>,
+        cur_klc: SharedCell<CKLine>,
         is_sure: bool,
     ) {
         let new_bi = Rc::new(RefCell::new(CBi::new(
@@ -246,11 +251,7 @@ impl CBiList {
         self.bi_list.push(new_bi);
     }
 
-    pub fn satisfy_bi_span(
-        &self,
-        klc: &Rc<RefCell<CKLine>>,
-        last_end: &Rc<RefCell<CKLine>>,
-    ) -> bool {
+    pub fn satisfy_bi_span(&self, klc: &SharedCell<CKLine>, last_end: &SharedCell<CKLine>) -> bool {
         let bi_span = self.get_klc_span(klc, last_end);
         if self.config.is_strict {
             return bi_span >= 4;
@@ -271,7 +272,7 @@ impl CBiList {
         bi_span >= 3 && uint_kl_cnt >= 3
     }
 
-    pub fn get_klc_span(&self, klc: &Rc<RefCell<CKLine>>, last_end: &Rc<RefCell<CKLine>>) -> i32 {
+    pub fn get_klc_span(&self, klc: &SharedCell<CKLine>, last_end: &SharedCell<CKLine>) -> i32 {
         let mut span = klc.borrow().idx - last_end.borrow().idx;
         if !self.config.gap_as_kl {
             return span;
@@ -294,8 +295,8 @@ impl CBiList {
 
     pub fn can_make_bi(
         &self,
-        klc: Rc<RefCell<CKLine>>,
-        last_end: Rc<RefCell<CKLine>>,
+        klc: SharedCell<CKLine>,
+        last_end: SharedCell<CKLine>,
         for_virtual: bool,
     ) -> bool {
         let satisfy_span = if self.config.bi_algo == "fx" {
@@ -318,19 +319,19 @@ impl CBiList {
         true
     }
 
-    pub fn try_update_end(&mut self, klc: Rc<RefCell<CKLine>>, for_virtual: bool) -> bool {
+    pub fn try_update_end(&mut self, klc: SharedCell<CKLine>, for_virtual: bool) -> bool {
         if self.bi_list.is_empty() {
             return false;
         }
         let last_bi = self.bi_list.last().unwrap();
-        let check_top = |k: &Rc<RefCell<CKLine>>, for_virtual: bool| -> bool {
+        let check_top = |k: &SharedCell<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KlineDir::Up
             } else {
                 k.borrow().fx == FxType::Top
             }
         };
-        let check_bottom = |k: &Rc<RefCell<CKLine>>, for_virtual: bool| -> bool {
+        let check_bottom = |k: &SharedCell<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KlineDir::Down
             } else {
@@ -363,7 +364,7 @@ impl CBiList {
     }
 }
 
-fn end_is_peak(last_end: &Rc<RefCell<CKLine>>, cur_end: &Rc<RefCell<CKLine>>) -> bool {
+fn end_is_peak(last_end: &SharedCell<CKLine>, cur_end: &SharedCell<CKLine>) -> bool {
     match last_end.borrow().fx {
         FxType::Bottom => {
             let cmp_thred = cur_end.borrow().high;

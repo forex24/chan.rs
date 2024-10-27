@@ -1,28 +1,33 @@
+use crate::Bi::Bi::CBi;
 use crate::Bi::BiList::CBiList;
-use crate::BuySellPoint::BSPoint::CBSPoint;
 use crate::BuySellPoint::BSPointList::CBSPointList;
-use crate::Common::CEnum::{BiDir, KlineDir, SegType};
-use crate::Common::ChanConfig::CChanConfig;
-use crate::Common::ChanException::CChanException;
+use crate::ChanConfig::CChanConfig;
+use crate::Common::types::SharedCell;
+use crate::Common::CEnum::{BiDir, KlType, KlineDir, SegType};
+use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
+use crate::Seg::SegConfig::CSegConfig;
+use crate::Seg::SegListChan::CSegListChan;
 use crate::Seg::SegListComm::CSegListComm;
-use crate::Zs::ZSList::CZSList;
-use crate::Zs::ZS::CZS;
+use crate::ZS::ZSList::CZSList;
+
 use chrono::NaiveDateTime;
 use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use super::KLine_Unit::MetricModel;
+
 pub struct CKLineList {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub lst: Vec<Rc<RefCell<CKLine>>>,
+    pub lst: Vec<SharedCell<CKLine>>,
     pub bi_list: CBiList,
-    pub seg_list: Rc<RefCell<CSegListComm<CBi>>>,
-    pub segseg_list: Rc<RefCell<CSegListComm<CSeg<CBi>>>>,
+    pub seg_list: SharedCell<CSegListComm<CBi>>,
+    pub segseg_list: SharedCell<CSegListComm<CSeg<CBi>>>,
     pub zs_list: CZSList,
     pub segzs_list: CZSList,
     pub bs_point_lst: CBSPointList<CBi, CBiList>,
@@ -35,8 +40,8 @@ pub struct CKLineList {
 
 impl CKLineList {
     pub fn new(kl_type: String, conf: CChanConfig) -> Self {
-        let seg_list = get_seglist_instance(Some(conf.seg_conf.clone()), SegType::Bi);
-        let segseg_list = get_seglist_instance(Some(conf.seg_conf.clone()), SegType::Seg);
+        let seg_list = CSegListChan::new(Some(conf.seg_conf.clone()), SegType::Bi);
+        let segseg_list = CSegListChan::new(Some(conf.seg_conf.clone()), SegType::Seg);
 
         CKLineList {
             kl_type,
@@ -59,7 +64,7 @@ impl CKLineList {
     pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
         if !self.step_calculation {
             self.bi_list
-                .try_add_virtual_bi(self.lst.last().unwrap().clone())?;
+                .try_add_virtual_bi(self.lst.last().unwrap().clone(), false)?;
         }
         cal_seg(&self.bi_list, &mut self.seg_list.borrow_mut())?;
         self.zs_list

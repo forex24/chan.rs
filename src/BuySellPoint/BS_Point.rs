@@ -1,24 +1,21 @@
 use crate::Bi::Bi::CBi;
-use crate::ChanModel::features::CFeatures;
+use crate::ChanModel::Features::CFeatures;
+use crate::Common::types::{LineType, SharedCell};
 use crate::Common::CEnum::BspType;
+use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-pub enum LineType {
-    Bi(Rc<RefCell<CBi>>),
-    Seg(Rc<RefCell<CSeg>>),
-}
-
 pub struct CBSPoint {
-    bi: LineType,
-    klu: Rc<RefCell<CKLineUnit>>,
-    is_buy: bool,
-    bsp_type: Vec<BspType>,
-    relate_bsp1: Option<Rc<RefCell<CBSPoint>>>,
-    features: CFeatures,
-    is_segbsp: bool,
+    pub bi: LineType,
+    pub klu: SharedCell<CKLineUnit>,
+    pub is_buy: bool,
+    pub bsp_type: Vec<BspType>,
+    pub relate_bsp1: Option<SharedCell<CBSPoint>>,
+    pub features: CFeatures,
+    pub is_segbsp: bool,
 }
 
 impl CBSPoint {
@@ -26,9 +23,9 @@ impl CBSPoint {
         bi: LineType,
         is_buy: bool,
         bs_type: BspType,
-        relate_bsp1: Option<Rc<RefCell<CBSPoint>>>,
+        relate_bsp1: Option<SharedCell<CBSPoint>>,
         feature_dict: Option<HashMap<String, f64>>,
-    ) -> Rc<RefCell<Self>> {
+    ) -> SharedCell<Self> {
         let klu = match &bi {
             LineType::Bi(b) => b.borrow().get_end_klu(),
             LineType::Seg(s) => s.borrow().get_end_klu(),
@@ -69,7 +66,7 @@ impl CBSPoint {
     pub fn add_another_bsp_prop(
         &mut self,
         bs_type: BspType,
-        relate_bsp1: Option<Rc<RefCell<CBSPoint>>>,
+        relate_bsp1: Option<SharedCell<CBSPoint>>,
     ) {
         self.add_type(bs_type);
         if self.relate_bsp1.is_none() {

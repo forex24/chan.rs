@@ -1,4 +1,5 @@
 use crate::Combiner::Combine_Item::CCombineItem;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{FxType, KlineDir};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -11,16 +12,16 @@ pub struct CKLineCombiner<T> {
     time_end: i64,
     high: f64,
     low: f64,
-    lst: Vec<Rc<RefCell<T>>>,
+    lst: Vec<SharedCell<T>>,
     dir: KlineDir,
     fx: FxType,
-    pre: Option<Rc<RefCell<CKLineCombiner<T>>>>,
-    next: Option<Rc<RefCell<CKLineCombiner<T>>>>,
-    memoize_cache: HashMap<String, Rc<RefCell<T>>>,
+    pre: Option<SharedCell<CKLineCombiner<T>>>,
+    next: Option<SharedCell<CKLineCombiner<T>>>,
+    memoize_cache: HashMap<String, SharedCell<T>>,
 }
 
 impl<T> CKLineCombiner<T> {
-    pub fn new(kl_unit: Rc<RefCell<T>>, dir: KlineDir) -> Result<Self, CChanException> {
+    pub fn new(kl_unit: SharedCell<T>, dir: KlineDir) -> Result<Self, CChanException> {
         let item = CCombineItem::new(kl_unit.clone())?;
         Ok(CKLineCombiner {
             time_begin: item.time_begin,
@@ -52,7 +53,7 @@ impl<T> CKLineCombiner<T> {
     pub fn low(&self) -> f64 {
         self.low
     }
-    pub fn lst(&self) -> &Vec<Rc<RefCell<T>>> {
+    pub fn lst(&self) -> &Vec<SharedCell<T>> {
         &self.lst
     }
     pub fn dir(&self) -> KlineDir {
@@ -62,20 +63,20 @@ impl<T> CKLineCombiner<T> {
         self.fx
     }
 
-    pub fn pre(&self) -> Result<Rc<RefCell<CKLineCombiner<T>>>, CChanException> {
-        self.pre
-            .clone()
-            .ok_or_else(|| CChanException::new("No previous combiner", ErrCode::CombinerErr))
+    pub fn pre(&self) -> Result<SharedCell<CKLineCombiner<T>>, CChanException> {
+        self.pre.clone().ok_or_else(|| {
+            CChanException::new("No previous combiner".to_string(), ErrCode::CombinerErr)
+        })
     }
 
-    pub fn next(&self) -> Option<Rc<RefCell<CKLineCombiner<T>>>> {
+    pub fn next(&self) -> Option<SharedCell<CKLineCombiner<T>>> {
         self.next.clone()
     }
 
-    pub fn get_next(&self) -> Result<Rc<RefCell<CKLineCombiner<T>>>, CChanException> {
-        self.next
-            .clone()
-            .ok_or_else(|| CChanException::new("No next combiner", ErrCode::CombinerErr))
+    pub fn get_next(&self) -> Result<SharedCell<CKLineCombiner<T>>, CChanException> {
+        self.next.clone().ok_or_else(|| {
+            CChanException::new("No next combiner".to_string(), ErrCode::CombinerErr)
+        })
     }
 
     pub fn test_combine(
@@ -111,12 +112,12 @@ impl<T> CKLineCombiner<T> {
             return Ok(KlineDir::Up);
         }
         Err(CChanException::new(
-            "combine type unknown",
+            "combine type unknown".to_string(),
             ErrCode::CombinerErr,
         ))
     }
 
-    pub fn add(&mut self, unit_kl: Rc<RefCell<T>>) {
+    pub fn add(&mut self, unit_kl: SharedCell<T>) {
         self.lst.push(unit_kl);
     }
 
@@ -126,7 +127,7 @@ impl<T> CKLineCombiner<T> {
 
     pub fn try_add(
         &mut self,
-        unit_kl: Rc<RefCell<T>>,
+        unit_kl: SharedCell<T>,
         exclude_included: bool,
         allow_top_equal: Option<i32>,
     ) -> Result<KlineDir, CChanException> {
@@ -157,7 +158,7 @@ impl<T> CKLineCombiner<T> {
                 _ => {
                     return Err(CChanException::new(
                         &format!(
-                            "KLINE_DIR = {:?} err!!! must be {:?}/{:?}",
+                            "KlineDir = {:?} err!!! must be {:?}/{:?}",
                             self.dir,
                             KlineDir::Up,
                             KlineDir::Down
@@ -172,7 +173,7 @@ impl<T> CKLineCombiner<T> {
         Ok(dir)
     }
 
-    pub fn get_peak_klu(&self, is_high: bool) -> Result<Rc<RefCell<T>>, CChanException> {
+    pub fn get_peak_klu(&self, is_high: bool) -> Result<SharedCell<T>, CChanException> {
         if is_high {
             self.get_high_peak_klu()
         } else {
@@ -180,7 +181,7 @@ impl<T> CKLineCombiner<T> {
         }
     }
 
-    pub fn get_high_peak_klu(&mut self) -> Result<Rc<RefCell<T>>, CChanException> {
+    pub fn get_high_peak_klu(&mut self) -> Result<SharedCell<T>, CChanException> {
         if let Some(cached) = self.memoize_cache.get("high_peak") {
             return Ok(cached.clone());
         }
@@ -193,12 +194,12 @@ impl<T> CKLineCombiner<T> {
             }
         }
         Err(CChanException::new(
-            "can't find peak...",
+            "can't find peak...".to_string(),
             ErrCode::CombinerErr,
         ))
     }
 
-    pub fn get_low_peak_klu(&mut self) -> Result<Rc<RefCell<T>>, CChanException> {
+    pub fn get_low_peak_klu(&mut self) -> Result<SharedCell<T>, CChanException> {
         if let Some(cached) = self.memoize_cache.get("low_peak") {
             return Ok(cached.clone());
         }
@@ -211,15 +212,15 @@ impl<T> CKLineCombiner<T> {
             }
         }
         Err(CChanException::new(
-            "can't find peak...",
+            "can't find peak...".to_string(),
             ErrCode::CombinerErr,
         ))
     }
 
     pub fn update_fx(
         &mut self,
-        pre: Rc<RefCell<CKLineCombiner<T>>>,
-        next: Rc<RefCell<CKLineCombiner<T>>>,
+        pre: SharedCell<CKLineCombiner<T>>,
+        next: SharedCell<CKLineCombiner<T>>,
         exclude_included: bool,
         allow_top_equal: Option<i32>,
     ) {
@@ -255,12 +256,12 @@ impl<T> CKLineCombiner<T> {
         self.clean_cache();
     }
 
-    pub fn set_pre(&mut self, pre: Rc<RefCell<CKLineCombiner<T>>>) {
+    pub fn set_pre(&mut self, pre: SharedCell<CKLineCombiner<T>>) {
         self.pre = Some(pre);
         self.clean_cache();
     }
 
-    pub fn set_next(&mut self, next: Rc<RefCell<CKLineCombiner<T>>>) {
+    pub fn set_next(&mut self, next: SharedCell<CKLineCombiner<T>>) {
         self.next = Some(next);
         self.clean_cache();
     }
@@ -277,7 +278,7 @@ impl<T> std::fmt::Display for CKLineCombiner<T> {
 }
 
 impl<T> std::ops::Index<usize> for CKLineCombiner<T> {
-    type Output = Rc<RefCell<T>>;
+    type Output = SharedCell<T>;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.lst[index]
@@ -285,7 +286,7 @@ impl<T> std::ops::Index<usize> for CKLineCombiner<T> {
 }
 
 impl<T> std::ops::Index<std::ops::Range<usize>> for CKLineCombiner<T> {
-    type Output = [Rc<RefCell<T>>];
+    type Output = [SharedCell<T>];
 
     fn index(&self, range: std::ops::Range<usize>) -> &Self::Output {
         &self.lst[range]
@@ -293,7 +294,7 @@ impl<T> std::ops::Index<std::ops::Range<usize>> for CKLineCombiner<T> {
 }
 
 impl<T> std::iter::IntoIterator for CKLineCombiner<T> {
-    type Item = Rc<RefCell<T>>;
+    type Item = SharedCell<T>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

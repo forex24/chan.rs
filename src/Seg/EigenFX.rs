@@ -1,20 +1,21 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiList::CBiList;
+use crate::Common::func_util::revert_BiDir;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{BiDir, FxType, KlineDir, SegType};
 use crate::Common::ChanException::{CChanException, ErrCode};
-use crate::Common::FuncUtil::revert_bi_dir;
 use crate::Seg::Eigen::CEigen;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CEigenFX {
-    lv: SegType,
-    dir: BiDir,
-    ele: [Option<Rc<RefCell<CEigen>>>; 3],
-    lst: Vec<Rc<RefCell<CBi>>>,
-    exclude_included: bool,
-    kl_dir: KlineDir,
-    last_evidence_bi: Option<Rc<RefCell<CBi>>>,
+    pub lv: SegType,
+    pub dir: BiDir,
+    pub ele: [Option<SharedCell<CEigen>>; 3],
+    pub lst: Vec<SharedCell<CBi>>,
+    pub exclude_included: bool,
+    pub kl_dir: KlineDir,
+    pub last_evidence_bi: Option<SharedCell<CBi>>,
 }
 
 impl CEigenFX {
@@ -34,12 +35,12 @@ impl CEigenFX {
         }
     }
 
-    fn treat_first_ele(&mut self, bi: Rc<RefCell<CBi>>) -> bool {
+    fn treat_first_ele(&mut self, bi: SharedCell<CBi>) -> bool {
         self.ele[0] = Some(Rc::new(RefCell::new(CEigen::new(bi, self.kl_dir))));
         false
     }
 
-    fn treat_second_ele(&mut self, bi: Rc<RefCell<CBi>>) -> bool {
+    fn treat_second_ele(&mut self, bi: SharedCell<CBi>) -> bool {
         let ele0 = self.ele[0].as_ref().unwrap();
         let combine_dir = ele0
             .borrow_mut()
@@ -57,7 +58,7 @@ impl CEigenFX {
         false
     }
 
-    fn treat_third_ele(&mut self, bi: Rc<RefCell<CBi>>) -> bool {
+    fn treat_third_ele(&mut self, bi: SharedCell<CBi>) -> bool {
         self.last_evidence_bi = Some(bi.clone());
         let allow_top_equal = if self.exclude_included {
             Some(if bi.borrow().is_down() { 1 } else { -1 })
@@ -92,7 +93,7 @@ impl CEigenFX {
         }
     }
 
-    pub fn add(&mut self, bi: Rc<RefCell<CBi>>) -> bool {
+    pub fn add(&mut self, bi: SharedCell<CBi>) -> bool {
         assert!(bi.borrow().dir != self.dir);
         self.lst.push(bi.clone());
         if self.ele[0].is_none() {
@@ -207,8 +208,8 @@ impl CEigenFX {
         break_thred: f64,
     ) -> Option<bool> {
         const COMMON_COMBINE: bool = true;
-        let first_bi_dir = bi_list[begin_idx as usize].borrow().dir;
-        let mut eigen_fx = CEigenFX::new(revert_bi_dir(first_bi_dir), !COMMON_COMBINE, self.lv);
+        let first_BiDir = bi_list[begin_idx as usize].borrow().dir;
+        let mut eigen_fx = CEigenFX::new(revert_BiDir(first_BiDir), !COMMON_COMBINE, self.lv);
         for bi in bi_list.iter().skip(begin_idx as usize).step_by(2) {
             if eigen_fx.add(bi.clone()) {
                 if COMMON_COMBINE {

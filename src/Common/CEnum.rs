@@ -10,7 +10,7 @@ pub enum DATA_SRC {
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum KL_TYPE {
+pub enum KlType {
     K_1S = 1,
     K_3S = 2,
     K_5S = 3,
@@ -33,7 +33,7 @@ pub enum KL_TYPE {
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum KLINE_DIR {
+pub enum KlineDir {
     UP,
     DOWN,
     COMBINE,
@@ -41,20 +41,20 @@ pub enum KLINE_DIR {
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum FX_TYPE {
+pub enum FxType {
     BOTTOM,
     TOP,
     UNKNOWN,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum BI_DIR {
+pub enum BiDir {
     UP,
     DOWN,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum BI_TYPE {
+pub enum BiType {
     UNKNOWN,
     STRICT,
     SUB_VALUE,
@@ -68,7 +68,7 @@ pub enum BI_TYPE {
 pub type BSP_MAIN_TYPE = String;
 
 #[derive(Debug, EnumString, Display)]
-pub enum BSP_TYPE {
+pub enum BspType {
     T1,
     T1P,
     T2,
@@ -77,12 +77,12 @@ pub enum BSP_TYPE {
     T3B,
 }
 
-impl BSP_TYPE {
+impl BspType {
     pub fn main_type(&self) -> BSP_MAIN_TYPE {
         match self {
-            BSP_TYPE::T1 | BSP_TYPE::T1P => "1".to_string(),
-            BSP_TYPE::T2 | BSP_TYPE::T2S => "2".to_string(),
-            BSP_TYPE::T3A | BSP_TYPE::T3B => "3".to_string(),
+            BspType::T1 | BspType::T1P => "1".to_string(),
+            BspType::T2 | BspType::T2S => "2".to_string(),
+            BspType::T3A | BspType::T3B => "3".to_string(),
         }
     }
 }
@@ -95,26 +95,26 @@ pub enum AUTYPE {
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum TREND_TYPE {
+pub enum TrendType {
     MEAN,
     MAX,
     MIN,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum TREND_LINE_SIDE {
+pub enum TrendLineSide {
     INSIDE,
     OUTSIDE,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum LEFT_SEG_METHOD {
+pub enum LeftSegMethod {
     ALL,
     PEAK,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum FX_CHECK_METHOD {
+pub enum FxCheckMethod {
     STRICT,
     LOSS,
     HALF,
@@ -122,13 +122,13 @@ pub enum FX_CHECK_METHOD {
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum SEG_TYPE {
+pub enum SegType {
     BI,
     SEG,
 }
 
 #[derive(Debug, EnumString, Display)]
-pub enum MACD_ALGO {
+pub enum MacdAlgo {
     AREA,
     PEAK,
     FULL_AREA,
@@ -143,9 +143,9 @@ pub enum MACD_ALGO {
     RSI,
 }
 
-pub struct DATA_FIELD;
+pub struct DataField;
 
-impl DATA_FIELD {
+impl DataField {
     pub const FIELD_TIME: &'static str = "time_key";
     pub const FIELD_OPEN: &'static str = "open";
     pub const FIELD_HIGH: &'static str = "high";
@@ -157,7 +157,7 @@ impl DATA_FIELD {
 }
 
 pub const TRADE_INFO_LST: [&str; 3] = [
-    DATA_FIELD::FIELD_VOLUME,
-    DATA_FIELD::FIELD_TURNOVER,
-    DATA_FIELD::FIELD_TURNRATE,
+    DataField::FIELD_VOLUME,
+    DataField::FIELD_TURNOVER,
+    DataField::FIELD_TURNRATE,
 ];

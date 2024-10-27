@@ -1,33 +1,34 @@
-use crate::buy_sell_point::bs_point::CBSPoint;
-use crate::common::c_enum::{BiDir, BiType, DataField, FxType, MacdAlgo};
-use crate::common::chan_exception::{CChanException, ErrCode};
-use crate::kline::kline::CKLine;
-use crate::kline::kline_unit::CKLineUnit;
-use crate::seg::seg::CSeg;
+use crate::BuySellPoint::BS_Point::CBSPoint;
+use crate::Common::types::SharedCell;
+use crate::Common::CEnum::{BiDir, BiType, DataField, FxType, MacdAlgo};
+use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::KLine::KLine::CKLine;
+use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct CBi {
-    begin_klc: Rc<RefCell<CKLine>>,
-    end_klc: Rc<RefCell<CKLine>>,
-    dir: BiDir,
-    idx: i32,
-    bi_type: BiType,
-    is_sure: bool,
-    sure_end: Vec<Rc<RefCell<CKLine>>>,
-    seg_idx: Option<i32>,
-    parent_seg: Option<Rc<RefCell<CSeg>>>,
-    bsp: Option<Rc<RefCell<CBSPoint>>>,
-    next: Option<Rc<RefCell<CBi>>>,
-    pre: Option<Rc<RefCell<CBi>>>,
-    memoize_cache: RefCell<HashMap<String, f64>>,
+    pub begin_klc: SharedCell<CKLine>,
+    pub end_klc: SharedCell<CKLine>,
+    pub dir: BiDir,
+    pub idx: i32,
+    pub bi_type: BiType,
+    pub is_sure: bool,
+    pub sure_end: Vec<SharedCell<CKLine>>,
+    pub seg_idx: Option<i32>,
+    pub parent_seg: Option<SharedCell<CSeg<CBi>>>,
+    pub bsp: Option<SharedCell<CBSPoint>>,
+    pub next: Option<SharedCell<CBi>>,
+    pub pre: Option<SharedCell<CBi>>,
+    pub memoize_cache: RefCell<HashMap<String, f64>>,
 }
 
 impl CBi {
     pub fn new(
-        begin_klc: Rc<RefCell<CKLine>>,
-        end_klc: Rc<RefCell<CKLine>>,
+        begin_klc: SharedCell<CKLine>,
+        end_klc: SharedCell<CKLine>,
         idx: i32,
         is_sure: bool,
     ) -> Self {
@@ -54,11 +55,11 @@ impl CBi {
         self.memoize_cache.borrow_mut().clear();
     }
 
-    pub fn begin_klc(&self) -> Rc<RefCell<CKLine>> {
+    pub fn begin_klc(&self) -> SharedCell<CKLine> {
         Rc::clone(&self.begin_klc)
     }
 
-    pub fn end_klc(&self) -> Rc<RefCell<CKLine>> {
+    pub fn end_klc(&self) -> SharedCell<CKLine> {
         Rc::clone(&self.end_klc)
     }
 
@@ -70,7 +71,7 @@ impl CBi {
         self.idx
     }
 
-    pub fn bi_type(&self) -> BiType {
+    pub fn BiType(&self) -> BiType {
         self.bi_type
     }
 
@@ -78,7 +79,7 @@ impl CBi {
         self.is_sure
     }
 
-    pub fn sure_end(&self) -> &Vec<Rc<RefCell<CKLine>>> {
+    pub fn sure_end(&self) -> &Vec<SharedCell<CKLine>> {
         &self.sure_end
     }
 
@@ -130,8 +131,8 @@ impl CBi {
 
     pub fn set(
         &mut self,
-        begin_klc: Rc<RefCell<CKLine>>,
-        end_klc: Rc<RefCell<CKLine>>,
+        begin_klc: SharedCell<CKLine>,
+        end_klc: SharedCell<CKLine>,
     ) -> Result<(), CChanException> {
         self.begin_klc = Rc::clone(&begin_klc);
         self.end_klc = Rc::clone(&end_klc);
@@ -140,7 +141,7 @@ impl CBi {
             FxType::Top => BiDir::Down,
             _ => {
                 return Err(CChanException::new(
-                    "ERROR DIRECTION when creating bi",
+                    "ERROR DIRECTION when creating bi".to_string(),
                     ErrCode::BiErr,
                 ))
             }
@@ -166,7 +167,7 @@ impl CBi {
         }
     }
 
-    pub fn get_begin_klu(&self) -> Rc<RefCell<CKLineUnit>> {
+    pub fn get_begin_klu(&self) -> SharedCell<CKLineUnit> {
         if self.is_up() {
             self.begin_klc.borrow().get_peak_klu(false)
         } else {
@@ -174,7 +175,7 @@ impl CBi {
         }
     }
 
-    pub fn get_end_klu(&self) -> Rc<RefCell<CKLineUnit>> {
+    pub fn get_end_klu(&self) -> SharedCell<CKLineUnit> {
         if self.is_up() {
             self.end_klc.borrow().get_peak_klu(true)
         } else {
@@ -230,23 +231,23 @@ impl CBi {
         self.dir == BiDir::Up
     }
 
-    pub fn update_virtual_end(&mut self, new_klc: Rc<RefCell<CKLine>>) {
+    pub fn update_virtual_end(&mut self, new_klc: SharedCell<CKLine>) {
         self.append_sure_end(Rc::clone(&self.end_klc));
         self.update_new_end(new_klc);
         self.is_sure = false;
     }
 
-    pub fn restore_from_virtual_end(&mut self, sure_end: Rc<RefCell<CKLine>>) {
+    pub fn restore_from_virtual_end(&mut self, sure_end: SharedCell<CKLine>) {
         self.is_sure = true;
         self.update_new_end(sure_end);
         self.sure_end.clear();
     }
 
-    pub fn append_sure_end(&mut self, klc: Rc<RefCell<CKLine>>) {
+    pub fn append_sure_end(&mut self, klc: SharedCell<CKLine>) {
         self.sure_end.push(klc);
     }
 
-    pub fn update_new_end(&mut self, new_klc: Rc<RefCell<CKLine>>) {
+    pub fn update_new_end(&mut self, new_klc: SharedCell<CKLine>) {
         self.end_klc = new_klc;
         self.check().unwrap();
         self.clean_cache();
@@ -435,14 +436,14 @@ impl CBi {
     }
 
     // Helper methods for iterating over KLines
-    fn klc_lst(&self) -> impl Iterator<Item = Rc<RefCell<CKLine>>> {
+    fn klc_lst(&self) -> impl Iterator<Item = SharedCell<CKLine>> {
         KlcIterator {
             current: Some(Rc::clone(&self.begin_klc)),
             end_idx: self.end_klc.borrow().idx,
         }
     }
 
-    fn klc_lst_re(&self) -> impl Iterator<Item = Rc<RefCell<CKLine>>> {
+    fn klc_lst_re(&self) -> impl Iterator<Item = SharedCell<CKLine>> {
         KlcReverseIterator {
             current: Some(Rc::clone(&self.end_klc)),
             begin_idx: self.begin_klc.borrow().idx,
@@ -451,12 +452,12 @@ impl CBi {
 }
 
 struct KlcIterator {
-    current: Option<Rc<RefCell<CKLine>>>,
+    current: Option<SharedCell<CKLine>>,
     end_idx: i32,
 }
 
 impl Iterator for KlcIterator {
-    type Item = Rc<RefCell<CKLine>>;
+    type Item = SharedCell<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
@@ -471,12 +472,12 @@ impl Iterator for KlcIterator {
 }
 
 struct KlcReverseIterator {
-    current: Option<Rc<RefCell<CKLine>>>,
+    current: Option<SharedCell<CKLine>>,
     begin_idx: i32,
 }
 
 impl Iterator for KlcReverseIterator {
-    type Item = Rc<RefCell<CKLine>>;
+    type Item = SharedCell<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;

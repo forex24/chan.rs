@@ -1,5 +1,5 @@
-use crate::Combiner::KLineCombiner::CKLineCombiner;
 use crate::Common::func_util::has_overlap;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{FxCheckMethod, FxType, KlineDir};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -15,13 +15,13 @@ pub struct CKLine {
     pub low: f64,
     pub high: f64,
     pub dir: KlineDir,
-    pub lst: Vec<Rc<RefCell<CKLineUnit>>>,
-    pub pre: Option<Rc<RefCell<CKLine>>>,
-    pub next: Option<Rc<RefCell<CKLine>>>,
+    pub lst: Vec<SharedCell<CKLineUnit>>,
+    pub pre: Option<SharedCell<CKLine>>,
+    pub next: Option<SharedCell<CKLine>>,
 }
 
 impl CKLine {
-    pub fn new(kl_unit: Rc<RefCell<CKLineUnit>>, idx: i32, dir: KlineDir) -> Self {
+    pub fn new(kl_unit: SharedCell<CKLineUnit>, idx: i32, dir: KlineDir) -> Self {
         let mut kline = CKLine {
             idx,
             kl_type: kl_unit.borrow().kl_type.clone(),
@@ -41,7 +41,7 @@ impl CKLine {
         kline
     }
 
-    pub fn get_sub_klc(&self) -> impl Iterator<Item = Rc<RefCell<CKLine>>> + '_ {
+    pub fn get_sub_klc(&self) -> impl Iterator<Item = SharedCell<CKLine>> + '_ {
         let mut last_klc = None;
         self.lst.iter().flat_map(move |klu| {
             klu.borrow().get_children().filter_map(move |sub_klu| {
@@ -94,7 +94,7 @@ impl CKLine {
         if self.next.is_none() || self.pre.is_none() || item2.pre.is_none() || item2.idx <= self.idx
         {
             return Err(CChanException::new(
-                "Invalid kline sequence",
+                "Invalid kline sequence".to_string(),
                 ErrCode::BiErr,
             ));
         }
@@ -102,7 +102,10 @@ impl CKLine {
         match self.fx {
             Some(FxType::Top) => {
                 if !for_virtual && item2.fx != Some(FxType::Bottom) {
-                    return Err(CChanException::new("Invalid fx sequence", ErrCode::BiErr));
+                    return Err(CChanException::new(
+                        "Invalid fx sequence".to_string(),
+                        ErrCode::BiErr,
+                    ));
                 }
                 if for_virtual && item2.dir != KlineDir::Down {
                     return Ok(false);
@@ -120,7 +123,7 @@ impl CKLine {
                         } else {
                             if item2.next.is_none() {
                                 return Err(CChanException::new(
-                                    "Invalid kline sequence",
+                                    "Invalid kline sequence".to_string(),
                                     ErrCode::BiErr,
                                 ));
                             }
@@ -145,7 +148,7 @@ impl CKLine {
                     }
                     _ => {
                         return Err(CChanException::new(
-                            "bi_fx_check config error!",
+                            "bi_fx_check config error!".to_string(),
                             ErrCode::ConfigError,
                         ))
                     }
@@ -159,7 +162,10 @@ impl CKLine {
             }
             Some(FxType::Bottom) => {
                 if !for_virtual && item2.fx != Some(FxType::Top) {
-                    return Err(CChanException::new("Invalid fx sequence", ErrCode::BiErr));
+                    return Err(CChanException::new(
+                        "Invalid fx sequence".to_string(),
+                        ErrCode::BiErr,
+                    ));
                 }
                 if for_virtual && item2.dir != KlineDir::Up {
                     return Ok(false);
@@ -177,7 +183,7 @@ impl CKLine {
                         } else {
                             if item2.next.is_none() {
                                 return Err(CChanException::new(
-                                    "Invalid kline sequence",
+                                    "Invalid kline sequence".to_string(),
                                     ErrCode::BiErr,
                                 ));
                             }
@@ -202,7 +208,7 @@ impl CKLine {
                     }
                     _ => {
                         return Err(CChanException::new(
-                            "bi_fx_check config error!",
+                            "bi_fx_check config error!".to_string(),
                             ErrCode::ConfigError,
                         ))
                     }
@@ -215,7 +221,7 @@ impl CKLine {
                 })
             }
             None => Err(CChanException::new(
-                "only top/bottom fx can check_valid_top_button",
+                "only top/bottom fx can check_valid_top_button".to_string(),
                 ErrCode::BiErr,
             )),
         }

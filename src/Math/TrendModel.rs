@@ -29,13 +29,13 @@ impl CTrendModel {
                 .iter()
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .map(|&x| x)
-                .ok_or_else(|| CChanException::new("Empty array", ErrCode::ParaError)),
+                .ok_or_else(|| CChanException::new("Empty array".to_string(), ErrCode::ParaError)),
             TrendType::Min => self
                 .arr
                 .iter()
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .map(|&x| x)
-                .ok_or_else(|| CChanException::new("Empty array", ErrCode::ParaError)),
+                .ok_or_else(|| CChanException::new("Empty array".to_string(), ErrCode::ParaError)),
             _ => Err(CChanException::new(
                 &format!("Unknown trendModel Type = {:?}", self.trend_type),
                 ErrCode::ParaError,

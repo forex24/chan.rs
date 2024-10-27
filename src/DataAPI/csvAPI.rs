@@ -1,6 +1,6 @@
 use crate::Common::func_util::str2float;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{DataField, KlType};
-use crate::Common::CTime::CTime;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::DataAPI::CommonStockAPI::CCommonStockApi;
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -8,7 +8,6 @@ use chrono::{NaiveDate, NaiveDateTime};
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
 use std::rc::Rc;
 
 fn create_item_dict(
@@ -99,7 +98,7 @@ impl CCommonStockApi for CsvApi {
 
     fn get_kl_data(
         &self,
-    ) -> Box<dyn Iterator<Item = Result<Rc<RefCell<CKLineUnit>>, CChanException>>> {
+    ) -> Box<dyn Iterator<Item = Result<SharedCell<CKLineUnit>>, CChanException>> {
         let file_path = format!("/opt/data/raw_data/{}.csv", self.code);
         let file = match File::open(&file_path) {
             Ok(file) => file,
@@ -127,7 +126,7 @@ impl CCommonStockApi for CsvApi {
                 Ok(line) => line,
                 Err(_) => {
                     return Some(Err(CChanException::new(
-                        "Error reading line from file",
+                        "Error reading line from file".to_string(),
                         ErrCode::SrcDataFormatError,
                     )))
                 }

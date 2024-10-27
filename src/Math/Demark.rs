@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+use crate::Common::types::SharedCell;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BiDir {
     Up,
@@ -48,7 +50,7 @@ pub struct DemarkIndex {
     dir: BiDir,
     idx: i32,
     demark_type: DemarkType,
-    series: Rc<RefCell<CDemarkSetup>>,
+    series: SharedCell<CDemarkSetup>,
 }
 
 pub struct CDemarkIndex {
@@ -65,7 +67,7 @@ impl CDemarkIndex {
         dir: BiDir,
         demark_type: DemarkType,
         idx: i32,
-        series: Rc<RefCell<CDemarkSetup>>,
+        series: SharedCell<CDemarkSetup>,
     ) {
         self.data.push(DemarkIndex {
             dir,
@@ -250,7 +252,7 @@ impl CDemarkSetup {
 
 pub struct CDemarkEngine {
     kl_lst: Vec<CKL>,
-    series: Vec<Rc<RefCell<CDemarkSetup>>>,
+    series: Vec<SharedCell<CDemarkSetup>>,
 }
 
 impl CDemarkEngine {

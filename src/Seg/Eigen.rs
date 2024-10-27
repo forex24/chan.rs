@@ -1,16 +1,16 @@
 use crate::Bi::Bi::CBi;
-use crate::Combiner::KLineCombiner::CKLineCombiner;
+
+use crate::Combiner::KLine_Combiner::CKLineCombiner;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{BiDir, FxType};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct CEigen {
-    inner: CKLineCombiner<CBi>,
-    gap: bool,
+    pub inner: CKLineCombiner<CBi>,
+    pub gap: bool,
 }
 
 impl CEigen {
-    pub fn new(bi: Rc<RefCell<CBi>>, dir: BiDir) -> Self {
+    pub fn new(bi: SharedCell<CBi>, dir: BiDir) -> Self {
         CEigen {
             inner: CKLineCombiner::new(bi, dir),
             gap: false,
@@ -35,8 +35,8 @@ impl CEigen {
 
     pub fn get_peak_bi_idx(&self) -> i32 {
         assert!(self.inner.fx() != FxType::Unknown);
-        let bi_dir = self.inner.lst()[0].borrow().dir;
-        if bi_dir == BiDir::Up {
+        let BiDir = self.inner.lst()[0].borrow().dir;
+        if BiDir == BiDir::Up {
             // 下降线段
             self.inner.get_peak_klu(false).borrow().idx - 1
         } else {

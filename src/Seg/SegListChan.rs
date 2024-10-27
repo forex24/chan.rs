@@ -3,9 +3,10 @@ use crate::Common::CEnum::{BiDir, SegType};
 use crate::Common::ChanException::CChanException;
 use crate::Seg::EigenFX::CEigenFX;
 use crate::Seg::SegConfig::CSegConfig;
-use crate::Seg::SegListComm::CSegListComm;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use super::SegListComm::CSegListComm;
 
 pub struct CSegListChan<SUB_LINE_TYPE> {
     inner: CSegListComm<SUB_LINE_TYPE>,

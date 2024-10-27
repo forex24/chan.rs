@@ -1,16 +1,16 @@
 // File: chan/src/common/func_util.rs
 
-use super::CEnum::{BI_DIR, KL_TYPE};
+use super::CEnum::{BiDir, KlType};
 
-/*pub fn kltype_lt_day(kl_type: &KL_TYPE) -> bool {
-    *kl_type as i32 < KL_TYPE::K_DAY as i32
+/*pub fn kltype_lt_day(kl_type: &KlType) -> bool {
+    *kl_type as i32 < KlType::K_DAY as i32
 }
 
-pub fn kltype_lte_day(kl_type: &KL_TYPE) -> bool {
-    *kl_type as i32 <= KL_TYPE::K_DAY as i32
+pub fn kltype_lte_day(kl_type: &KlType) -> bool {
+    *kl_type as i32 <= KlType::K_DAY as i32
 }
 
-pub fn check_kltype_order(type_list: &[KL_TYPE]) -> Result<(), String> {
+pub fn check_kltype_order(type_list: &[KlType]) -> Result<(), String> {
     let mut last_lv = type_list[0] as i32;
     for kl_type in &type_list[1..] {
         if *kl_type as i32 >= last_lv {
@@ -21,10 +21,10 @@ pub fn check_kltype_order(type_list: &[KL_TYPE]) -> Result<(), String> {
     Ok(())
 }*/
 
-pub fn revert_bi_dir(dir: &BI_DIR) -> BI_DIR {
+pub fn revert_BiDir(dir: &BiDir) -> BiDir {
     match dir {
-        BI_DIR::UP => BI_DIR::DOWN,
-        BI_DIR::DOWN => BI_DIR::UP,
+        BiDir::UP => BiDir::DOWN,
+        BiDir::DOWN => BiDir::UP,
     }
 }
 
@@ -58,31 +58,31 @@ mod tests {
 
     /*#[test]
     fn test_kltype_lt_day() {
-        assert!(kltype_lt_day(&KL_TYPE::K_1M));
-        assert!(!kltype_lt_day(&KL_TYPE::K_DAY));
-        assert!(!kltype_lt_day(&KL_TYPE::K_WEEK));
+        assert!(kltype_lt_day(&KlType::K_1M));
+        assert!(!kltype_lt_day(&KlType::K_DAY));
+        assert!(!kltype_lt_day(&KlType::K_WEEK));
     }
 
     #[test]
     fn test_kltype_lte_day() {
-        assert!(kltype_lte_day(&KL_TYPE::K_1M));
-        assert!(kltype_lte_day(&KL_TYPE::K_DAY));
-        assert!(!kltype_lte_day(&KL_TYPE::K_WEEK));
+        assert!(kltype_lte_day(&KlType::K_1M));
+        assert!(kltype_lte_day(&KlType::K_DAY));
+        assert!(!kltype_lte_day(&KlType::K_WEEK));
     }
 
     #[test]
     fn test_check_kltype_order() {
-        let valid_order = vec![KL_TYPE::K_WEEK, KL_TYPE::K_DAY, KL_TYPE::K_1M];
+        let valid_order = vec![KlType::K_WEEK, KlType::K_DAY, KlType::K_1M];
         assert!(check_kltype_order(&valid_order).is_ok());
 
-        let invalid_order = vec![KL_TYPE::K_DAY, KL_TYPE::K_WEEK, KL_TYPE::K_1M];
+        let invalid_order = vec![KlType::K_DAY, KlType::K_WEEK, KlType::K_1M];
         assert!(check_kltype_order(&invalid_order).is_err());
     }
     */
     #[test]
-    fn test_revert_bi_dir() {
-        assert_eq!(revert_bi_dir(&BI_DIR::UP), BI_DIR::DOWN);
-        assert_eq!(revert_bi_dir(&BI_DIR::DOWN), BI_DIR::UP);
+    fn test_revert_BiDir() {
+        assert_eq!(revert_BiDir(&BiDir::UP), BiDir::DOWN);
+        assert_eq!(revert_BiDir(&BiDir::DOWN), BiDir::UP);
     }
 
     #[test]

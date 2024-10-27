@@ -1,5 +1,6 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiList::CBiList;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{BiDir, LeftSegMethod, SegType};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::Seg::Seg::CSeg;
@@ -9,7 +10,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 pub struct CSegListComm<SUB_LINE_TYPE> {
-    pub lst: Vec<Rc<RefCell<CSeg<SUB_LINE_TYPE>>>>,
+    pub lst: Vec<SharedCell<CSeg<SUB_LINE_TYPE>>>,
     pub lv: SegType,
     pub config: CSegConfig,
     _phantom: PhantomData<SUB_LINE_TYPE>,
@@ -125,7 +126,7 @@ impl<SUB_LINE_TYPE> CSegListComm<SUB_LINE_TYPE> {
 
     pub fn collect_left_seg_peak_method(
         &mut self,
-        last_seg_end_bi: Rc<RefCell<SUB_LINE_TYPE>>,
+        last_seg_end_bi: SharedCell<SUB_LINE_TYPE>,
         bi_lst: &CBiList,
     ) -> Result<(), CChanException> {
         if last_seg_end_bi.borrow().is_down() {
@@ -352,7 +353,7 @@ impl<SUB_LINE_TYPE> CSegListComm<SUB_LINE_TYPE> {
 }
 
 impl<SUB_LINE_TYPE> std::ops::Index<usize> for CSegListComm<SUB_LINE_TYPE> {
-    type Output = Rc<RefCell<CSeg<SUB_LINE_TYPE>>>;
+    type Output = SharedCell<CSeg<SUB_LINE_TYPE>>;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.lst[index]
@@ -366,7 +367,7 @@ impl<SUB_LINE_TYPE> std::ops::IndexMut<usize> for CSegListComm<SUB_LINE_TYPE> {
 }
 
 impl<SUB_LINE_TYPE> std::ops::Deref for CSegListComm<SUB_LINE_TYPE> {
-    type Target = Vec<Rc<RefCell<CSeg<SUB_LINE_TYPE>>>>;
+    type Target = Vec<SharedCell<CSeg<SUB_LINE_TYPE>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.lst
@@ -379,7 +380,7 @@ impl<SUB_LINE_TYPE> std::ops::DerefMut for CSegListComm<SUB_LINE_TYPE> {
     }
 }
 
-pub fn find_peak_bi(bi_lst: &[Rc<RefCell<CBi>>], is_high: bool) -> Option<Rc<RefCell<CBi>>> {
+pub fn find_peak_bi(bi_lst: &[SharedCell<CBi>], is_high: bool) -> Option<SharedCell<CBi>> {
     let mut peak_val = if is_high {
         f64::NEG_INFINITY
     } else {

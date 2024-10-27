@@ -1,34 +1,27 @@
-use crate::Bi::Bi::CBi;
 use crate::BuySellPoint::BSPointConfig::CPointConfig;
+use crate::Common::func_util::has_overlap;
+use crate::Common::types::{LineType, SharedCell};
 use crate::Common::ChanException::{CChanException, ErrCode};
-use crate::Common::FuncUtil::has_overlap;
-use crate::KLine::KLineUnit::CKLineUnit;
+use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
-pub enum LineType {
-    Bi(Rc<RefCell<CBi>>),
-    Seg(Rc<RefCell<CSeg>>),
-}
-
 pub struct CZS {
-    is_sure: bool,
-    sub_zs_lst: Vec<Rc<RefCell<CZS>>>,
-    begin: Option<Rc<RefCell<CKLineUnit>>>,
-    begin_bi: Option<LineType>,
-    low: f64,
-    high: f64,
-    mid: f64,
-    end: Option<Rc<RefCell<CKLineUnit>>>,
-    end_bi: Option<LineType>,
-    peak_high: f64,
-    peak_low: f64,
-    bi_in: Option<LineType>,
-    bi_out: Option<LineType>,
-    bi_lst: Vec<LineType>,
-    memoize_cache: HashMap<String, Rc<RefCell<dyn Any>>>,
+    pub is_sure: bool,
+    pub sub_zs_lst: Vec<SharedCell<CZS>>,
+    pub begin: Option<SharedCell<CKLineUnit>>,
+    pub begin_bi: Option<LineType>,
+    pub low: f64,
+    pub high: f64,
+    pub mid: f64,
+    pub end: Option<SharedCell<CKLineUnit>>,
+    pub end_bi: Option<LineType>,
+    pub peak_high: f64,
+    pub peak_low: f64,
+    pub bi_in: Option<LineType>,
+    pub bi_out: Option<LineType>,
+    pub bi_lst: Vec<LineType>,
 }
 
 impl CZS {
@@ -48,7 +41,6 @@ impl CZS {
             bi_in: None,
             bi_out: None,
             bi_lst: Vec::new(),
-            memoize_cache: HashMap::new(),
         };
 
         if let Some(lst) = lst {
@@ -65,9 +57,7 @@ impl CZS {
         zs
     }
 
-    pub fn clean_cache(&mut self) {
-        self.memoize_cache.clear();
-    }
+    pub fn clean_cache(&mut self) {}
 
     pub fn update_zs_range(&mut self, lst: &[LineType]) {
         self.low = lst
@@ -172,7 +162,7 @@ impl CZS {
         has_overlap(self.low, self.high, item._low(), item._high(), false)
     }
 
-    pub fn is_inside(&self, seg: &CSeg) -> bool {
+    pub fn is_inside<T>(&self, seg: &CSeg<T>) -> bool {
         seg.start_bi.borrow().idx <= self.begin_bi.as_ref().unwrap().idx()
             && self.begin_bi.as_ref().unwrap().idx() <= seg.end_bi.borrow().idx
     }

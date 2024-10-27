@@ -1,17 +1,19 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiList::CBiList;
-use crate::Common::func_util::revert_bi_dir;
+use crate::Common::func_util::revert_BiDir;
+use crate::Common::types::SharedCell;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListComm::CSegListComm;
 use crate::ZS::ZSConfig::CZSConfig;
 use crate::ZS::ZS::CZS;
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CZSList {
-    zs_lst: Vec<Rc<RefCell<CZS>>>,
+    zs_lst: Vec<SharedCell<CZS>>,
     config: CZSConfig,
-    free_item_lst: Vec<Rc<RefCell<dyn Any>>>,
+    free_item_lst: Vec<SharedCell<dyn Any>>,
     last_sure_pos: i32,
 }
 
@@ -39,7 +41,7 @@ impl CZSList {
         seg.start_bi.borrow().idx >= self.last_sure_pos
     }
 
-    pub fn add_to_free_lst(&mut self, item: Rc<RefCell<dyn Any>>, is_sure: bool, zs_algo: &str) {
+    pub fn add_to_free_lst(&mut self, item: SharedCell<dyn Any>, is_sure: bool, zs_algo: &str) {
         if !self.free_item_lst.is_empty()
             && item.borrow().idx == self.free_item_lst.last().unwrap().borrow().idx
         {
@@ -59,7 +61,7 @@ impl CZSList {
         self.free_item_lst.clear();
     }
 
-    pub fn update(&mut self, bi: Rc<RefCell<CBi>>, is_sure: bool) {
+    pub fn update(&mut self, bi: SharedCell<CBi>, is_sure: bool) {
         if self.free_item_lst.is_empty() && self.try_add_to_end(&bi) {
             self.try_combine();
             return;
@@ -67,7 +69,7 @@ impl CZSList {
         self.add_to_free_lst(bi, is_sure, "normal");
     }
 
-    pub fn try_add_to_end(&mut self, bi: &Rc<RefCell<CBi>>) -> bool {
+    pub fn try_add_to_end(&mut self, bi: &SharedCell<CBi>) -> bool {
         if self.zs_lst.is_empty() {
             false
         } else {
@@ -81,7 +83,7 @@ impl CZSList {
 
     pub fn add_zs_from_bi_range(
         &mut self,
-        seg_bi_lst: &[Rc<RefCell<CBi>>],
+        seg_bi_lst: &[SharedCell<CBi>],
         seg_dir: i32,
         seg_is_sure: bool,
     ) {
@@ -101,7 +103,7 @@ impl CZSList {
 
     pub fn try_construct_zs(
         &self,
-        lst: &[Rc<RefCell<dyn Any>>],
+        lst: &[SharedCell<dyn Any>],
         is_sure: bool,
         zs_algo: &str,
     ) -> Option<CZS> {
@@ -177,11 +179,7 @@ impl CZSList {
                         .downcast_ref::<CBiList>()
                         .unwrap()
                         .slice(last_seg.end_bi.borrow().idx + 1, bi_lst.len());
-                    self.add_zs_from_bi_range(
-                        &remaining_bi_lst,
-                        revert_bi_dir(last_seg.dir),
-                        false,
-                    );
+                    self.add_zs_from_bi_range(&remaining_bi_lst, revert_BiDir(last_seg.dir), false);
                 }
             }
             "over_seg" => {
@@ -236,7 +234,7 @@ impl CZSList {
         self.update_last_pos(seg_lst);
     }
 
-    pub fn update_overseg_zs(&mut self, bi: Rc<RefCell<dyn Any>>) {
+    pub fn update_overseg_zs(&mut self, bi: SharedCell<dyn Any>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
             if bi.borrow().next.is_none() {
                 return;
@@ -281,7 +279,7 @@ impl CZSList {
 }
 
 impl std::ops::Deref for CZSList {
-    type Target = Vec<Rc<RefCell<CZS>>>;
+    type Target = Vec<SharedCell<CZS>>;
 
     fn deref(&self) -> &Self::Target {
         &self.zs_lst
@@ -295,7 +293,7 @@ impl std::ops::DerefMut for CZSList {
 }
 
 impl std::iter::IntoIterator for CZSList {
-    type Item = Rc<RefCell<CZS>>;
+    type Item = SharedCell<CZS>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

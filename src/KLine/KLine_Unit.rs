@@ -1,16 +1,24 @@
-use crate::Common::CEnum::DATA_FIELD;
-use crate::Common::CTime;
-use crate::Common::ChanException::{CChanException, ErrCode};
-use crate::KLine::KLine::CKLine;
-use crate::Math::Demark::{CDemarkEngine, CDemarkIndex};
-use crate::Math::TrendModel::CTrendModel;
-use crate::Math::BOLL::{BOLLMetric, BollModel};
-use crate::Math::KDJ::KDJ;
-use crate::Math::MACD::{CMACDItem, CMACD};
-use crate::Math::RSI::RSI;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+
+use crate::{
+    Common::{
+        types::SharedCell,
+        CEnum::{DataField, TrendType},
+        CTime::CTime,
+        ChanException::{CChanException, ErrCode},
+        TradeInfo::CTradeInfo,
+    },
+    Math::{
+        Demark::{CDemarkEngine, CDemarkIndex},
+        TrendModel::CTrendModel,
+        BOLL::{BOLLMetric, BollModel},
+        KDJ::KDJ,
+        MACD::{CMACDItem, CMACD},
+        RSI::RSI,
+    },
+};
+
+use super::KLine::CKLine;
 
 pub struct CKLineUnit {
     pub kl_type: Option<String>,
@@ -21,14 +29,14 @@ pub struct CKLineUnit {
     pub low: f64,
     pub trade_info: CTradeInfo,
     pub demark: CDemarkIndex,
-    pub sub_kl_list: Vec<Rc<RefCell<CKLineUnit>>>,
-    pub sup_kl: Option<Rc<RefCell<CKLineUnit>>>,
-    klc: Option<Rc<RefCell<CKLine>>>,
+    pub sub_kl_list: Vec<SharedCell<CKLineUnit>>,
+    pub sup_kl: Option<SharedCell<CKLineUnit>>,
+    pub klc: Option<SharedCell<CKLine>>,
     pub trend: HashMap<TrendType, HashMap<i32, f64>>,
     pub limit_flag: i32,
-    pub pre: Option<Rc<RefCell<CKLineUnit>>>,
-    pub next: Option<Rc<RefCell<CKLineUnit>>>,
-    idx: i32,
+    pub pre: Option<SharedCell<CKLineUnit>>,
+    pub next: Option<SharedCell<CKLineUnit>>,
+    pub idx: i32,
     pub macd: Option<CMACDItem>,
     pub boll: Option<BOLLMetric>,
     pub rsi: Option<f64>,
@@ -98,15 +106,15 @@ impl CKLineUnit {
         Ok(())
     }
 
-    pub fn add_children(&mut self, child: Rc<RefCell<CKLineUnit>>) {
+    pub fn add_children(&mut self, child: SharedCell<CKLineUnit>) {
         self.sub_kl_list.push(child);
     }
 
-    pub fn set_parent(&mut self, parent: Rc<RefCell<CKLineUnit>>) {
+    pub fn set_parent(&mut self, parent: SharedCell<CKLineUnit>) {
         self.sup_kl = Some(parent);
     }
 
-    pub fn get_children(&self) -> impl Iterator<Item = &Rc<RefCell<CKLineUnit>>> {
+    pub fn get_children(&self) -> impl Iterator<Item = &SharedCell<CKLineUnit>> {
         self.sub_kl_list.iter()
     }
 
@@ -141,7 +149,7 @@ impl CKLineUnit {
         }
     }
 
-    pub fn get_parent_klc(&self) -> Option<Rc<RefCell<CKLine>>> {
+    pub fn get_parent_klc(&self) -> Option<SharedCell<CKLine>> {
         self.sup_kl
             .as_ref()
             .and_then(|sup_kl| sup_kl.borrow().klc.clone())
@@ -160,18 +168,18 @@ impl CKLineUnit {
         false
     }
 
-    pub fn set_pre_klu(&mut self, pre_klu: Option<Rc<RefCell<CKLineUnit>>>) {
+    pub fn set_pre_klu(&mut self, pre_klu: Option<SharedCell<CKLineUnit>>) {
         if let Some(pre_klu) = pre_klu {
-            pre_klu.borrow_mut().next = Some(Rc::new(RefCell::new(self.clone())));
+            pre_klu.borrow_mut().next = Some(SharedCell::new(self.clone()));
             self.pre = Some(pre_klu);
         }
     }
 
-    pub fn set_klc(&mut self, klc: Rc<RefCell<CKLine>>) {
+    pub fn set_klc(&mut self, klc: SharedCell<CKLine>) {
         self.klc = Some(klc);
     }
 
-    pub fn get_klc(&self) -> Option<Rc<RefCell<CKLine>>> {
+    pub fn get_klc(&self) -> Option<SharedCell<CKLine>> {
         self.klc.clone()
     }
 

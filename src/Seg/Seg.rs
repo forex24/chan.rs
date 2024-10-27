@@ -1,29 +1,29 @@
-use crate::Bi::Bi::CBi;
-use crate::BuySellPoint::BSPoint::CBSPoint;
+use crate::BuySellPoint::BS_Point::CBSPoint;
+use crate::Common::types::SharedCell;
 use crate::Common::CEnum::{BiDir, MacdAlgo, TrendLineSide};
 use crate::Common::ChanException::{CChanException, ErrCode};
-use crate::KLine::KLineUnit::CKLineUnit;
+use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Math::TrendLine::CTrendLine;
 use crate::Seg::EigenFX::CEigenFX;
-use crate::Zs::ZS::CZS;
+use crate::ZS::ZS::CZS;
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
 pub struct CSeg<LINE_TYPE> {
     pub idx: i32,
-    pub start_bi: Rc<RefCell<LINE_TYPE>>,
-    pub end_bi: Rc<RefCell<LINE_TYPE>>,
+    pub start_bi: SharedCell<LINE_TYPE>,
+    pub end_bi: SharedCell<LINE_TYPE>,
     pub is_sure: bool,
     pub dir: BiDir,
-    pub zs_lst: Vec<Rc<RefCell<CZS<LINE_TYPE>>>>,
-    pub eigen_fx: Option<Rc<RefCell<CEigenFX>>>,
+    pub zs_lst: Vec<SharedCell<CZS<LINE_TYPE>>>,
+    pub eigen_fx: Option<SharedCell<CEigenFX>>,
     pub seg_idx: Option<i32>,
-    pub parent_seg: Option<Rc<RefCell<CSeg<LINE_TYPE>>>>,
-    pub pre: Option<Rc<RefCell<CSeg<LINE_TYPE>>>>,
-    pub next: Option<Rc<RefCell<CSeg<LINE_TYPE>>>>,
-    pub bsp: Option<Rc<RefCell<CBSPoint>>>,
-    pub bi_list: Vec<Rc<RefCell<LINE_TYPE>>>,
+    pub parent_seg: Option<SharedCell<CSeg<LINE_TYPE>>>,
+    pub pre: Option<SharedCell<CSeg<LINE_TYPE>>>,
+    pub next: Option<SharedCell<CSeg<LINE_TYPE>>>,
+    pub bsp: Option<SharedCell<CBSPoint>>,
+    pub bi_list: Vec<SharedCell<LINE_TYPE>>,
     pub reason: String,
     pub support_trend_line: Option<CTrendLine>,
     pub resistance_trend_line: Option<CTrendLine>,
@@ -34,8 +34,8 @@ pub struct CSeg<LINE_TYPE> {
 impl<LINE_TYPE> CSeg<LINE_TYPE> {
     pub fn new(
         idx: i32,
-        start_bi: Rc<RefCell<LINE_TYPE>>,
-        end_bi: Rc<RefCell<LINE_TYPE>>,
+        start_bi: SharedCell<LINE_TYPE>,
+        end_bi: SharedCell<LINE_TYPE>,
         is_sure: bool,
         seg_dir: Option<BiDir>,
         reason: &str,
@@ -104,7 +104,7 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         Ok(())
     }
 
-    pub fn add_zs(&mut self, zs: Rc<RefCell<CZS<LINE_TYPE>>>) {
+    pub fn add_zs(&mut self, zs: SharedCell<CZS<LINE_TYPE>>) {
         self.zs_lst.insert(0, zs);
     }
 
@@ -162,11 +162,11 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         (self.get_end_val() - self.get_begin_val()).abs()
     }
 
-    pub fn get_end_klu(&self) -> Rc<RefCell<CKLineUnit>> {
+    pub fn get_end_klu(&self) -> SharedCell<CKLineUnit> {
         self.end_bi.borrow().get_end_klu()
     }
 
-    pub fn get_begin_klu(&self) -> Rc<RefCell<CKLineUnit>> {
+    pub fn get_begin_klu(&self) -> SharedCell<CKLineUnit> {
         self.start_bi.borrow().get_begin_klu()
     }
 
@@ -216,7 +216,7 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         }
     }
 
-    pub fn update_bi_list(&mut self, bi_lst: &[Rc<RefCell<LINE_TYPE>>], idx1: usize, idx2: usize) {
+    pub fn update_bi_list(&mut self, bi_lst: &[SharedCell<LINE_TYPE>], idx1: usize, idx2: usize) {
         for bi_idx in idx1..=idx2 {
             bi_lst[bi_idx].borrow_mut().parent_seg = Some(Rc::new(RefCell::new(self.clone())));
             self.bi_list.push(bi_lst[bi_idx].clone());
@@ -228,14 +228,14 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         }
     }
 
-    pub fn get_first_multi_bi_zs(&self) -> Option<Rc<RefCell<CZS<LINE_TYPE>>>> {
+    pub fn get_first_multi_bi_zs(&self) -> Option<SharedCell<CZS<LINE_TYPE>>> {
         self.zs_lst
             .iter()
             .find(|zs| !zs.borrow().is_one_bi_zs())
             .cloned()
     }
 
-    pub fn get_final_multi_bi_zs(&self) -> Option<Rc<RefCell<CZS<LINE_TYPE>>>> {
+    pub fn get_final_multi_bi_zs(&self) -> Option<SharedCell<CZS<LINE_TYPE>>> {
         self.zs_lst
             .iter()
             .rev()

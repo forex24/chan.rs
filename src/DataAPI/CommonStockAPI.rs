@@ -1,6 +1,5 @@
+use crate::Common::types::SharedCell;
 use crate::KLine::KLine_Unit::CKLineUnit;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub trait CCommonStockApi {
     fn new(
@@ -12,7 +11,7 @@ pub trait CCommonStockApi {
     ) -> Self
     where
         Self: Sized;
-    fn get_kl_data(&self) -> Box<dyn Iterator<Item = Rc<RefCell<CKLineUnit>>>>;
+    fn get_kl_data(&self) -> Box<dyn Iterator<Item = SharedCell<CKLineUnit>>>;
     fn set_basic_info(&mut self);
     fn do_init();
     fn do_close();
@@ -49,7 +48,7 @@ impl CCommonStockApi for CommonStockApiImpl {
         api
     }
 
-    fn get_kl_data(&self) -> Box<dyn Iterator<Item = Rc<RefCell<CKLineUnit>>>> {
+    fn get_kl_data(&self) -> Box<dyn Iterator<Item = SharedCell<CKLineUnit>>> {
         // This is a placeholder implementation. You need to implement the actual logic here.
         Box::new(std::iter::empty())
     }
