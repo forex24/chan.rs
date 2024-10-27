@@ -79,7 +79,7 @@ impl CKLineUnit {
                 self.low = min_price;
             } else {
                 return Err(CChanException::new(
-                    &format!(
+                    format!(
                         "{} low price={} is not min of [low={}, open={}, high={}, close={}]",
                         self.time, self.low, self.low, self.open, self.high, self.close
                     ),
@@ -94,7 +94,7 @@ impl CKLineUnit {
                 self.high = max_price;
             } else {
                 return Err(CChanException::new(
-                    &format!(
+                    format!(
                         "{} high price={} is not max of [low={}, open={}, high={}, close={}]",
                         self.time, self.high, self.low, self.open, self.high, self.close
                     ),
@@ -170,7 +170,7 @@ impl CKLineUnit {
 
     pub fn set_pre_klu(&mut self, pre_klu: Option<SharedCell<CKLineUnit>>) {
         if let Some(pre_klu) = pre_klu {
-            pre_klu.borrow_mut().next = Some(SharedCell::new(self.clone()));
+            pre_klu.borrow_mut().next = Some(self.clone());
             self.pre = Some(pre_klu);
         }
     }
