@@ -121,8 +121,8 @@ pub enum FxCheckMethod {
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SegType {
-    BI,
-    SEG,
+    Bi,
+    Seg,
 }
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]

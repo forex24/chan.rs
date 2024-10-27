@@ -4,7 +4,7 @@ use crate::{
     Bi::BiConfig::CBiConfig, BuySellPoint::BSPointConfig::CBSPointConfig,
     Seg::SegConfig::CSegConfig, ZS::ZSConfig::CZSConfig,
 };
-
+#[derive(Debug, Clone)]
 pub struct CChanConfig {
     pub bi_conf: CBiConfig,
     pub seg_conf: CSegConfig,
@@ -32,7 +32,7 @@ pub struct CChanConfig {
 }
 
 impl CChanConfig {
-    pub fn new(conf: Option<HashMap<String, serde_json::Value>>) -> Result<Self, CChanException> {
+    pub fn new(conf: Option<HashMap<String, serde_json::Value>>) -> Self {
         let mut conf = ConfigWithCheck::new(conf.unwrap_or_default());
 
         let bi_conf = CBiConfig::new(

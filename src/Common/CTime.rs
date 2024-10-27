@@ -1,10 +1,10 @@
 // File: chan/src/Common/CTime.rs
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
+use chrono::{Datelike, Duration};
 use std::cmp::Ordering;
 use std::fmt;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct CTime {
     pub year: i32,
     pub month: u32,
@@ -38,6 +38,19 @@ impl CTime {
         };
         ctime.set_timestamp();
         ctime
+    }
+
+    pub fn from_naive_date_time(ndt: NaiveDateTime, auto: bool, ts: f64) -> Self {
+        CTime {
+            year: ndt.year(),
+            month: ndt.month(),
+            day: ndt.day(),
+            hour: ndt.hour(),
+            minute: ndt.minute(),
+            second: ndt.second(),
+            auto,
+            ts,
+        }
     }
 
     pub fn to_str(&self) -> String {

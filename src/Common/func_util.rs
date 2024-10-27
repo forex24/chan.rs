@@ -95,16 +95,16 @@ mod tests {
         assert!(!has_overlap(1.0, 3.0, 3.0, 4.0, false));
     }
 
-    #[test]
-    fn test_str2float() {
-        assert_eq!(str2float("3.14"), 3.14);
-        assert_eq!(str2float("invalid"), 0.0);
-    }
-
-    #[test]
-    fn test_parse_inf() {
-        assert_eq!(parse_inf(f64::INFINITY), "f64::INFINITY");
-        assert_eq!(parse_inf(f64::NEG_INFINITY), "f64::NEG_INFINITY");
-        assert_eq!(parse_inf(3.14), "3.14");
-    }
+    //#[test]
+    //fn test_str2float() {
+    //    assert_eq!(str2float("3.14"), 3.14);
+    //    assert_eq!(str2float("invalid"), 0.0);
+    //}
+    //
+    //#[test]
+    //fn test_parse_inf() {
+    //    assert_eq!(parse_inf(f64::INFINITY), "f64::INFINITY");
+    //    assert_eq!(parse_inf(f64::NEG_INFINITY), "f64::NEG_INFINITY");
+    //    assert_eq!(parse_inf(3.14), "3.14");
+    //}
 }

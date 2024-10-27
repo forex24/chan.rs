@@ -44,20 +44,20 @@ impl CKLine {
         kline
     }
 
-    pub fn get_sub_klc(&self) -> impl Iterator<Item = Handle<CKLine>> + '_ {
-        let mut last_klc = None;
-        self.lst.iter().flat_map(move |klu| {
-            klu.borrow().get_children().filter_map(move |sub_klu| {
-                let sub_klc = sub_klu.borrow().get_klc();
-                if sub_klc != last_klc {
-                    last_klc = sub_klc.clone();
-                    sub_klc
-                } else {
-                    None
-                }
-            })
-        })
-    }
+    //pub fn get_sub_klc(&self) -> impl Iterator<Item = Handle<CKLine>> + '_ {
+    //    let mut last_klc = None;
+    //    self.lst.iter().flat_map(move |klu| {
+    //        klu.borrow().get_children().filter_map(move |sub_klu| {
+    //            let sub_klc = sub_klu.borrow().get_klc();
+    //            if sub_klc != last_klc {
+    //                last_klc = sub_klc.clone();
+    //                sub_klc
+    //            } else {
+    //                None
+    //            }
+    //        })
+    //    })
+    //}
 
     pub fn get_klu_max_high(&self) -> f64 {
         self.lst
@@ -283,42 +283,21 @@ impl CKLine {
         self.next()
     }
 
-    pub fn test_combine(
-        &self,
-        item: &Handle<CKLineUnit>,
-        exclude_included: bool,
-        allow_top_equal: Option<i32>,
-    ) -> Result<KlineDir, CChanException> {
-        if self.high >= item.borrow().high && self.low <= item.borrow().low {
-            return Ok(KlineDir::Combine);
+    pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KlineDir {
+        if (self.high >= item.borrow().high && self.low <= item.borrow().low)
+            || (self.high <= item.borrow().high && self.low >= item.borrow().low)
+        {
+            return KlineDir::Combine;
         }
-        if self.high <= item.borrow().high && self.low >= item.borrow().low {
-            match allow_top_equal {
-                Some(1) if self.high == item.borrow().high && self.low > item.borrow().low => {
-                    return Ok(KlineDir::Down)
-                }
-                Some(-1) if self.low == item.borrow().low && self.high < item.borrow().high => {
-                    return Ok(KlineDir::Up)
-                }
-                _ => {
-                    return Ok(if exclude_included {
-                        KlineDir::Included
-                    } else {
-                        KlineDir::Combine
-                    })
-                }
-            }
-        }
+
         if self.high > item.borrow().high && self.low > item.borrow().low {
-            return Ok(KlineDir::Down);
+            return KlineDir::Down;
         }
         if self.high < item.borrow().high && self.low < item.borrow().low {
-            return Ok(KlineDir::Up);
+            return KlineDir::Up;
         }
-        Err(CChanException::new(
-            "combine type unknown".to_string(),
-            ErrCode::CombinerErr,
-        ))
+
+        unreachable!();
     }
 
     pub fn add(&mut self, unit_kl: Handle<CKLineUnit>) {
@@ -330,44 +309,47 @@ impl CKLine {
     }
 
     pub fn try_add(
-        &mut self,
-        self_ptr: &Handle<CKLine>,
-        unit_kl: Handle<CKLineUnit>,
-        exclude_included: bool,
-        allow_top_equal: Option<i32>,
+        klc: &Handle<CKLine>,
+        unit_kl: &Handle<CKLineUnit>,
     ) -> Result<KlineDir, CChanException> {
         //let combine_item = CCombineItem::new(unit_kl.clone())?;
-        let dir = self.test_combine(&unit_kl, exclude_included, allow_top_equal)?;
+        let dir = klc.borrow().test_combine(&unit_kl); //, exclude_included, allow_top_equal)?;
         if dir == KlineDir::Combine {
-            self.lst.push(unit_kl.clone());
-            if let Ok(kline_unit) = unit_kl.try_borrow_mut()
+            klc.borrow_mut().lst.push(Rc::clone(unit_kl));
+            //if let Ok(kline_unit) = unit_kl.try_borrow_mut()
             //.unwrap()
             //.downcast_mut::<CKLineUnit>()
-            {
-                kline_unit.set_klc(Rc::clone(self_ptr));
-            }
-            match self.dir {
+            //{
+            unit_kl.borrow_mut().set_klc(Rc::clone(klc));
+            //}
+
+            let dir_ = klc.borrow().dir;
+            match dir_ {
                 KlineDir::Up => {
                     if unit_kl.borrow().high != unit_kl.borrow().low
-                        || unit_kl.borrow().high != self.high
+                        || unit_kl.borrow().high != klc.borrow().high
                     {
-                        self.high = self.high.max(unit_kl.borrow().high);
-                        self.low = self.low.max(unit_kl.borrow().low);
+                        let high_ = klc.borrow().high.max(unit_kl.borrow().high);
+                        let low_ = klc.borrow().low.max(unit_kl.borrow().low);
+                        klc.borrow_mut().high = high_;
+                        klc.borrow_mut().low = low_;
                     }
                 }
                 KlineDir::Down => {
                     if unit_kl.borrow().high != unit_kl.borrow().low
-                        || unit_kl.borrow().low != self.low
+                        || unit_kl.borrow().low != klc.borrow().low
                     {
-                        self.high = self.high.min(unit_kl.borrow().high);
-                        self.low = self.low.min(unit_kl.borrow().low);
+                        let high_ = klc.borrow().high.min(unit_kl.borrow().high);
+                        let low_ = klc.borrow().low.min(unit_kl.borrow().low);
+                        klc.borrow_mut().high = high_;
+                        klc.borrow_mut().low = low_;
                     }
                 }
                 _ => {
                     return Err(CChanException::new(
                         format!(
                             "KlineDir = {:?} err!!! must be {:?}/{:?}",
-                            self.dir,
+                            klc.borrow().dir,
                             KlineDir::Up,
                             KlineDir::Down
                         ),
@@ -375,7 +357,7 @@ impl CKLine {
                     ))
                 }
             }
-            self.time_end = unit_kl.time_end;
+            klc.borrow_mut().time_end = unit_kl.borrow().time;
             //self.clean_cache();
         }
         Ok(dir)
@@ -427,31 +409,22 @@ impl CKLine {
         //))
     }
 
-    pub fn update_fx(
-        &mut self,
-        self_ptr: Handle<CKLine>,
-        pre: Handle<CKLine>,
-        next: Handle<CKLine>,
-        //exclude_included: bool,       // False
-        //allow_top_equal: Option<i32>, //None
-    ) {
-        self.set_next(next.clone());
-        self.set_pre(pre.clone());
-        next.borrow_mut().set_pre(self_ptr.clone());
+    pub fn update_fx(cur: &Handle<CKLine>, pre: &Handle<CKLine>, next: &Handle<CKLine>) {
+        cur.borrow_mut().set_next(next.clone());
+        cur.borrow_mut().set_pre(pre.clone());
+        next.borrow_mut().set_pre(cur.clone());
+
         let pre = pre.borrow();
         let next = next.borrow();
-        if pre.high < self.high
-            && next.high < self.high
-            && pre.low < self.low
-            && next.low < self.low
+        let mut cur = cur.borrow_mut();
+        if pre.high < cur.high && next.high < cur.high && pre.low < cur.low && next.low < cur.low {
+            cur.fx = FxType::Top;
+        } else if pre.high > cur.high
+            && next.high > cur.high
+            && pre.low > cur.low
+            && next.low > cur.low
         {
-            self.fx = FxType::Top;
-        } else if pre.high > self.high
-            && next.high > self.high
-            && pre.low > self.low
-            && next.low > self.low
-        {
-            self.fx = FxType::Bottom;
+            cur.fx = FxType::Bottom;
         }
         //self.clean_cache();
     }

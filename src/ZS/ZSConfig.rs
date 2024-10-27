@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct CZSConfig {
     pub need_combine: bool,
     pub zs_combine_mode: String,

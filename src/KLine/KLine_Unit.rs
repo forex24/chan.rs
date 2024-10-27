@@ -1,23 +1,19 @@
-use std::collections::HashMap;
-
-use segvec::SegVec;
-
 use crate::{
     Common::{
         types::Handle,
         CEnum::{DataField, TrendType},
         CTime::CTime,
         ChanException::{CChanException, ErrCode},
-        TradeInfo::CTradeInfo,
+        //TradeInfo::CTradeInfo,
     },
-    Math::{
-        Demark::{CDemarkEngine, CDemarkIndex},
-        TrendModel::CTrendModel,
-        BOLL::{BOLLMetric, BollModel},
-        KDJ::KDJ,
-        MACD::{CMACDItem, CMACD},
-        RSI::RSI,
-    },
+    //Math::{
+    //    Demark::{CDemarkEngine, CDemarkIndex},
+    //    TrendModel::CTrendModel,
+    //    BOLL::{BOLLMetric, BollModel},
+    //    KDJ::KDJ,
+    //    MACD::{CMACDItem, CMACD},
+    //    RSI::RSI,
+    //},
 };
 
 use super::KLine::CKLine;
@@ -30,19 +26,19 @@ pub struct CKLineUnit {
     pub high: f64,
     pub low: f64,
     //pub trade_info: CTradeInfo,
-    pub demark: CDemarkIndex,
-    pub sub_kl_list: Vec<Handle<CKLineUnit>>,
-    pub sup_kl: Option<Handle<CKLineUnit>>,
+    //pub demark: CDemarkIndex,
+    //pub sub_kl_list: Vec<Handle<CKLineUnit>>,
+    //pub sup_kl: Option<Handle<CKLineUnit>>,
     pub klc: Option<Handle<CKLine>>,
-    pub trend: HashMap<TrendType, HashMap<i32, f64>>,
-    pub limit_flag: i32,
+    //pub trend: HashMap<TrendType, HashMap<i32, f64>>,
+    //pub limit_flag: i32,
     pub pre: Option<Handle<CKLineUnit>>,
     pub next: Option<Handle<CKLineUnit>>,
     pub idx: i32,
-    pub macd: Option<CMACDItem>,
-    pub boll: Option<BOLLMetric>,
-    pub rsi: Option<f64>,
-    pub kdj: Option<KDJ>,
+    //pub macd: Option<CMACDItem>,
+    //pub boll: Option<BOLLMetric>,
+    //pub rsi: Option<f64>,
+    //pub kdj: Option<KDJ>,
 }
 
 impl CKLineUnit {
@@ -62,22 +58,22 @@ impl CKLineUnit {
             high,  //: kl_dict[&DataField::FieldHigh],
             low,   //: kl_dict[&DataField::FieldLow],
             //trade_info: CTradeInfo::new(kl_dict),
-            demark: CDemarkIndex::new(),
-            sub_kl_list: Vec::new(),
-            sup_kl: None,
+            //demark: CDemarkIndex::new(),
+            //sub_kl_list: Vec::new(),
+            //sup_kl: None,
             klc: None,
-            trend: HashMap::new(),
-            limit_flag: 0,
+            //trend: HashMap::new(),
+            //limit_flag: 0,
             pre: None,
             next: None,
             idx: -1,
-            macd: None,
-            boll: None,
-            rsi: None,
-            kdj: None,
+            //macd: None,
+            //boll: None,
+            //rsi: None,
+            //kdj: None,
         };
 
-        unit.check(autofix)?;
+        //unit.check(autofix)?;
         Ok(unit)
     }
 
@@ -115,7 +111,7 @@ impl CKLineUnit {
         Ok(())
     }
 
-    pub fn add_children(&mut self, child: Handle<CKLineUnit>) {
+    /*pub fn add_children(&mut self, child: Handle<CKLineUnit>) {
         self.sub_kl_list.push(child);
     }
 
@@ -125,7 +121,7 @@ impl CKLineUnit {
 
     pub fn get_children(&self) -> impl Iterator<Item = &Handle<CKLineUnit>> {
         self.sub_kl_list.iter()
-    }
+    }*/
 
     pub fn low(&self) -> f64 {
         self.low
@@ -135,7 +131,7 @@ impl CKLineUnit {
         self.high
     }
 
-    pub fn set_metric(&mut self, metric_model_lst: &[Box<dyn MetricModel>]) {
+    /*pub fn set_metric(&mut self, metric_model_lst: &[Box<dyn MetricModel>]) {
         for metric_model in metric_model_lst {
             if let Some(macd) = metric_model.as_any().downcast_ref::<CMACD>() {
                 self.macd = Some(macd.add(self.close));
@@ -175,13 +171,11 @@ impl CKLineUnit {
             }
         }
         false
-    }
+    }*/
 
-    pub fn set_pre_klu(&mut self, pre_klu: Option<Handle<CKLineUnit>>) {
-        if let Some(pre_klu) = pre_klu {
-            pre_klu.borrow_mut().next = Some(self.clone());
-            self.pre = Some(pre_klu);
-        }
+    pub fn set_pre_klu(self_: Handle<CKLineUnit>, pre_klu: Handle<CKLineUnit>) {
+        pre_klu.borrow_mut().next = Some(self_.clone());
+        self_.borrow_mut().pre = Some(pre_klu);
     }
 
     pub fn set_klc(&mut self, klc: Handle<CKLine>) {
@@ -201,22 +195,22 @@ impl CKLineUnit {
     }
 }
 
-impl std::fmt::Display for CKLineUnit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:{}/{} open={} close={} high={} low={} {}",
-            self.idx,
-            self.time,
-            self.kl_type.as_deref().unwrap_or(""),
-            self.open,
-            self.close,
-            self.high,
-            self.low,
-            //self.trade_info
-        )
-    }
-}
+//`impl std::fmt::Display for CKLineUnit {
+//`    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//`        write!(
+//`            f,
+//`            "{}:{}/{} open={} close={} high={} low={} {}",
+//`            self.idx,
+//`            self.time,
+//`            self.kl_type.as_deref().unwrap_or(""),
+//`            self.open,
+//`            self.close,
+//`            self.high,
+//`            self.low,
+//`            //self.trade_info
+//`        )
+//`    }
+//`}
 
 pub trait MetricModel {
     fn as_any(&self) -> &dyn std::any::Any;

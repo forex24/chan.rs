@@ -2,7 +2,7 @@ use crate::Common::{
     CEnum::LeftSegMethod,
     ChanException::{CChanException, ErrCode},
 };
-
+#[derive(Debug, Clone)]
 pub struct CSegConfig {
     pub seg_algo: String,
     pub left_method: LeftSegMethod,
@@ -15,7 +15,7 @@ impl CSegConfig {
             "peak" => LeftSegMethod::Peak,
             _ => {
                 return Err(CChanException::new(
-                    &format!("unknown left_seg_method={}", left_method),
+                    format!("unknown left_seg_method={}", left_method),
                     ErrCode::ParaError,
                 ))
             }

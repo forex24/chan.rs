@@ -1,7 +1,7 @@
 use crate::Common::func_util::parse_inf;
 use crate::Common::CEnum::{BspType, MacdAlgo};
 use std::collections::HashMap;
-
+#[derive(Debug, Clone)]
 pub struct CBSPointConfig {
     b_conf: CPointConfig,
     s_conf: CPointConfig,
@@ -24,6 +24,7 @@ impl CBSPointConfig {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CPointConfig {
     pub divergence_rate: f64,
     pub min_zs_cnt: i32,

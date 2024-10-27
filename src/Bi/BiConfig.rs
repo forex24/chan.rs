@@ -1,6 +1,6 @@
 use crate::Common::CEnum::FxCheckMethod;
 use crate::Common::ChanException::{CChanException, ErrCode};
-
+#[derive(Debug, Clone)]
 pub struct CBiConfig {
     pub bi_algo: String,
     pub is_strict: bool,
