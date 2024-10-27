@@ -1,5 +1,5 @@
-use crate::bi::bi::CBi;
-use crate::common::c_enum::{BiDir, TrendLineSide};
+use crate::Bi::Bi::CBi;
+use crate::Common::CEnum::{BiDir, TrendLineSide};
 use std::f64;
 
 #[derive(Clone, Copy, Debug)]

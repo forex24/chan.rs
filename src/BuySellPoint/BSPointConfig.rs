@@ -1,5 +1,5 @@
-use crate::common::c_enum::{BspType, MacdAlgo};
-use crate::common::func_util::parse_inf;
+use crate::Common::func_util::parse_inf;
+use crate::Common::CEnum::{BspType, MacdAlgo};
 use std::collections::HashMap;
 
 pub struct CBSPointConfig {

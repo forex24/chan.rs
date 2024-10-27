@@ -1,5 +1,5 @@
-use crate::common::c_enum::TrendType;
-use crate::common::chan_exception::{CChanException, ErrCode};
+use crate::Common::CEnum::TrendType;
+use crate::Common::ChanException::{CChanException, ErrCode};
 
 pub struct CTrendModel {
     t: usize,

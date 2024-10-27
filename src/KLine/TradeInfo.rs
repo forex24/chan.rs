@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 // Assuming TRADE_INFO_LST is defined elsewhere in your Rust project
-use crate::common::c_enum::TRADE_INFO_LST;
+use crate::Common::CEnum::TRADE_INFO_LST;
 
 pub struct CTradeInfo {
     metric: HashMap<String, Option<f64>>,

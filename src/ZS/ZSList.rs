@@ -1,10 +1,10 @@
-use crate::bi::bi::CBi;
-use crate::bi::bi_list::CBiList;
-use crate::common::func_util::revert_bi_dir;
-use crate::seg::seg::CSeg;
-use crate::seg::seg_list_comm::CSegListComm;
-use crate::zs::zs::CZS;
-use crate::zs::zs_config::CZSConfig;
+use crate::Bi::Bi::CBi;
+use crate::Bi::BiList::CBiList;
+use crate::Common::func_util::revert_bi_dir;
+use crate::Seg::Seg::CSeg;
+use crate::Seg::SegListComm::CSegListComm;
+use crate::ZS::ZSConfig::CZSConfig;
+use crate::ZS::ZS::CZS;
 use std::cell::RefCell;
 use std::rc::Rc;
 

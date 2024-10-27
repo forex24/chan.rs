@@ -1,7 +1,7 @@
-use crate::bi::bi::CBi;
-use crate::chan_model::features::CFeatures;
-use crate::common::c_enum::BspType;
-use crate::seg::seg::CSeg;
+use crate::Bi::Bi::CBi;
+use crate::ChanModel::features::CFeatures;
+use crate::Common::CEnum::BspType;
+use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

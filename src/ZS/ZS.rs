@@ -1,9 +1,9 @@
-use crate::bi::bi::CBi;
-use crate::buy_sell_point::bs_point_config::CPointConfig;
-use crate::common::chan_exception::{CChanException, ErrCode};
-use crate::common::func_util::has_overlap;
-use crate::kline::kline_unit::CKLineUnit;
-use crate::seg::seg::CSeg;
+use crate::Bi::Bi::CBi;
+use crate::BuySellPoint::BSPointConfig::CPointConfig;
+use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::Common::FuncUtil::has_overlap;
+use crate::KLine::KLineUnit::CKLineUnit;
+use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

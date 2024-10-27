@@ -1,9 +1,9 @@
-use super::eigen_fx::CEigenFX;
-use super::seg_config::CSegConfig;
-use super::seg_list_comm::CSegListComm;
-use crate::bi::bi_list::CBiList;
-use crate::common::c_enum::{BiDir, SegType};
-use crate::common::chan_exception::CChanException;
+use crate::Bi::BiList::CBiList;
+use crate::Common::CEnum::{BiDir, SegType};
+use crate::Common::ChanException::CChanException;
+use crate::Seg::EigenFX::CEigenFX;
+use crate::Seg::SegConfig::CSegConfig;
+use crate::Seg::SegListComm::CSegListComm;
 use std::cell::RefCell;
 use std::rc::Rc;
 

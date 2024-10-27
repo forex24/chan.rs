@@ -1,14 +1,14 @@
-use crate::bi::bi::CBi;
-use crate::common::chan_exception::{CChanException, ErrCode};
-use crate::kline::kline_unit::CKLineUnit;
-use crate::seg::seg::CSeg;
+use crate::Bi::Bi::CBi;
+use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub enum CombineItemType {
+pub enum CombineItemType<LINE_TYPE> {
     Bi(Rc<RefCell<CBi>>),
     KLineUnit(Rc<RefCell<CKLineUnit>>),
-    Seg(Rc<RefCell<CSeg>>),
+    Seg(Rc<RefCell<CSeg<LINE_TYPE>>>),
 }
 
 pub struct CCombineItem {

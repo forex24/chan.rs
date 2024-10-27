@@ -1,8 +1,8 @@
 // File: chan/src/common/func_util.rs
 
-use crate::common::CEnum::{BI_DIR, KL_TYPE};
+use super::CEnum::{BI_DIR, KL_TYPE};
 
-pub fn kltype_lt_day(kl_type: &KL_TYPE) -> bool {
+/*pub fn kltype_lt_day(kl_type: &KL_TYPE) -> bool {
     *kl_type as i32 < KL_TYPE::K_DAY as i32
 }
 
@@ -19,7 +19,7 @@ pub fn check_kltype_order(type_list: &[KL_TYPE]) -> Result<(), String> {
         last_lv = *kl_type as i32;
     }
     Ok(())
-}
+}*/
 
 pub fn revert_bi_dir(dir: &BI_DIR) -> BI_DIR {
     match dir {
@@ -56,7 +56,7 @@ pub fn parse_inf(v: f64) -> String {
 mod tests {
     use super::*;
 
-    #[test]
+    /*#[test]
     fn test_kltype_lt_day() {
         assert!(kltype_lt_day(&KL_TYPE::K_1M));
         assert!(!kltype_lt_day(&KL_TYPE::K_DAY));
@@ -78,7 +78,7 @@ mod tests {
         let invalid_order = vec![KL_TYPE::K_DAY, KL_TYPE::K_WEEK, KL_TYPE::K_1M];
         assert!(check_kltype_order(&invalid_order).is_err());
     }
-
+    */
     #[test]
     fn test_revert_bi_dir() {
         assert_eq!(revert_bi_dir(&BI_DIR::UP), BI_DIR::DOWN);

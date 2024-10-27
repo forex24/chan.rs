@@ -1,7 +1,7 @@
-use crate::bi::bi::CBi;
-use crate::bi::bi_config::CBiConfig;
-use crate::common::c_enum::{FxType, KlineDir};
-use crate::kline::kline::CKLine;
+use crate::Bi::Bi::CBi;
+use crate::Bi::BiConfig::CBiConfig;
+use crate::Common::CEnum::{FxType, KlineDir};
+use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
 use std::rc::Rc;
 

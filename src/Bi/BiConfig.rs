@@ -1,5 +1,5 @@
-use crate::common::c_enum::FxCheckMethod;
-use crate::common::chan_exception::{CChanException, ErrCode};
+use crate::Common::CEnum::FxCheckMethod;
+use crate::Common::ChanException::{CChanException, ErrCode};
 
 pub struct CBiConfig {
     pub bi_algo: String,

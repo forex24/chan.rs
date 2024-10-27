@@ -1,8 +1,8 @@
-use std::rc::Rc;
+use crate::Bi::Bi::CBi;
+use crate::Combiner::KLineCombiner::CKLineCombiner;
+use crate::Common::CEnum::{BiDir, FxType};
 use std::cell::RefCell;
-use crate::bi::bi::CBi;
-use crate::combiner::kline_combiner::CKLineCombiner;
-use crate::common::c_enum::{BiDir, FxType};
+use std::rc::Rc;
 
 pub struct CEigen {
     inner: CKLineCombiner<CBi>,
@@ -17,10 +17,18 @@ impl CEigen {
         }
     }
 
-    pub fn update_fx(&mut self, _pre: &CEigen, _next: &CEigen, exclude_included: bool, allow_top_equal: Option<i32>) {
-        self.inner.update_fx(&_pre.inner, &_next.inner, exclude_included, allow_top_equal);
-        if (self.inner.fx() == FxType::Top && _pre.inner.high() < self.inner.low()) ||
-           (self.inner.fx() == FxType::Bottom && _pre.inner.low() > self.inner.high()) {
+    pub fn update_fx(
+        &mut self,
+        _pre: &CEigen,
+        _next: &CEigen,
+        exclude_included: bool,
+        allow_top_equal: Option<i32>,
+    ) {
+        self.inner
+            .update_fx(&_pre.inner, &_next.inner, exclude_included, allow_top_equal);
+        if (self.inner.fx() == FxType::Top && _pre.inner.high() < self.inner.low())
+            || (self.inner.fx() == FxType::Bottom && _pre.inner.low() > self.inner.high())
+        {
             self.gap = true;
         }
     }
@@ -28,7 +36,8 @@ impl CEigen {
     pub fn get_peak_bi_idx(&self) -> i32 {
         assert!(self.inner.fx() != FxType::Unknown);
         let bi_dir = self.inner.lst()[0].borrow().dir;
-        if bi_dir == BiDir::Up {  // 下降线段
+        if bi_dir == BiDir::Up {
+            // 下降线段
             self.inner.get_peak_klu(false).borrow().idx - 1
         } else {
             self.inner.get_peak_klu(true).borrow().idx - 1
@@ -38,7 +47,9 @@ impl CEigen {
 
 impl std::fmt::Display for CEigen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}~{} gap={} fx={:?}", 
+        write!(
+            f,
+            "{}~{} gap={} fx={:?}",
             self.inner.lst()[0].borrow().idx,
             self.inner.lst().last().unwrap().borrow().idx,
             self.gap,

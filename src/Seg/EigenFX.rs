@@ -1,9 +1,9 @@
-use super::eigen::CEigen;
-use crate::bi::bi::CBi;
-use crate::bi::bi_list::CBiList;
-use crate::common::c_enum::{BiDir, FxType, KlineDir, SegType};
-use crate::common::chan_exception::{CChanException, ErrCode};
-use crate::common::func_util::revert_bi_dir;
+use crate::Bi::Bi::CBi;
+use crate::Bi::BiList::CBiList;
+use crate::Common::CEnum::{BiDir, FxType, KlineDir, SegType};
+use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::Common::FuncUtil::revert_bi_dir;
+use crate::Seg::Eigen::CEigen;
 use std::cell::RefCell;
 use std::rc::Rc;
 

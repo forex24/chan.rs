@@ -1,9 +1,9 @@
-use super::seg::CSeg;
-use super::seg_config::CSegConfig;
-use crate::bi::bi::CBi;
-use crate::bi::bi_list::CBiList;
-use crate::common::c_enum::{BiDir, LeftSegMethod, SegType};
-use crate::common::chan_exception::{CChanException, ErrCode};
+use crate::Bi::Bi::CBi;
+use crate::Bi::BiList::CBiList;
+use crate::Common::CEnum::{BiDir, LeftSegMethod, SegType};
+use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::Seg::Seg::CSeg;
+use crate::Seg::SegConfig::CSegConfig;
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
