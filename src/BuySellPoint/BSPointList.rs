@@ -11,9 +11,9 @@ use std::rc::Rc;
 use super::BS_Point::CBSPoint;
 
 pub struct CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
-    lst: Vec<SharedCell<CBSPoint<LINE_TYPE>>>,
-    bsp_dict: HashMap<i32, SharedCell<CBSPoint<LINE_TYPE>>>,
-    bsp1_lst: Vec<SharedCell<CBSPoint<LINE_TYPE>>>,
+    lst: Vec<SharedCell<CBSPoint>>,
+    bsp_dict: HashMap<i32, SharedCell<CBSPoint>>,
+    bsp1_lst: Vec<SharedCell<CBSPoint>>,
     config: CBSPointConfig,
     last_sure_pos: i32,
 }
@@ -33,7 +33,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         self.lst.len()
     }
 
-    pub fn get(&self, index: usize) -> Option<SharedCell<CBSPoint<LINE_TYPE>>> {
+    pub fn get(&self, index: usize) -> Option<SharedCell<CBSPoint>> {
         self.lst.get(index).cloned()
     }
 
@@ -78,7 +78,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         &mut self,
         bs_type: BspType,
         bi: SharedCell<LINE_TYPE>,
-        relate_bsp1: Option<SharedCell<CBSPoint<LINE_TYPE>>>,
+        relate_bsp1: Option<SharedCell<CBSPoint>>,
         is_target_bsp: bool,
         feature_dict: Option<HashMap<String, f64>>,
     ) {
@@ -259,7 +259,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         seg_list: &CSegListComm<LINE_TYPE>,
         bi_list: &LINE_LIST_TYPE,
     ) {
-        let bsp1_bi_idx_dict: HashMap<i32, SharedCell<CBSPoint<LINE_TYPE>>> = self
+        let bsp1_bi_idx_dict: HashMap<i32, SharedCell<CBSPoint>> = self
             .bsp1_lst
             .iter()
             .map(|bsp| (bsp.borrow().bi.borrow().idx, Rc::clone(bsp)))
@@ -291,7 +291,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         next_seg: &SharedCell<CSeg<LINE_TYPE>>,
         bsp_conf: &CPointConfig,
         bi_list: &LINE_LIST_TYPE,
-        real_bsp1: Option<SharedCell<CBSPoint<LINE_TYPE>>>,
+        real_bsp1: Option<SharedCell<CBSPoint>>,
     ) {
         let first_zs = next_seg.borrow().get_first_multi_bi_zs();
         if first_zs.is_none() {
@@ -364,7 +364,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         seg_list: &CSegListComm<LINE_TYPE>,
         bi_list: &LINE_LIST_TYPE,
     ) {
-        let bsp1_bi_idx_dict: HashMap<i32, SharedCell<CBSPoint<LINE_TYPE>>> = self
+        let bsp1_bi_idx_dict: HashMap<i32, SharedCell<CBSPoint>> = self
             .bsp1_lst
             .iter()
             .map(|bsp| (bsp.borrow().bi.borrow().idx, Rc::clone(bsp)))
@@ -440,7 +440,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         next_seg: &SharedCell<CSeg<LINE_TYPE>>,
         bsp_conf: &CPointConfig,
         bi_list: &LINE_LIST_TYPE,
-        real_bsp1: Option<SharedCell<CBSPoint<LINE_TYPE>>>,
+        real_bsp1: Option<SharedCell<CBSPoint>>,
         bsp1_bi_idx: i32,
         next_seg_idx: i32,
     ) {
@@ -517,7 +517,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         bsp1_bi: Option<&SharedCell<LINE_TYPE>>,
         bsp_conf: &CPointConfig,
         bi_list: &LINE_LIST_TYPE,
-        real_bsp1: Option<SharedCell<CBSPoint<LINE_TYPE>>>,
+        real_bsp1: Option<SharedCell<CBSPoint>>,
         next_seg_idx: i32,
     ) {
         let cmp_zs = seg.borrow().get_final_multi_bi_zs();
@@ -571,7 +571,7 @@ impl<LINE_TYPE, LINE_LIST_TYPE> CBSPointList<LINE_TYPE, LINE_LIST_TYPE> {
         }
     }
 
-    pub fn get_lastest_bsp_list(&self) -> Vec<SharedCell<CBSPoint<LINE_TYPE>>> {
+    pub fn get_lastest_bsp_list(&self) -> Vec<SharedCell<CBSPoint>> {
         if self.lst.is_empty() {
             return Vec::new();
         }

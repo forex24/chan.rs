@@ -9,7 +9,7 @@ use super::CEnum::{BiDir, KlType};
 pub fn kltype_lte_day(kl_type: &KlType) -> bool {
     *kl_type as i32 <= KlType::K_DAY as i32
 }
-
+*/
 pub fn check_kltype_order(type_list: &[KlType]) -> Result<(), String> {
     let mut last_lv = type_list[0] as i32;
     for kl_type in &type_list[1..] {
@@ -19,7 +19,7 @@ pub fn check_kltype_order(type_list: &[KlType]) -> Result<(), String> {
         last_lv = *kl_type as i32;
     }
     Ok(())
-}*/
+}
 
 pub fn revert_BiDir(dir: &BiDir) -> BiDir {
     match dir {

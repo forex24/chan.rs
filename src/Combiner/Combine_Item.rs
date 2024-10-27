@@ -18,7 +18,7 @@ pub struct CCombineItem {
 }
 
 impl CCombineItem {
-    pub fn new(item: CombineItemType) -> Result<Self, CChanException> {
+    pub fn new<T>(item: CombineItemType<T>) -> Result<Self, CChanException> {
         match item {
             CombineItemType::Bi(bi) => {
                 let bi = bi.borrow();

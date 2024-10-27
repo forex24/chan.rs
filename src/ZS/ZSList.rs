@@ -3,7 +3,7 @@ use crate::Bi::BiList::CBiList;
 use crate::Common::func_util::revert_BiDir;
 use crate::Common::types::SharedCell;
 use crate::Seg::Seg::CSeg;
-use crate::Seg::SegListComm::CSegListComm;
+use crate::Seg::SegListChan::CSegListChan;
 use crate::ZS::ZSConfig::CZSConfig;
 use crate::ZS::ZS::CZS;
 use std::any::Any;
@@ -27,7 +27,7 @@ impl CZSList {
         }
     }
 
-    pub fn update_last_pos(&mut self, seg_list: &CSegListComm) {
+    pub fn update_last_pos<T>(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = -1;
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
@@ -37,7 +37,7 @@ impl CZSList {
         }
     }
 
-    pub fn seg_need_cal(&self, seg: &CSeg) -> bool {
+    pub fn seg_need_cal<T>(&self, seg: &CSeg<T>) -> bool {
         seg.start_bi.borrow().idx >= self.last_sure_pos
     }
 
@@ -151,7 +151,7 @@ impl CZSList {
         }
     }
 
-    pub fn cal_bi_zs(&mut self, bi_lst: &dyn Any, seg_lst: &CSegListComm) {
+    pub fn cal_bi_zs<T>(&mut self, bi_lst: &dyn Any, seg_lst: &CSegListChan<T>) {
         while !self.zs_lst.is_empty()
             && self.zs_lst.last().unwrap().borrow().begin_bi.borrow().idx >= self.last_sure_pos
         {

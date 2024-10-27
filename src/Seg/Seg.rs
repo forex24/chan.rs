@@ -16,7 +16,7 @@ pub struct CSeg<LINE_TYPE> {
     pub end_bi: SharedCell<LINE_TYPE>,
     pub is_sure: bool,
     pub dir: BiDir,
-    pub zs_lst: Vec<SharedCell<CZS<LINE_TYPE>>>,
+    pub zs_lst: Vec<SharedCell<CZS>>,
     pub eigen_fx: Option<SharedCell<CEigenFX>>,
     pub seg_idx: Option<i32>,
     pub parent_seg: Option<SharedCell<CSeg<LINE_TYPE>>>,
@@ -104,7 +104,7 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         Ok(())
     }
 
-    pub fn add_zs(&mut self, zs: SharedCell<CZS<LINE_TYPE>>) {
+    pub fn add_zs(&mut self, zs: SharedCell<CZS>) {
         self.zs_lst.insert(0, zs);
     }
 
@@ -228,14 +228,14 @@ impl<LINE_TYPE> CSeg<LINE_TYPE> {
         }
     }
 
-    pub fn get_first_multi_bi_zs(&self) -> Option<SharedCell<CZS<LINE_TYPE>>> {
+    pub fn get_first_multi_bi_zs(&self) -> Option<SharedCell<CZS>> {
         self.zs_lst
             .iter()
             .find(|zs| !zs.borrow().is_one_bi_zs())
             .cloned()
     }
 
-    pub fn get_final_multi_bi_zs(&self) -> Option<SharedCell<CZS<LINE_TYPE>>> {
+    pub fn get_final_multi_bi_zs(&self) -> Option<SharedCell<CZS>> {
         self.zs_lst
             .iter()
             .rev()

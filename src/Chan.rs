@@ -1,23 +1,22 @@
-use crate::buy_sell_point::bs_point::CBSPoint;
-use crate::chan_config::CChanConfig;
-use crate::common::c_enum::{AuType, DataSrc, KlType};
-use crate::common::c_time::CTime;
-use crate::common::chan_exception::{CChanException, ErrCode};
-use crate::common::func_util::{check_kltype_order, kltype_lte_day};
-use crate::data_api::common_stock_api::CCommonStockApi;
-use crate::kline::kline_list::CKLineList;
-use crate::kline::kline_unit::CKLineUnit;
-use chrono::{NaiveDate, NaiveDateTime};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+
+use crate::ChanConfig::CChanConfig;
+use crate::Common::func_util::check_kltype_order;
+use crate::Common::CEnum::{KlType, AUTYPE, DATA_SRC};
+use crate::Common::CTime::CTime;
+use crate::Common::ChanException::CChanException;
+use crate::DataAPI::CommonStockAPI::CCommonStockApi;
+use crate::KLine::KLine_List::CKLineList;
+use crate::KLine::KLine_Unit::CKLineUnit;
 
 pub struct CChan {
     code: String,
     begin_time: Option<String>,
     end_time: Option<String>,
-    autype: AuType,
-    data_src: DataSrc,
+    autype: AUTYPE,
+    data_src: DATA_SRC,
     lv_list: Vec<KlType>,
     conf: CChanConfig,
     kl_misalign_cnt: usize,
@@ -33,10 +32,10 @@ impl CChan {
         code: String,
         begin_time: Option<String>,
         end_time: Option<String>,
-        data_src: DataSrc,
+        data_src: DATA_SRC,
         lv_list: Option<Vec<KlType>>,
         config: Option<CChanConfig>,
-        autype: AuType,
+        autype: AUTYPE,
     ) -> Result<Self, CChanException> {
         let lv_list = lv_list.unwrap_or_else(|| vec![KlType::KDay, KlType::K60M]);
         check_kltype_order(&lv_list)?;

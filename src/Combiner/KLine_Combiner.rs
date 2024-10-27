@@ -8,16 +8,15 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct CKLineCombiner<T> {
-    time_begin: i64,
-    time_end: i64,
-    high: f64,
-    low: f64,
-    lst: Vec<SharedCell<T>>,
-    dir: KlineDir,
-    fx: FxType,
-    pre: Option<SharedCell<CKLineCombiner<T>>>,
-    next: Option<SharedCell<CKLineCombiner<T>>>,
-    memoize_cache: HashMap<String, SharedCell<T>>,
+    pub time_begin: i64,
+    pub time_end: i64,
+    pub high: f64,
+    pub low: f64,
+    pub lst: Vec<SharedCell<T>>,
+    pub dir: KlineDir,
+    pub fx: FxType,
+    pub pre: Option<SharedCell<CKLineCombiner<T>>>,
+    pub next: Option<SharedCell<CKLineCombiner<T>>>,
 }
 
 impl<T> CKLineCombiner<T> {
@@ -33,7 +32,6 @@ impl<T> CKLineCombiner<T> {
             fx: FxType::Unknown,
             pre: None,
             next: None,
-            memoize_cache: HashMap::new(),
         })
     }
 

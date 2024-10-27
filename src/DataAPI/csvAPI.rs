@@ -104,7 +104,7 @@ impl CCommonStockApi for CsvApi {
             Ok(file) => file,
             Err(_) => {
                 return Box::new(std::iter::once(Err(CChanException::new(
-                    &format!("file not exist: {}", file_path),
+                    format!("file not exist: {}", file_path),
                     ErrCode::SrcDataNotFound,
                 ))))
             }
@@ -134,7 +134,7 @@ impl CCommonStockApi for CsvApi {
             let data: Vec<String> = line.split(',').map(String::from).collect();
             if data.len() != columns.len() {
                 return Some(Err(CChanException::new(
-                    &format!("file format error: {}", file_path),
+                    format!("file format error: {}", file_path),
                     ErrCode::SrcDataFormatError,
                 )));
             }
