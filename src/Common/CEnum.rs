@@ -159,3 +159,18 @@ pub const TRADE_INFO_LST: [&str; 3] = [
     DataField::FIELD_TURNOVER,
     DataField::FIELD_TURNRATE,
 ];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EqualMode {
+    TopEqual,
+    BottomEqual,
+}
+
+impl std::fmt::Display for EqualMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            EqualMode::TopEqual => f.write_str("允许顶相等"),
+            EqualMode::BottomEqual => f.write_str("允许底相等"),
+        }
+    }
+}

@@ -4,3 +4,5 @@ pub mod Seg;
 pub mod SegConfig;
 pub mod SegListChan;
 pub mod SegListComm;
+pub mod linetype;
+//pub mod types;

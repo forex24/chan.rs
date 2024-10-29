@@ -392,3 +392,17 @@ fn end_is_peak(last_end: &Handle<CKLine>, cur_end: &Handle<CKLine>) -> bool {
     }
     true
 }
+
+impl std::ops::Deref for CBiList {
+    type Target = Vec<Handle<CBi>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.bi_list
+    }
+}
+
+impl std::ops::DerefMut for CBiList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.bi_list
+    }
+}

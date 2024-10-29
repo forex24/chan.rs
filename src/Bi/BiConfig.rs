@@ -1,5 +1,6 @@
 use crate::Common::CEnum::FxCheckMethod;
 use crate::Common::ChanException::{CChanException, ErrCode};
+
 #[derive(Debug, Clone)]
 pub struct CBiConfig {
     pub bi_algo: String,
@@ -40,5 +41,18 @@ impl CBiConfig {
             bi_end_is_peak: bi_end_is_peak.unwrap_or(true),
             bi_allow_sub_peak: bi_allow_sub_peak.unwrap_or(true),
         })
+    }
+}
+
+impl Default for CBiConfig {
+    fn default() -> Self {
+        Self {
+            bi_algo: "normal".to_string(),
+            is_strict: true,
+            bi_fx_check: FxCheckMethod::Strict,
+            gap_as_kl: true,
+            bi_end_is_peak: true,
+            bi_allow_sub_peak: true,
+        }
     }
 }

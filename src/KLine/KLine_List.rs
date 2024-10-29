@@ -1,7 +1,7 @@
-use smallvec::SmallVec;
 //
-//use crate::Bi::Bi::CBi;
-//use crate::Bi::BiList::CBiList;
+use crate::Bi::Bi::CBi;
+use crate::Bi::BiConfig::CBiConfig;
+use crate::Bi::BiList::CBiList;
 //use crate::BuySellPoint::BSPointList::CBSPointList;
 //use crate::ChanConfig::CChanConfig;
 use crate::Common::types::Handle;
@@ -24,7 +24,7 @@ pub struct CKLineList {
     pub kl_type: String,
     //pub config: CChanConfig,
     pub lst: Vec<Handle<CKLine>>,
-    //pub bi_list: CBiList,
+    pub bi_list: CBiList,
     //pub seg_list: Handle<CSegListComm<CBi>>,
     //pub segseg_list: Handle<CSegListComm<CSeg<CBi>>>,
     //pub zs_list: CZSList,
@@ -47,7 +47,7 @@ impl CKLineList {
             kl_type,
             //config: conf.clone(),
             lst: Vec::new(),
-            //bi_list: CBiList::new(Some(conf.bi_conf.clone())),
+            bi_list: CBiList::new(CBiConfig::default()),
             //seg_list,
             //segseg_list,
             //zs_list: CZSList::new(Some(conf.zs_conf.clone())),
@@ -107,14 +107,14 @@ impl CKLineList {
                     let len = self.lst.len();
                     CKLine::update_fx(&self.lst[len - 2], &self.lst[len - 3], &self.lst[len - 1]);
                 }
-                //if self.bi_list.update_bi(
-                //    &self.lst[self.lst.len() - 2],
-                //    Rc::clone(&self.lst[self.lst.len() - 2]) & self.lst[self.lst.len() - 1],
-                //    self.step_calculation,
-                //)? && self.step_calculation
-                //{
-                //    self.cal_seg_and_zs()?;
-                //}
+                self.bi_list.update_bi(
+                    Rc::clone(&self.lst[self.lst.len() - 2]),
+                    Rc::clone(&self.lst[self.lst.len() - 1]),
+                    true, //self.step_calculation,
+                ); //&& self.step_calculation
+                   //{
+                   //    self.cal_seg_and_zs()?;
+                   //}
             } /*else if self.step_calculation
                   && self
                       .bi_list

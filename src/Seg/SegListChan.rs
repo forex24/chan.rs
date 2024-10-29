@@ -6,13 +6,14 @@ use crate::Seg::SegConfig::CSegConfig;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::linetype::Line;
 use super::SegListComm::CSegListComm;
 
-pub struct CSegListChan<SUB_LINE_TYPE> {
-    inner: CSegListComm<SUB_LINE_TYPE>,
+pub struct CSegListChan<T> {
+    inner: CSegListComm<T>,
 }
 
-impl<SUB_LINE_TYPE> CSegListChan<SUB_LINE_TYPE> {
+impl<T: Line<T>> CSegListChan<T> {
     pub fn new(seg_config: Option<CSegConfig>, lv: SegType) -> Self {
         CSegListChan {
             inner: CSegListComm::new(seg_config, lv),
@@ -64,7 +65,7 @@ impl<SUB_LINE_TYPE> CSegListChan<SUB_LINE_TYPE> {
                 .last()
                 .unwrap()
                 .borrow()
-                .is_sure
+                .is_sure()
             {
                 // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                 self.inner.lst.pop();
@@ -85,8 +86,8 @@ impl<SUB_LINE_TYPE> CSegListChan<SUB_LINE_TYPE> {
     }
 
     pub fn cal_seg_sure(&mut self, bi_lst: &CBiList, begin_idx: i32) -> Result<(), CChanException> {
-        let mut up_eigen = CEigenFX::new(BiDir::Up, false, self.inner.lv);
-        let mut down_eigen = CEigenFX::new(BiDir::Down, false, self.inner.lv);
+        let mut up_eigen = CEigenFX::<T>::new(BiDir::Up, false, self.inner.lv);
+        let mut down_eigen = CEigenFX::<T>::new(BiDir::Down, false, self.inner.lv);
         let mut last_seg_dir = if self.inner.lst.is_empty() {
             None
         } else {
@@ -135,7 +136,7 @@ impl<SUB_LINE_TYPE> CSegListChan<SUB_LINE_TYPE> {
 
     pub fn treat_fx_eigen(
         &mut self,
-        fx_eigen: &mut CEigenFX,
+        fx_eigen: &mut CEigenFX<T>,
         bi_lst: &CBiList,
     ) -> Result<(), CChanException> {
         let _test = fx_eigen.can_be_end(bi_lst);
@@ -168,15 +169,15 @@ impl<SUB_LINE_TYPE> CSegListChan<SUB_LINE_TYPE> {
     }
 }
 
-impl<SUB_LINE_TYPE> std::ops::Deref for CSegListChan<SUB_LINE_TYPE> {
-    type Target = CSegListComm<SUB_LINE_TYPE>;
+impl<T> std::ops::Deref for CSegListChan<T> {
+    type Target = CSegListComm<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<SUB_LINE_TYPE> std::ops::DerefMut for CSegListChan<SUB_LINE_TYPE> {
+impl<T> std::ops::DerefMut for CSegListChan<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }

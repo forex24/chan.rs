@@ -376,11 +376,10 @@ impl CKLine {
         //    return Ok(cached.clone());
         //}
         for kl in self.lst.iter().rev() {
-            let item = kl.clone();
-            if item.borrow().high == self.high {
+            if kl.borrow().high == self.high {
                 //self.memoize_cache
                 //    .insert("high_peak".to_string(), kl.clone());
-                return Some(item);
+                return Some(Rc::clone(kl));
             }
         }
         None
@@ -395,11 +394,10 @@ impl CKLine {
         //    return Ok(cached.clone());
         //}
         for kl in self.lst.iter().rev() {
-            let item = kl.clone();
-            if item.borrow().low == self.low {
+            if kl.borrow().low == self.low {
                 //self.memoize_cache
                 //    .insert("low_peak".to_string(), kl.clone());
-                return Some(item);
+                return Some(Rc::clone(kl));
             }
         }
         None
