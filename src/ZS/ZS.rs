@@ -1,34 +1,35 @@
-use crate::BuySellPoint::BSPointConfig::CPointConfig;
+//use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::{LineType, Handle};
+use crate::Common::types::Handle;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct CZS {
+pub struct CZS<T> {
     pub is_sure: bool,
-    pub sub_zs_lst: Vec<Handle<CZS>>,
+    //pub sub_zs_lst: Vec<Handle<CZS>>,
     pub begin: Option<Handle<CKLineUnit>>,
-    pub begin_bi: Option<LineType>,
+    pub begin_bi: Option<Handle<T>>,
     pub low: f64,
     pub high: f64,
     pub mid: f64,
     pub end: Option<Handle<CKLineUnit>>,
-    pub end_bi: Option<LineType>,
+    pub end_bi: Option<Handle<T>>,
     pub peak_high: f64,
     pub peak_low: f64,
-    pub bi_in: Option<LineType>,
-    pub bi_out: Option<LineType>,
-    pub bi_lst: Vec<LineType>,
+    pub bi_in: Option<Handle<T>>,
+    pub bi_out: Option<Handle<T>>,
+    pub bi_lst: Vec<Handle<T>>,
 }
 
-impl CZS {
-    pub fn new(lst: Option<Vec<LineType>>, is_sure: bool) -> Self {
+impl<T: Line> CZS<T> {
+    pub fn new(lst: Option<Vec<T>>, is_sure: bool) -> Self {
         let mut zs = CZS {
             is_sure,
-            sub_zs_lst: Vec::new(),
+            //sub_zs_lst: Vec::new(),
             begin: None,
             begin_bi: None,
             low: 0.0,
@@ -59,15 +60,15 @@ impl CZS {
 
     pub fn clean_cache(&mut self) {}
 
-    pub fn update_zs_range(&mut self, lst: &[LineType]) {
+    pub fn update_zs_range(&mut self, lst: &[Handle<T>]) {
         self.low = lst
             .iter()
-            .map(|bi| bi._low())
+            .map(|bi| bi.borrow().low())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         self.high = lst
             .iter()
-            .map(|bi| bi._high())
+            .map(|bi| bi.borrow().high())
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         self.mid = (self.low + self.high) / 2.0;
@@ -76,29 +77,31 @@ impl CZS {
 
     pub fn is_one_bi_zs(&self) -> bool {
         self.end_bi.as_ref().map_or(false, |end_bi| {
-            self.begin_bi
-                .as_ref()
-                .map_or(false, |begin_bi| begin_bi.idx() == end_bi.idx())
+            self.begin_bi.as_ref().map_or(false, |begin_bi| {
+                begin_bi.borrow().idx() == end_bi.borrow().idx()
+            })
         })
     }
 
-    pub fn update_zs_end(&mut self, item: &LineType) {
-        self.end = Some(item.get_end_klu());
+    pub fn update_zs_end(&mut self, item: &Handle<T>) {
+        self.end = Some(item.borrow().get_end_klu());
         self.end_bi = Some(item.clone());
-        if item._low() < self.peak_low {
-            self.peak_low = item._low();
+        if item.borrow().low() < self.peak_low {
+            self.peak_low = item.borrow().low();
         }
-        if item._high() > self.peak_high {
-            self.peak_high = item._high();
+        if item.borrow().high() > self.peak_high {
+            self.peak_high = item.borrow().high();
         }
         self.clean_cache();
     }
 
-    pub fn combine(&mut self, zs2: &CZS, combine_mode: &str) -> Result<bool, CChanException> {
+    pub fn combine(&mut self, zs2: &CZS<T>, combine_mode: &str) -> Result<bool, CChanException> {
         if zs2.is_one_bi_zs() {
             return Ok(false);
         }
-        if self.begin_bi.as_ref().unwrap().seg_idx() != zs2.begin_bi.as_ref().unwrap().seg_idx() {
+        if self.begin_bi.as_ref().unwrap().borrow().seg_idx()
+            != zs2.begin_bi.as_ref().unwrap().borrow().seg_idx()
+        {
             return Ok(false);
         }
         match combine_mode {
@@ -124,13 +127,13 @@ impl CZS {
                 }
             }
             _ => Err(CChanException::new(
-                &format!("{} is unsupport zs combine mode", combine_mode),
+                format!("{} is unsupport zs combine mode", combine_mode).to_string(),
                 ErrCode::ParaError,
             )),
         }
     }
 
-    pub fn do_combine(&mut self, zs2: &CZS) {
+    pub fn do_combine(&mut self, zs2: &CZS<T>) {
         if self.sub_zs_lst.is_empty() {
             self.sub_zs_lst
                 .push(Rc::new(RefCell::new(self.make_copy())));
@@ -147,7 +150,7 @@ impl CZS {
         self.clean_cache();
     }
 
-    pub fn try_add_to_end(&mut self, item: &LineType) -> bool {
+    pub fn try_add_to_end(&mut self, item: &Handle<T>) -> bool {
         if !self.in_range(item) {
             return false;
         }
@@ -158,19 +161,25 @@ impl CZS {
         true
     }
 
-    pub fn in_range(&self, item: &LineType) -> bool {
-        has_overlap(self.low, self.high, item._low(), item._high(), false)
+    pub fn in_range(&self, item: &Handle<T>) -> bool {
+        has_overlap(
+            self.low,
+            self.high,
+            item.borrow().low(),
+            item.borrow().high(),
+            false,
+        )
     }
 
-    pub fn is_inside<T>(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.borrow().idx <= self.begin_bi.as_ref().unwrap().idx()
-            && self.begin_bi.as_ref().unwrap().idx() <= seg.end_bi.borrow().idx
+    pub fn is_inside<U: Line>(&self, seg: &CSeg<U>) -> bool {
+        seg.start_bi.borrow().idx() <= self.begin_bi.as_ref().unwrap().borrow().idx()
+            && self.begin_bi.as_ref().unwrap().borrow().idx() <= seg.end_bi.borrow().idx()
     }
 
     pub fn is_divergence(
         &self,
         config: &CPointConfig,
-        out_bi: Option<&LineType>,
+        out_bi: Option<Handle<T>>,
     ) -> (bool, Option<f64>) {
         if !self.end_bi_break(out_bi) {
             return (false, None);
@@ -193,7 +202,7 @@ impl CZS {
         }
     }
 
-    pub fn init_from_zs(&mut self, zs: &CZS) {
+    pub fn init_from_zs(&mut self, zs: &CZS<T>) {
         self.begin = zs.begin.clone();
         self.end = zs.end.clone();
         self.low = zs.low;
@@ -206,35 +215,37 @@ impl CZS {
         self.bi_out = zs.bi_out.clone();
     }
 
-    pub fn make_copy(&self) -> CZS {
+    pub fn make_copy(&self) -> CZS<T> {
         let mut copy = CZS::new(None, self.is_sure);
         copy.init_from_zs(self);
         copy
     }
 
-    pub fn end_bi_break(&self, end_bi: Option<&LineType>) -> bool {
+    pub fn end_bi_break(&self, end_bi: Option<Handle<T>>) -> bool {
         let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
-        (end_bi.is_down() && end_bi._low() < self.low)
-            || (end_bi.is_up() && end_bi._high() > self.high)
+        let end_bi = end_bi.borrow();
+        (end_bi.is_down() && end_bi.low() < self.low)
+            || (end_bi.is_up() && end_bi.high() > self.high)
     }
 
-    pub fn out_bi_is_peak(&self, end_bi_idx: i32) -> (bool, Option<f64>) {
+    pub fn out_bi_is_peak(&self, end_bi_idx: usize) -> (bool, Option<f64>) {
         assert!(!self.bi_lst.is_empty());
         if self.bi_out.is_none() {
             return (false, None);
         }
-        let bi_out = self.bi_out.as_ref().unwrap();
+        let bi_out = self.bi_out.as_ref().unwrap().borrow();
         let mut peak_rate = f64::INFINITY;
         for bi in &self.bi_lst {
-            if bi.idx() > end_bi_idx {
+            let bi_ref = bi.borrow();
+            if bi_ref.idx() > end_bi_idx {
                 break;
             }
-            if (bi_out.is_down() && bi._low() < bi_out._low())
-                || (bi_out.is_up() && bi._high() > bi_out._high())
+            if (bi_out.is_down() && bi_ref.low() < bi_out.low())
+                || (bi_out.is_up() && bi_ref.high() > bi_out.high())
             {
                 return (false, None);
             }
-            let r = (bi.get_end_val() - bi_out.get_end_val()).abs() / bi_out.get_end_val();
+            let r = (bi_ref.get_end_val() - bi_out.get_end_val()).abs() / bi_out.get_end_val();
             if r < peak_rate {
                 peak_rate = r;
             }
@@ -242,31 +253,31 @@ impl CZS {
         (true, Some(peak_rate))
     }
 
-    pub fn get_bi_in(&self) -> &LineType {
+    pub fn get_bi_in(&self) -> &Handle<T> {
         self.bi_in.as_ref().expect("bi_in is None")
     }
 
-    pub fn get_bi_out(&self) -> &LineType {
+    pub fn get_bi_out(&self) -> &Handle<T> {
         self.bi_out.as_ref().expect("bi_out is None")
     }
 
-    pub fn set_bi_in(&mut self, bi: LineType) {
+    pub fn set_bi_in(&mut self, bi: Handle<T>) {
         self.bi_in = Some(bi);
         self.clean_cache();
     }
 
-    pub fn set_bi_out(&mut self, bi: LineType) {
+    pub fn set_bi_out(&mut self, bi: Handle<T>) {
         self.bi_out = Some(bi);
         self.clean_cache();
     }
 
-    pub fn set_bi_lst(&mut self, bi_lst: Vec<LineType>) {
+    pub fn set_bi_lst(&mut self, bi_lst: &[Handle<T>]) {
         self.bi_lst = bi_lst;
         self.clean_cache();
     }
 }
 
-impl std::fmt::Display for CZS {
+impl<T: Line> std::fmt::Display for CZS<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let main_str = format!(
             "{}->{}",

@@ -2,6 +2,7 @@ use crate::Bi::Bi::CBi;
 use crate::Bi::BiList::CBiList;
 use crate::Common::func_util::revert_bi_dir;
 use crate::Common::types::Handle;
+use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
 use crate::ZS::ZSConfig::CZSConfig;
@@ -10,14 +11,14 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct CZSList {
-    zs_lst: Vec<Handle<CZS>>,
+pub struct CZSList<T> {
+    zs_lst: Vec<Handle<CZS<T>>>,
     config: CZSConfig,
-    free_item_lst: Vec<Handle<dyn Any>>,
+    free_item_lst: Vec<Handle<T>>,
     last_sure_pos: i32,
 }
 
-impl CZSList {
+impl<U: Line> CZSList<U> {
     pub fn new(zs_config: Option<CZSConfig>) -> Self {
         CZSList {
             zs_lst: Vec::new(),
@@ -27,7 +28,7 @@ impl CZSList {
         }
     }
 
-    pub fn update_last_pos<T>(&mut self, seg_list: &CSegListChan<T>) {
+    pub fn update_last_pos<T: Line>(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = -1;
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
@@ -37,7 +38,7 @@ impl CZSList {
         }
     }
 
-    pub fn seg_need_cal<T>(&self, seg: &CSeg<T>) -> bool {
+    pub fn seg_need_cal<T: Line>(&self, seg: &CSeg<T>) -> bool {
         seg.start_bi.borrow().idx >= self.last_sure_pos
     }
 
@@ -69,7 +70,7 @@ impl CZSList {
         self.add_to_free_lst(bi, is_sure, "normal");
     }
 
-    pub fn try_add_to_end(&mut self, bi: &Handle<CBi>) -> bool {
+    pub fn try_add_to_end(&mut self, bi: &Handle<U>) -> bool {
         if self.zs_lst.is_empty() {
             false
         } else {
@@ -83,13 +84,13 @@ impl CZSList {
 
     pub fn add_zs_from_bi_range(
         &mut self,
-        seg_bi_lst: &[Handle<CBi>],
+        seg_bi_lst: &[Handle<U>],
         seg_dir: i32,
         seg_is_sure: bool,
     ) {
         let mut deal_bi_cnt = 0;
         for bi in seg_bi_lst {
-            if bi.borrow().dir == seg_dir {
+            if bi.borrow().dir() == seg_dir {
                 continue;
             }
             if deal_bi_cnt < 1 {
@@ -106,7 +107,7 @@ impl CZSList {
         lst: &[Handle<dyn Any>],
         is_sure: bool,
         zs_algo: &str,
-    ) -> Option<CZS> {
+    ) -> Option<CZS<U>> {
         let lst = match zs_algo {
             "normal" => {
                 if !self.config.one_bi_zs {
@@ -151,7 +152,7 @@ impl CZSList {
         }
     }
 
-    pub fn cal_bi_zs<T>(&mut self, bi_lst: &dyn Any, seg_lst: &CSegListChan<T>) {
+    pub fn cal_bi_zs<T: Line>(&mut self, bi_lst: &dyn Any, seg_lst: &CSegListChan<T>) {
         while !self.zs_lst.is_empty()
             && self.zs_lst.last().unwrap().borrow().begin_bi.borrow().idx >= self.last_sure_pos
         {
@@ -282,22 +283,22 @@ impl CZSList {
     }
 }
 
-impl std::ops::Deref for CZSList {
-    type Target = Vec<Handle<CZS>>;
+impl<T: Line> std::ops::Deref for CZSList<T> {
+    type Target = Vec<Handle<CZS<T>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.zs_lst
     }
 }
 
-impl std::ops::DerefMut for CZSList {
+impl<T: Line> std::ops::DerefMut for CZSList<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.zs_lst
     }
 }
 
-impl std::iter::IntoIterator for CZSList {
-    type Item = Handle<CZS>;
+impl<T: Line> std::iter::IntoIterator for CZSList<T> {
+    type Item = Handle<CZS<T>>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
