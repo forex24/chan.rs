@@ -11,6 +11,7 @@ use crate::Common::{
 
 use super::{linetype::Line, Eigen::CEigen};
 
+//#[derive(Debug, Clone)]
 pub struct CEigenFX<T> {
     pub lv: SegType,
     pub dir: BiDir,
@@ -192,16 +193,15 @@ impl<T: Line> CEigenFX<T> {
         } else {
             assert!(self.ele[1].is_some());
 
+            let ele1_begin_idx = self.ele[1].as_ref().unwrap().borrow().lst[0].borrow().idx();
+
             self.ele[0] = self.ele[1].take();
             self.ele[1] = self.ele[2].take();
             self.ele[2] = None;
 
             self.lst = bi_tmp_list
                 .into_iter()
-                .filter(|bi| {
-                    bi.borrow().idx()
-                        >= self.ele[1].as_ref().unwrap().borrow().lst[0].borrow().idx()
-                })
+                .filter(|bi| bi.borrow().idx() >= ele1_begin_idx)
                 .collect();
         }
         false

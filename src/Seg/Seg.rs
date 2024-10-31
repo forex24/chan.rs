@@ -6,6 +6,7 @@ use crate::KLine::KLine_Unit::CKLineUnit;
 use super::linetype::Line;
 use super::EigenFX::CEigenFX;
 
+//#[derive(Debug, Clone)]
 pub struct CSeg<T> {
     pub idx: usize,
     pub start_bi: Handle<T>,
@@ -240,7 +241,7 @@ impl<T: Line> CSeg<T> {
 
     pub fn update_bi_list(&mut self, bi_lst: &[Handle<T>], idx1: usize, idx2: usize) {
         for bi_idx in idx1..=idx2 {
-            let bi = bi_lst[bi_idx].clone();
+            let bi = bi_lst.get(bi_idx).unwrap().clone();
             // TODO:
             //bi.borrow_mut()
             //    .set_parent_seg(Some(Rc::new(RefCell::new(self.clone()))));

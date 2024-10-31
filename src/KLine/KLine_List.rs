@@ -9,9 +9,11 @@ use crate::Common::CEnum::{BiDir, KLineDir, KlType, SegType};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Seg::SegConfig::CSegConfig;
+use crate::Seg::SegListChan::CSegListChan;
 //use crate::Seg::Seg::CSeg;
 //use crate::Seg::SegListChan::CSegListChan;
-//use crate::Seg::SegListComm::CSegListComm;
+//use crate::Seg::SegListComm::CSegListChan;
 //use crate::ZS::ZSList::CZSList;
 
 use std::cell::RefCell;
@@ -25,14 +27,14 @@ pub struct CKLineList {
     //pub config: CChanConfig,
     pub lst: Vec<Handle<CKLine>>,
     pub bi_list: CBiList,
-    //pub seg_list: Handle<CSegListComm<CBi>>,
-    //pub segseg_list: Handle<CSegListComm<CSeg<CBi>>>,
+    pub seg_list: CSegListChan<CBi>,
+    //pub segseg_list: Handle<CSegListChan<CSeg<CBi>>>,
     //pub zs_list: CZSList,
     //pub segzs_list: CZSList,
     //pub bs_point_lst: CBSPointList<CBi, CBiList>,
-    //pub seg_bs_point_lst: CBSPointList<CSeg<CBi>, CSegListComm<CBi>>,
+    //pub seg_bs_point_lst: CBSPointList<CSeg<CBi>, CSegListChan<CBi>>,
     //pub metric_model_lst: Vec<Box<dyn MetricModel>>,
-    //pub step_calculation: bool,
+    pub step_calculation: bool,
     //pub bs_point_history: Vec<HashMap<String, String>>,
     //pub seg_bs_point_history: Vec<HashMap<String, String>>,
 }
@@ -40,7 +42,7 @@ pub struct CKLineList {
 impl CKLineList {
     pub fn new(kl_type: String) -> Self {
         //}, conf: CChanConfig) -> Self {
-        //let seg_list = CSegListChan::new(Some(conf.seg_conf.clone()), SegType::Bi);
+        let seg_list = CSegListChan::new(CSegConfig::default(), SegType::Bi);
         //let segseg_list = CSegListChan::new(Some(conf.seg_conf.clone()), SegType::Seg);
 
         CKLineList {
@@ -48,50 +50,50 @@ impl CKLineList {
             //config: conf.clone(),
             lst: Vec::new(),
             bi_list: CBiList::new(CBiConfig::default()),
-            //seg_list,
+            seg_list,
             //segseg_list,
             //zs_list: CZSList::new(Some(conf.zs_conf.clone())),
             //segzs_list: CZSList::new(Some(conf.zs_conf.clone())),
             //bs_point_lst: CBSPointList::new(Some(conf.bs_point_conf.clone())),
             //seg_bs_point_lst: CBSPointList::new(Some(conf.seg_bs_point_conf.clone())),
             //metric_model_lst: conf.get_metric_model(),
-            //step_calculation: conf.trigger_step,
-            //bs_point_history: Vec::new(),
-            //seg_bs_point_history: Vec::new(),
+            step_calculation: true, //conf.trigger_step,
+                                    //bs_point_history: Vec::new(),
+                                    //seg_bs_point_history: Vec::new(),
         }
     }
 
-    /*pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
+    pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
         if !self.step_calculation {
             self.bi_list
-                .try_add_virtual_bi(self.lst.last().unwrap().clone(), false)?;
+                .try_add_virtual_bi(self.lst.last().unwrap().clone(), false);
         }
-        cal_seg(&self.bi_list, &mut self.seg_list.borrow_mut())?;
-        self.zs_list
-            .cal_bi_zs(&self.bi_list, &self.seg_list.borrow())?;
-        update_zs_in_seg(
-            &self.bi_list,
-            &mut self.seg_list.borrow_mut(),
-            &mut self.zs_list,
-        )?;
-
-        cal_seg(&self.seg_list.borrow(), &mut self.segseg_list.borrow_mut())?;
-        self.segzs_list
-            .cal_bi_zs(&self.seg_list.borrow(), &self.segseg_list.borrow())?;
-        update_zs_in_seg(
-            &self.seg_list.borrow(),
-            &mut self.segseg_list.borrow_mut(),
-            &mut self.segzs_list,
-        )?;
-
-        self.seg_bs_point_lst
-            .cal(&self.seg_list.borrow(), &self.segseg_list.borrow())?;
-        self.bs_point_lst
-            .cal(&self.bi_list, &self.seg_list.borrow())?;
-        self.record_current_bs_points();
+        cal_seg(&self.bi_list, &mut self.seg_list);
+        //self.zs_list
+        //    .cal_bi_zs(&self.bi_list, &self.seg_list.borrow())?;
+        //update_zs_in_seg(
+        //    &self.bi_list,
+        //    &mut self.seg_list.borrow_mut(),
+        //    &mut self.zs_list,
+        //)?;
+        //
+        //cal_seg(&self.seg_list.borrow(), &mut self.segseg_list.borrow_mut())?;
+        //self.segzs_list
+        //    .cal_bi_zs(&self.seg_list.borrow(), &self.segseg_list.borrow())?;
+        //update_zs_in_seg(
+        //    &self.seg_list.borrow(),
+        //    &mut self.segseg_list.borrow_mut(),
+        //    &mut self.segzs_list,
+        //)?;
+        //
+        //self.seg_bs_point_lst
+        //    .cal(&self.seg_list.borrow(), &self.segseg_list.borrow())?;
+        //self.bs_point_lst
+        //    .cal(&self.bi_list, &self.seg_list.borrow())?;
+        //self.record_current_bs_points();
 
         Ok(())
-    }*/
+    }
 
     pub fn add_single_klu(&mut self, klu: CKLineUnit) -> Result<(), CChanException> {
         //klu.set_metric(&self.metric_model_lst);
@@ -107,21 +109,21 @@ impl CKLineList {
                     let len = self.lst.len();
                     CKLine::update_fx(&self.lst[len - 2], &self.lst[len - 3], &self.lst[len - 1]);
                 }
-                self.bi_list.update_bi(
+                if self.bi_list.update_bi(
                     Rc::clone(&self.lst[self.lst.len() - 2]),
                     Rc::clone(&self.lst[self.lst.len() - 1]),
                     true, //self.step_calculation,
-                ); //&& self.step_calculation
-                   //{
-                   //    self.cal_seg_and_zs()?;
-                   //}
-            } /*else if self.step_calculation
-                  && self
-                      .bi_list
-                      .try_add_virtual_bi(self.lst.last().unwrap().clone(), true)?
-              {
-                  self.cal_seg_and_zs()?;
-              }*/
+                ) && self.step_calculation
+                {
+                    self.cal_seg_and_zs()?;
+                }
+            } else if self.step_calculation
+                && self
+                    .bi_list
+                    .try_add_virtual_bi(self.lst.last().unwrap().clone(), true)
+            {
+                self.cal_seg_and_zs()?;
+            }
         }
         Ok(())
     }
@@ -132,54 +134,54 @@ impl CKLineList {
     //        .flat_map(|klc| klc.borrow().lst.iter())
     //}
 }
-/*
-pub fn cal_seg(bi_list: &CBiList, seg_list: &mut CSegListComm<CBi>) -> Result<(), CChanException> {
-    seg_list.update(bi_list)?;
 
-    let mut sure_seg_cnt = 0;
-    if seg_list.is_empty() {
-        for bi in bi_list.iter() {
-            bi.borrow_mut().set_seg_idx(0);
-        }
-        return Ok(());
-    }
-    let mut begin_seg = seg_list.last().unwrap().clone();
-    for seg in seg_list.iter().rev() {
-        if seg.borrow().is_sure {
-            sure_seg_cnt += 1;
-        } else {
-            sure_seg_cnt = 0;
-        }
-        begin_seg = seg.clone();
-        if sure_seg_cnt > 2 {
-            break;
-        }
-    }
+pub fn cal_seg(bi_list: &CBiList, seg_list: &mut CSegListChan<CBi>) -> Result<(), CChanException> {
+    seg_list.update(bi_list);
 
-    let mut cur_seg = seg_list.last().unwrap().clone();
-    for bi in bi_list.iter().rev() {
-        if bi.borrow().seg_idx.is_some()
-            && bi.borrow().idx < begin_seg.borrow().start_bi.borrow().idx
-        {
-            break;
-        }
-        if bi.borrow().idx > cur_seg.borrow().end_bi.borrow().idx {
-            bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx + 1);
-            continue;
-        }
-        if bi.borrow().idx < cur_seg.borrow().start_bi.borrow().idx {
-            assert!(cur_seg.borrow().pre.is_some());
-            cur_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
-        }
-        bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx);
-    }
+    //let mut sure_seg_cnt = 0;
+    //if seg_list.is_empty() {
+    //    for bi in bi_list.iter() {
+    //        bi.borrow_mut().set_seg_idx(0);
+    //    }
+    //    return Ok(());
+    //}
+    //let mut begin_seg = seg_list.last().unwrap().clone();
+    //for seg in seg_list.iter().rev() {
+    //    if seg.borrow().is_sure {
+    //        sure_seg_cnt += 1;
+    //    } else {
+    //        sure_seg_cnt = 0;
+    //    }
+    //    begin_seg = seg.clone();
+    //    if sure_seg_cnt > 2 {
+    //        break;
+    //    }
+    //}
+    //
+    //let mut cur_seg = seg_list.last().unwrap().clone();
+    //for bi in bi_list.iter().rev() {
+    //    if bi.borrow().seg_idx.is_some()
+    //        && bi.borrow().idx < begin_seg.borrow().start_bi.borrow().idx
+    //    {
+    //        break;
+    //    }
+    //    if bi.borrow().idx > cur_seg.borrow().end_bi.borrow().idx {
+    //        bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx + 1);
+    //        continue;
+    //    }
+    //    if bi.borrow().idx < cur_seg.borrow().start_bi.borrow().idx {
+    //        assert!(cur_seg.borrow().pre.is_some());
+    //        cur_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
+    //    }
+    //    bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx);
+    //}
 
     Ok(())
 }
 
-pub fn update_zs_in_seg(
+/*pub fn update_zs_in_seg(
     bi_list: &CBiList,
-    seg_list: &mut CSegListComm<CBi>,
+    seg_list: &mut CSegListChan<CBi>,
     zs_list: &mut CZSList,
 ) -> Result<(), CChanException> {
     let mut sure_seg_cnt = 0;
@@ -220,8 +222,7 @@ pub fn update_zs_in_seg(
     }
 
     Ok(())
-}
-*/
+}*/
 
 mod test {
     use std::time::Instant;

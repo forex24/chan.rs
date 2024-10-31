@@ -262,15 +262,16 @@ impl<T: Line> CSegListComm<T> {
                         && (peak_bi_ref.high() > bi_lst[0].borrow().high()
                             || peak_bi_ref.idx() == 0))
                 {
+                    // 要比第一笔开头还高/低（因为没有比较到）
                     self.add_new_seg(
                         bi_lst,
                         peak_bi_ref.idx() as usize,
                         false,
                         Some(peak_bi_ref.dir()),
-                        false,
+                        true,
                         "split_first_1st",
                     );
-                    self.add_new_seg(bi_lst, end_bi_idx, false, None, false, "split_first_2nd");
+                    self.add_new_seg(bi_lst, end_bi_idx, false, None, true, "split_first_2nd");
                     return Ok(());
                 }
             }
@@ -291,7 +292,7 @@ impl<T: Line> CSegListComm<T> {
             is_sure,
             seg_dir,
             reason,
-        )));
+        )?));
 
         if self.lst.len() >= 2 {
             let last_seg = self.lst.last().unwrap().clone();

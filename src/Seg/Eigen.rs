@@ -8,6 +8,7 @@ use crate::Common::ChanException::{CChanException, ErrCode};
 
 use super::linetype::Line;
 
+//#[derive(Debug, Clone)]
 pub struct CEigen<T> {
     begin_klc: usize,
     end_klc: usize,
