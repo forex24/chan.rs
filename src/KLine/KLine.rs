@@ -1,6 +1,6 @@
 use crate::Common::func_util::has_overlap;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{FxCheckMethod, FxType, KlineDir};
+use crate::Common::CEnum::{FxCheckMethod, FxType, KLineDir};
 use crate::Common::CTime::CTime;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -16,7 +16,7 @@ pub struct CKLine {
     pub time_end: CTime,
     pub low: f64,
     pub high: f64,
-    pub dir: KlineDir,
+    pub dir: KLineDir,
     pub lst: Vec<Handle<CKLineUnit>>,
     pub pre: Option<Handle<CKLine>>,
     pub next: Option<Handle<CKLine>>,
@@ -24,7 +24,7 @@ pub struct CKLine {
 }
 
 impl CKLine {
-    pub fn new(kl_unit: Handle<CKLineUnit>, idx: i32, dir: KlineDir) -> Handle<Self> {
+    pub fn new(kl_unit: Handle<CKLineUnit>, idx: i32, dir: KLineDir) -> Handle<Self> {
         let kline = Rc::new(RefCell::new(CKLine {
             idx,
             kl_type: kl_unit.borrow().kl_type.clone(),
@@ -113,7 +113,7 @@ impl CKLine {
                         ErrCode::BiErr,
                     ));
                 }
-                if for_virtual && item2.borrow().dir != KlineDir::Down {
+                if for_virtual && item2.borrow().dir != KLineDir::Down {
                     return Ok(false);
                 }
 
@@ -188,7 +188,7 @@ impl CKLine {
                         ErrCode::BiErr,
                     ));
                 }
-                if for_virtual && item2.borrow().dir != KlineDir::Up {
+                if for_virtual && item2.borrow().dir != KLineDir::Up {
                     return Ok(false);
                 }
 
@@ -283,18 +283,18 @@ impl CKLine {
         self.next()
     }
 
-    pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KlineDir {
+    pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KLineDir {
         if (self.high >= item.borrow().high && self.low <= item.borrow().low)
             || (self.high <= item.borrow().high && self.low >= item.borrow().low)
         {
-            return KlineDir::Combine;
+            return KLineDir::Combine;
         }
 
         if self.high > item.borrow().high && self.low > item.borrow().low {
-            return KlineDir::Down;
+            return KLineDir::Down;
         }
         if self.high < item.borrow().high && self.low < item.borrow().low {
-            return KlineDir::Up;
+            return KLineDir::Up;
         }
 
         unreachable!();
@@ -311,10 +311,10 @@ impl CKLine {
     pub fn try_add(
         klc: &Handle<CKLine>,
         unit_kl: &Handle<CKLineUnit>,
-    ) -> Result<KlineDir, CChanException> {
+    ) -> Result<KLineDir, CChanException> {
         //let combine_item = CCombineItem::new(unit_kl.clone())?;
         let dir = klc.borrow().test_combine(&unit_kl); //, exclude_included, allow_top_equal)?;
-        if dir == KlineDir::Combine {
+        if dir == KLineDir::Combine {
             klc.borrow_mut().lst.push(Rc::clone(unit_kl));
             //if let Ok(kline_unit) = unit_kl.try_borrow_mut()
             //.unwrap()
@@ -325,7 +325,7 @@ impl CKLine {
 
             let dir_ = klc.borrow().dir;
             match dir_ {
-                KlineDir::Up => {
+                KLineDir::Up => {
                     if unit_kl.borrow().high != unit_kl.borrow().low
                         || unit_kl.borrow().high != klc.borrow().high
                     {
@@ -335,7 +335,7 @@ impl CKLine {
                         klc.borrow_mut().low = low_;
                     }
                 }
-                KlineDir::Down => {
+                KLineDir::Down => {
                     if unit_kl.borrow().high != unit_kl.borrow().low
                         || unit_kl.borrow().low != klc.borrow().low
                     {
@@ -350,8 +350,8 @@ impl CKLine {
                         format!(
                             "KlineDir = {:?} err!!! must be {:?}/{:?}",
                             klc.borrow().dir,
-                            KlineDir::Up,
-                            KlineDir::Down
+                            KLineDir::Up,
+                            KLineDir::Down
                         ),
                         ErrCode::CombinerErr,
                     ))

@@ -6,4 +6,3 @@ pub mod SegListChan;
 pub mod SegListComm;
 pub mod linetype;
 //pub mod types;
-pub mod kline_combiner;

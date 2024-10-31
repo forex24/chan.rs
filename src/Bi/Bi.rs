@@ -4,9 +4,8 @@ use crate::Common::CEnum::{BiDir, BiType, DataField, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Seg::Seg::CSeg;
 //use crate::Seg::Seg::CSeg;
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct CBi {
@@ -18,11 +17,11 @@ pub struct CBi {
     pub is_sure: bool,
     pub sure_end: Vec<Handle<CKLine>>,
     pub seg_idx: Option<i32>,
-    //pub parent_seg: Option<Handle<CSeg<CBi>>>,
+    pub parent_seg: Option<Handle<CSeg<CBi>>>,
     //pub bsp: Option<Handle<CBSPoint>>,
     pub next: Option<Handle<Self>>,
     pub pre: Option<Handle<Self>>,
-    pub memoize_cache: RefCell<HashMap<String, f64>>,
+    //pub memoize_cache: RefCell<HashMap<String, f64>>,
 }
 
 impl CBi {
@@ -41,18 +40,18 @@ impl CBi {
             is_sure,
             sure_end: Vec::new(),
             seg_idx: None,
-            //parent_seg: None,
+            parent_seg: None,
             //bsp: None,
             next: None,
             pre: None,
-            memoize_cache: RefCell::new(HashMap::new()),
+            //memoize_cache: RefCell::new(HashMap::new()),
         };
         bi.set(begin_klc, end_klc).unwrap();
         bi
     }
 
     pub fn clean_cache(&self) {
-        self.memoize_cache.borrow_mut().clear();
+        //self.memoize_cache.borrow_mut().clear();
     }
 
     pub fn begin_klc(&self) -> Handle<CKLine> {
@@ -216,7 +215,7 @@ impl CBi {
         self.end_klc.borrow().idx - self.begin_klc.borrow().idx + 1
     }
 
-    pub fn high(&self) -> f64 {
+    pub fn _high(&self) -> f64 {
         if self.is_up() {
             self.end_klc.borrow().high
         } else {
@@ -224,7 +223,7 @@ impl CBi {
         }
     }
 
-    pub fn low(&self) -> f64 {
+    pub fn _low(&self) -> f64 {
         if self.is_up() {
             self.begin_klc.borrow().low
         } else {
@@ -233,7 +232,7 @@ impl CBi {
     }
 
     pub fn mid(&self) -> f64 {
-        (self.high() + self.low()) / 2.0
+        (self._high() + self._low()) / 2.0
     }
 
     pub fn is_down(&self) -> bool {

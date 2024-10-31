@@ -5,7 +5,7 @@ use crate::Bi::BiList::CBiList;
 //use crate::BuySellPoint::BSPointList::CBSPointList;
 //use crate::ChanConfig::CChanConfig;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{BiDir, KlType, KlineDir, SegType};
+use crate::Common::CEnum::{BiDir, KLineDir, KlType, SegType};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -97,10 +97,10 @@ impl CKLineList {
         //klu.set_metric(&self.metric_model_lst);
         let klu = Rc::new(RefCell::new(klu));
         if self.lst.is_empty() {
-            self.lst.push(CKLine::new(Rc::clone(&klu), 0, KlineDir::Up));
+            self.lst.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
         } else {
             let dir = CKLine::try_add(self.lst.last().as_ref().unwrap(), &klu)?;
-            if dir != KlineDir::Combine {
+            if dir != KLineDir::Combine {
                 let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len() as i32, dir);
                 self.lst.push(new_kline.clone());
                 if self.lst.len() >= 3 {

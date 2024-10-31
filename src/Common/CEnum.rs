@@ -31,7 +31,7 @@ pub enum KlType {
 }
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum KlineDir {
+pub enum KLineDir {
     Up,
     Down,
     Combine,

@@ -1,7 +1,7 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{FxType, KlineDir};
+use crate::Common::CEnum::{FxType, KLineDir};
 use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -322,14 +322,14 @@ impl CBiList {
         let last_bi = self.bi_list.last().unwrap();
         let check_top = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
-                k.borrow().dir == KlineDir::Up
+                k.borrow().dir == KLineDir::Up
             } else {
                 k.borrow().fx == FxType::Top
             }
         };
         let check_bottom = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
-                k.borrow().dir == KlineDir::Down
+                k.borrow().dir == KLineDir::Down
             } else {
                 k.borrow().fx == FxType::Bottom
             }

@@ -1,21 +1,28 @@
+use crate::Bi::Bi::CBi;
+//use crate::BuySellPoint::BS_Point::CBSPoint;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{BiDir, MacdAlgo};
+use crate::Common::CEnum::{BiDir, MacdAlgo, TrendLineSide};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
+//use crate::Math::TrendLine::CTrendLine;
+use crate::Seg2::EigenFX::CEigenFX;
+//use crate::ZS::ZS::CZS;
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 use super::linetype::Line;
-use super::EigenFX::CEigenFX;
+
+pub type SegSeg = CSeg<CSeg<CBi>>;
 
 pub struct CSeg<T> {
-    pub idx: usize,
+    pub idx: i32,
     pub start_bi: Handle<T>,
     pub end_bi: Handle<T>,
     pub is_sure: bool,
     pub dir: BiDir,
-    //pub zs_lst: Vec<Handle<CZS<T>>>,
-    pub eigen_fx: Option<CEigenFX<T>>,
-    pub seg_idx: Option<usize>,
-    //pub parent_seg: Option<Handle<CSeg<CSeg<T>>>>,
+    //pub zs_lst: Vec<Handle<CZS>>,
+    pub eigen_fx: Option<Handle<CEigenFX<T>>>,
+    pub seg_idx: Option<i32>,
     pub parent_seg: Option<Handle<CSeg<T>>>,
     pub pre: Option<Handle<CSeg<T>>>,
     pub next: Option<Handle<CSeg<T>>>,
@@ -25,35 +32,23 @@ pub struct CSeg<T> {
     //pub support_trend_line: Option<CTrendLine>,
     //pub resistance_trend_line: Option<CTrendLine>,
     pub ele_inside_is_sure: bool,
+    //_phantom: PhantomData<T>,
 }
 
-impl<T: Line> CSeg<T> {
+impl<T: Line<T>> CSeg<T> {
     pub fn new(
-        idx: usize,
+        idx: i32,
         start_bi: Handle<T>,
         end_bi: Handle<T>,
         is_sure: bool,
         seg_dir: Option<BiDir>,
         reason: &str,
     ) -> Result<Self, CChanException> {
-        assert!(
-            start_bi.borrow().idx() == 0
-                || start_bi.borrow().dir() == end_bi.borrow().dir()
-                || !is_sure,
-            "start_bi and end_bi direction mismatch"
-        );
-
-        let is_sure = if end_bi.borrow().idx() - start_bi.borrow().idx() < 2 {
-            false
-        } else {
-            is_sure
-        };
-
         let dir = seg_dir.unwrap_or_else(|| end_bi.borrow().dir());
-        let seg = Self {
+        let mut seg = CSeg {
             idx,
-            start_bi,
-            end_bi,
+            start_bi: start_bi.clone(),
+            end_bi: end_bi.clone(),
             is_sure,
             dir,
             //zs_lst: Vec::new(),
@@ -68,13 +63,17 @@ impl<T: Line> CSeg<T> {
             //support_trend_line: None,
             //resistance_trend_line: None,
             ele_inside_is_sure: false,
+            //_phantom: PhantomData,
         };
 
+        if end_bi.borrow().idx() - start_bi.borrow().idx() < 2 {
+            seg.is_sure = false;
+        }
         seg.check()?;
         Ok(seg)
     }
 
-    pub fn set_seg_idx(&mut self, idx: usize) {
+    pub fn set_seg_idx(&mut self, idx: i32) {
         self.seg_idx = Some(idx);
     }
 
@@ -82,58 +81,48 @@ impl<T: Line> CSeg<T> {
         if !self.is_sure {
             return Ok(());
         }
-
-        let start_val = self.start_bi.borrow().get_begin_val();
-        let end_val = self.end_bi.borrow().get_end_val();
-        let start_idx = self.start_bi.borrow().idx();
-        let end_idx = self.end_bi.borrow().idx();
-
         if self.is_down() {
-            if start_val < end_val {
+            if self.start_bi.borrow().get_begin_val() < self.end_bi.borrow().get_end_val() {
                 return Err(CChanException::new(
-                    format!("下降线段起始点应该高于结束点! idx={}", self.idx).to_string(),
+                    format!("下降线段起始点应该高于结束点! idx={}", self.idx),
                     ErrCode::SegEndValueErr,
                 ));
             }
-        } else if start_val > end_val {
+        } else if self.start_bi.borrow().get_begin_val() > self.end_bi.borrow().get_end_val() {
             return Err(CChanException::new(
-                format!("上升线段起始点应该低于结束点! idx={}", self.idx).to_string(),
+                format!("上升线段起始点应该低于结束点! idx={}", self.idx),
                 ErrCode::SegEndValueErr,
             ));
         }
-
-        if end_idx - start_idx < 2 {
+        if self.end_bi.borrow().idx() - self.start_bi.borrow().idx() < 2 {
             return Err(CChanException::new(
                 format!(
                     "线段({}-{})长度不能小于2! idx={}",
-                    start_idx, end_idx, self.idx
-                )
-                .to_string(),
+                    self.start_bi.borrow().idx(),
+                    self.end_bi.borrow().idx(),
+                    self.idx
+                ),
                 ErrCode::SegLenErr,
             ));
         }
-
         Ok(())
     }
 
-    //pub fn add_zs(&mut self, zs: Handle<CZS<T>>) {
+    //pub fn add_zs(&mut self, zs: Handle<CZS>) {
     //    self.zs_lst.insert(0, zs);
     //}
 
     pub fn cal_klu_slope(&self) -> f64 {
-        let end_val = self.get_end_val();
-        let begin_val = self.get_begin_val();
-        let end_idx = self.get_end_klu().borrow().idx;
-        let begin_idx = self.get_begin_klu().borrow().idx;
-
-        (end_val - begin_val) / ((end_idx - begin_idx) as f64) / begin_val
+        (self.get_end_val() - self.get_begin_val())
+            / (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx) as f64
+            / self.get_begin_val()
     }
 
     pub fn cal_amp(&self) -> f64 {
         (self.get_end_val() - self.get_begin_val()) / self.get_begin_val()
     }
 
-    pub fn cal_bi_cnt(&self) -> usize {
+    pub fn cal_bi_cnt(&self) -> i32 {
         self.end_bi.borrow().idx() - self.start_bi.borrow().idx() + 1
     }
 
@@ -185,8 +174,8 @@ impl<T: Line> CSeg<T> {
         self.start_bi.borrow().get_begin_klu()
     }
 
-    pub fn get_klu_cnt(&self) -> usize {
-        (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1) as usize
+    pub fn get_klu_cnt(&self) -> i32 {
+        self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1
     }
 
     pub fn cal_macd_metric(
@@ -201,8 +190,7 @@ impl<T: Line> CSeg<T> {
                 format!(
                     "unsupport macd_algo={:?} of Seg, should be one of slope/amp",
                     macd_algo
-                )
-                .to_string(),
+                ),
                 ErrCode::ParaError,
             )),
         }
@@ -211,42 +199,34 @@ impl<T: Line> CSeg<T> {
     pub fn cal_macd_slope(&self) -> f64 {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
-        let begin_klu = begin_klu.borrow();
-        let end_klu = end_klu.borrow();
-
         if self.is_up() {
-            (end_klu.high - begin_klu.low)
-                / end_klu.high
-                / ((end_klu.idx - begin_klu.idx + 1) as f64)
+            (end_klu.borrow().high - begin_klu.borrow().low)
+                / end_klu.borrow().high
+                / (end_klu.borrow().idx - begin_klu.borrow().idx + 1) as f64
         } else {
-            (begin_klu.high - end_klu.low)
-                / begin_klu.high
-                / ((end_klu.idx - begin_klu.idx + 1) as f64)
+            (begin_klu.borrow().high - end_klu.borrow().low)
+                / begin_klu.borrow().high
+                / (end_klu.borrow().idx - begin_klu.borrow().idx + 1) as f64
         }
     }
 
     pub fn cal_macd_amp(&self) -> f64 {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
-        let begin_klu = begin_klu.borrow();
-        let end_klu = end_klu.borrow();
-
         if self.is_down() {
-            (begin_klu.high - end_klu.low) / begin_klu.high
+            (begin_klu.borrow().high - end_klu.borrow().low) / begin_klu.borrow().high
         } else {
-            (end_klu.high - begin_klu.low) / begin_klu.low
+            (end_klu.borrow().high - begin_klu.borrow().low) / begin_klu.borrow().low
         }
     }
 
-    pub fn update_bi_list(&mut self, bi_lst: &[Handle<T>], idx1: usize, idx2: usize) {
+    pub fn update_bi_list(seg: &Handle<CSeg<T>>, bi_lst: &[Handle<T>], idx1: usize, idx2: usize) {
         for bi_idx in idx1..=idx2 {
-            let bi = bi_lst[bi_idx].clone();
-            // TODO:
-            //bi.borrow_mut()
-            //    .set_parent_seg(Some(Rc::new(RefCell::new(self.clone()))));
-            self.bi_list.push(bi);
+            bi_lst[bi_idx]
+                .borrow_mut()
+                .set_parent_seg(Some(Rc::clone(seg)));
+            seg.borrow_mut().bi_list.push(Rc::clone(&bi_lst[bi_idx]));
         }
-
         //if self.bi_list.len() >= 3 {
         //    self.support_trend_line = Some(CTrendLine::new(&self.bi_list, TrendLineSide::Inside));
         //    self.resistance_trend_line =
@@ -254,14 +234,14 @@ impl<T: Line> CSeg<T> {
         //}
     }
 
-    //pub fn get_first_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+    //pub fn get_first_multi_bi_zs(&self) -> Option<Handle<CZS>> {
     //    self.zs_lst
     //        .iter()
     //        .find(|zs| !zs.borrow().is_one_bi_zs())
     //        .cloned()
     //}
     //
-    //pub fn get_final_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+    //pub fn get_final_multi_bi_zs(&self) -> Option<Handle<CZS>> {
     //    self.zs_lst
     //        .iter()
     //        .rev()
@@ -277,15 +257,15 @@ impl<T: Line> CSeg<T> {
     //}
 }
 
-impl<T: Line> std::fmt::Display for CSeg<T> {
+/*impl<LINE_TYPE> std::fmt::Display for CSeg<LINE_TYPE> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}->{}: {:?}  {}",
-            self.start_bi.borrow().idx(),
-            self.end_bi.borrow().idx(),
+            "{}->{}:{:?} {}",
+            self.start_bi.borrow().idx,
+            self.end_bi.borrow().idx,
             self.dir,
             self.is_sure
         )
     }
-}
+}*/
