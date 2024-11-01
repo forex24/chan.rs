@@ -12,14 +12,14 @@ pub enum BiDir {
 
 #[derive(Clone, Copy, Debug)]
 pub struct CKL {
-    idx: i32,
+    idx: usize,
     close: f64,
     high: f64,
     low: f64,
 }
 
 impl CKL {
-    fn new(idx: i32, close: f64, high: f64, low: f64) -> Self {
+    fn new(idx: usize, close: f64, high: f64, low: f64) -> Self {
         CKL {
             idx,
             close,
@@ -45,7 +45,7 @@ pub enum DemarkType {
     Countdown,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct DemarkIndex {
     dir: BiDir,
     idx: i32,
@@ -62,13 +62,7 @@ impl CDemarkIndex {
         CDemarkIndex { data: Vec::new() }
     }
 
-    fn add(
-        &mut self,
-        dir: BiDir,
-        demark_type: DemarkType,
-        idx: i32,
-        series: Handle<CDemarkSetup>,
-    ) {
+    fn add(&mut self, dir: BiDir, demark_type: DemarkType, idx: i32, series: Handle<CDemarkSetup>) {
         self.data.push(DemarkIndex {
             dir,
             idx,
@@ -271,7 +265,7 @@ impl CDemarkEngine {
         }
     }
 
-    pub fn update(&mut self, idx: i32, close: f64, high: f64, low: f64) -> CDemarkIndex {
+    pub fn update(&mut self, idx: usize, close: f64, high: f64, low: f64) -> CDemarkIndex {
         self.kl_lst.push(CKL::new(idx, close, high, low));
         if self.kl_lst.len() <= (Self::SETUP_BIAS + 1) as usize {
             return CDemarkIndex::new();

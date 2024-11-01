@@ -1,7 +1,9 @@
+use crate::Common::CEnum::ZsCombineMode;
+
 #[derive(Debug, Clone)]
 pub struct CZSConfig {
     pub need_combine: bool,
-    pub zs_combine_mode: String,
+    pub zs_combine_mode: ZsCombineMode,
     pub one_bi_zs: bool,
     pub zs_algo: String,
 }

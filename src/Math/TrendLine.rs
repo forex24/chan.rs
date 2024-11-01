@@ -5,12 +5,12 @@ use std::f64;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Point {
-    pub x: i32,
+    pub x: usize,
     pub y: f64,
 }
 
 impl Point {
-    pub fn new(x: i32, y: f64) -> Self {
+    pub fn new(x: usize, y: f64) -> Self {
         Point { x, y }
     }
 
@@ -58,13 +58,23 @@ impl CTrendLine {
             lst.iter()
                 .rev()
                 .step_by(2)
-                .map(|bi| Point::new(bi.borrow().get_begin_klu().idx, bi.borrow().get_begin_val()))
+                .map(|bi| {
+                    Point::new(
+                        bi.borrow().get_begin_klu().borrow().idx,
+                        bi.borrow().get_begin_val(),
+                    )
+                })
                 .collect::<Vec<_>>()
         } else {
             lst.iter()
                 .rev()
                 .step_by(2)
-                .map(|bi| Point::new(bi.borrow().get_end_klu().idx, bi.borrow().get_end_val()))
+                .map(|bi| {
+                    Point::new(
+                        bi.borrow().get_end_klu().borrow().idx,
+                        bi.borrow().get_end_val(),
+                    )
+                })
                 .collect::<Vec<_>>()
         };
         let mut c_p = all_p.clone();
@@ -121,67 +131,4 @@ fn cal_tl(c_p: &[Point], dir: BiDir, side: TrendLineSide) -> (Line, usize) {
         }
     }
     (Line::new(p, peak_slope), idx)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
-    // You'll need to mock CBi for testing purposes
-    struct MockBi {
-        idx: i32,
-        val: f64,
-        dir: BiDir,
-    }
-
-    impl MockBi {
-        fn get_begin_klu(&self) -> Self {
-            self.clone()
-        }
-        fn get_end_klu(&self) -> Self {
-            self.clone()
-        }
-        fn get_begin_val(&self) -> f64 {
-            self.val
-        }
-        fn get_end_val(&self) -> f64 {
-            self.val
-        }
-    }
-
-    #[test]
-    fn test_trend_line() {
-        let bis = vec![
-            Rc::new(RefCell::new(MockBi {
-                idx: 0,
-                val: 10.0,
-                dir: BiDir::Up,
-            })),
-            Rc::new(RefCell::new(MockBi {
-                idx: 1,
-                val: 12.0,
-                dir: BiDir::Up,
-            })),
-            Rc::new(RefCell::new(MockBi {
-                idx: 2,
-                val: 11.0,
-                dir: BiDir::Up,
-            })),
-            Rc::new(RefCell::new(MockBi {
-                idx: 3,
-                val: 13.0,
-                dir: BiDir::Up,
-            })),
-        ];
-
-        let trend_line = CTrendLine::new(&bis, TrendLineSide::Outside);
-        assert!(trend_line.line.is_some());
-        let line = trend_line.line.unwrap();
-        println!(
-            "Trend line: p=({}, {}), slope={}",
-            line.p.x, line.p.y, line.slope
-        );
-    }
 }

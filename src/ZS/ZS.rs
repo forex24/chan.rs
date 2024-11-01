@@ -1,7 +1,8 @@
+use crate::BuySellPoint::BSPointConfig::CPointConfig;
 //use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
 use crate::Common::types::Handle;
-use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::Common::CEnum::ZsCombineMode;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
@@ -10,7 +11,7 @@ use std::rc::Rc;
 
 pub struct CZS<T> {
     pub is_sure: bool,
-    //pub sub_zs_lst: Vec<Handle<CZS>>,
+    pub sub_zs_lst: Vec<Handle<CZS<T>>>,
     pub begin: Option<Handle<CKLineUnit>>,
     pub begin_bi: Option<Handle<T>>,
     pub low: f64,
@@ -26,10 +27,13 @@ pub struct CZS<T> {
 }
 
 impl<T: Line> CZS<T> {
-    pub fn new(lst: Option<Vec<T>>, is_sure: bool) -> Self {
+    pub fn new(lst: Option<Vec<Handle<T>>>, is_sure: bool) -> Self {
+        // begin/end：永远指向 klu
+        // low/high: 中枢的范围
+        // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
         let mut zs = CZS {
             is_sure,
-            //sub_zs_lst: Vec::new(),
+            sub_zs_lst: Vec::new(),
             begin: None,
             begin_bi: None,
             low: 0.0,
@@ -39,14 +43,14 @@ impl<T: Line> CZS<T> {
             end_bi: None,
             peak_high: f64::NEG_INFINITY,
             peak_low: f64::INFINITY,
-            bi_in: None,
-            bi_out: None,
-            bi_lst: Vec::new(),
+            bi_in: None,        //进中枢那一笔
+            bi_out: None,       //出中枢那一笔
+            bi_lst: Vec::new(), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
         };
 
         if let Some(lst) = lst {
             if !lst.is_empty() {
-                zs.begin = Some(lst[0].get_begin_klu());
+                zs.begin = Some(lst[0].borrow().get_begin_klu());
                 zs.begin_bi = Some(lst[0].clone());
                 zs.update_zs_range(&lst);
                 for item in lst {
@@ -54,11 +58,10 @@ impl<T: Line> CZS<T> {
                 }
             }
         }
-
         zs
     }
 
-    pub fn clean_cache(&mut self) {}
+    //pub fn clean_cache(&mut self) {}
 
     pub fn update_zs_range(&mut self, lst: &[Handle<T>]) {
         self.low = lst
@@ -72,7 +75,7 @@ impl<T: Line> CZS<T> {
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         self.mid = (self.low + self.high) / 2.0;
-        self.clean_cache();
+        //self.clean_cache();
     }
 
     pub fn is_one_bi_zs(&self) -> bool {
@@ -92,27 +95,27 @@ impl<T: Line> CZS<T> {
         if item.borrow().high() > self.peak_high {
             self.peak_high = item.borrow().high();
         }
-        self.clean_cache();
+        //self.clean_cache();
     }
 
-    pub fn combine(&mut self, zs2: &CZS<T>, combine_mode: &str) -> Result<bool, CChanException> {
+    pub fn combine(&mut self, zs2: &CZS<T>, combine_mode: ZsCombineMode) -> bool {
         if zs2.is_one_bi_zs() {
-            return Ok(false);
+            return false;
         }
         if self.begin_bi.as_ref().unwrap().borrow().seg_idx()
             != zs2.begin_bi.as_ref().unwrap().borrow().seg_idx()
         {
-            return Ok(false);
+            return false;
         }
         match combine_mode {
-            "zs" => {
+            ZsCombineMode::Zs => {
                 if !has_overlap(self.low, self.high, zs2.low, zs2.high, true) {
-                    return Ok(false);
+                    return false;
                 }
                 self.do_combine(zs2);
-                Ok(true)
+                true
             }
-            "peak" => {
+            ZsCombineMode::Peak => {
                 if has_overlap(
                     self.peak_low,
                     self.peak_high,
@@ -121,15 +124,11 @@ impl<T: Line> CZS<T> {
                     false,
                 ) {
                     self.do_combine(zs2);
-                    Ok(true)
+                    true
                 } else {
-                    Ok(false)
+                    false
                 }
             }
-            _ => Err(CChanException::new(
-                format!("{} is unsupport zs combine mode", combine_mode).to_string(),
-                ErrCode::ParaError,
-            )),
         }
     }
 
@@ -147,7 +146,7 @@ impl<T: Line> CZS<T> {
         self.end = zs2.end.clone();
         self.bi_out = zs2.bi_out.clone();
         self.end_bi = zs2.end_bi.clone();
-        self.clean_cache();
+        //self.clean_cache();
     }
 
     pub fn try_add_to_end(&mut self, item: &Handle<T>) -> bool {
@@ -181,14 +180,25 @@ impl<T: Line> CZS<T> {
         config: &CPointConfig,
         out_bi: Option<Handle<T>>,
     ) -> (bool, Option<f64>) {
+        let out_bi = out_bi.map(|x| Rc::clone(&x));
         if !self.end_bi_break(out_bi) {
             return (false, None);
         }
-        let in_metric = self.get_bi_in().cal_macd_metric(config.macd_algo, false);
+        let in_metric = self
+            .get_bi_in()
+            .borrow()
+            .cal_macd_metric(config.macd_algo, false)
+            .unwrap();
         let out_metric = if let Some(out_bi) = out_bi {
-            out_bi.cal_macd_metric(config.macd_algo, true)
+            out_bi
+                .borrow()
+                .cal_macd_metric(config.macd_algo, true)
+                .unwrap()
         } else {
-            self.get_bi_out().cal_macd_metric(config.macd_algo, true)
+            self.get_bi_out()
+                .borrow()
+                .cal_macd_metric(config.macd_algo, true)
+                .unwrap()
         };
 
         let ratio = out_metric / in_metric;
@@ -222,7 +232,7 @@ impl<T: Line> CZS<T> {
     }
 
     pub fn end_bi_break(&self, end_bi: Option<Handle<T>>) -> bool {
-        let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
+        let end_bi = end_bi.unwrap_or_else(|| Rc::clone(self.get_bi_out()));
         let end_bi = end_bi.borrow();
         (end_bi.is_down() && end_bi.low() < self.low)
             || (end_bi.is_up() && end_bi.high() > self.high)
@@ -263,37 +273,37 @@ impl<T: Line> CZS<T> {
 
     pub fn set_bi_in(&mut self, bi: Handle<T>) {
         self.bi_in = Some(bi);
-        self.clean_cache();
+        //self.clean_cache();
     }
 
     pub fn set_bi_out(&mut self, bi: Handle<T>) {
         self.bi_out = Some(bi);
-        self.clean_cache();
+        //self.clean_cache();
     }
 
     pub fn set_bi_lst(&mut self, bi_lst: &[Handle<T>]) {
-        self.bi_lst = bi_lst;
-        self.clean_cache();
+        self.bi_lst = bi_lst.to_vec();
+        //self.clean_cache();
     }
 }
 
-impl<T: Line> std::fmt::Display for CZS<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let main_str = format!(
-            "{}->{}",
-            self.begin_bi.as_ref().map_or(0, |bi| bi.idx()),
-            self.end_bi.as_ref().map_or(0, |bi| bi.idx())
-        );
-        let sub_str: String = self
-            .sub_zs_lst
-            .iter()
-            .map(|sub_zs| sub_zs.borrow().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        if !sub_str.is_empty() {
-            write!(f, "{}({})", main_str, sub_str)
-        } else {
-            write!(f, "{}", main_str)
-        }
-    }
-}
+//impl<T: Line> std::fmt::Display for CZS<T> {
+//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//        let main_str = format!(
+//            "{}->{}",
+//            self.begin_bi.as_ref().map_or(0, |bi| bi.idx()),
+//            self.end_bi.as_ref().map_or(0, |bi| bi.idx())
+//        );
+//        let sub_str: String = self
+//            .sub_zs_lst
+//            .iter()
+//            .map(|sub_zs| sub_zs.borrow().to_string())
+//            .collect::<Vec<_>>()
+//            .join(",");
+//        if !sub_str.is_empty() {
+//            write!(f, "{}({})", main_str, sub_str)
+//        } else {
+//            write!(f, "{}", main_str)
+//        }
+//    }
+//}

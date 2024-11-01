@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct CKLine {
-    pub idx: i32,
+    pub idx: usize,
     pub kl_type: Option<String>,
     pub fx: FxType,
     pub time_begin: CTime,
@@ -24,7 +24,7 @@ pub struct CKLine {
 }
 
 impl CKLine {
-    pub fn new(kl_unit: Handle<CKLineUnit>, idx: i32, dir: KLineDir) -> Handle<Self> {
+    pub fn new(kl_unit: Handle<CKLineUnit>, idx: usize, dir: KLineDir) -> Handle<Self> {
         let kline = Rc::new(RefCell::new(CKLine {
             idx,
             kl_type: kl_unit.borrow().kl_type.clone(),

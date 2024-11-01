@@ -235,7 +235,7 @@ impl CBiList {
         let new_bi = Rc::new(RefCell::new(CBi::new(
             pre_klc,
             cur_klc,
-            self.bi_list.len() as i32,
+            self.bi_list.len(),
             is_sure,
         )));
         if !self.bi_list.is_empty() {
@@ -267,7 +267,7 @@ impl CBiList {
         bi_span >= 3 && uint_kl_cnt >= 3
     }
 
-    pub fn get_klc_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> i32 {
+    pub fn get_klc_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> usize {
         let mut span = klc.borrow().idx - last_end.borrow().idx;
         if !self.config.gap_as_kl {
             return span;
@@ -353,7 +353,7 @@ impl CBiList {
         }
     }
 
-    pub fn get_last_klu_of_last_bi(&self) -> Option<i32> {
+    pub fn get_last_klu_of_last_bi(&self) -> Option<usize> {
         self.bi_list
             .last()
             .map(|bi| bi.borrow().get_end_klu().borrow().idx)

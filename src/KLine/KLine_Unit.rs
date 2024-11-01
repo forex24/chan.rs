@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     Common::{
         types::Handle,
@@ -6,14 +8,14 @@ use crate::{
         ChanException::{CChanException, ErrCode},
         //TradeInfo::CTradeInfo,
     },
-    //Math::{
-    //    Demark::{CDemarkEngine, CDemarkIndex},
-    //    TrendModel::CTrendModel,
-    //    BOLL::{BOLLMetric, BollModel},
-    //    KDJ::KDJ,
-    //    MACD::{CMACDItem, CMACD},
-    //    RSI::RSI,
-    //},
+    Math::{
+        //Demark::{CDemarkEngine, CDemarkIndex},
+        TrendModel::CTrendModel,
+        BOLL::{BOLLMetric, BollModel},
+        KDJ::KDJ,
+        MACD::{CMACDItem, CMACD},
+        RSI::RSI,
+    },
 };
 
 use super::KLine::CKLine;
@@ -30,15 +32,15 @@ pub struct CKLineUnit {
     //pub sub_kl_list: Vec<Handle<CKLineUnit>>,
     //pub sup_kl: Option<Handle<CKLineUnit>>,
     pub klc: Option<Handle<CKLine>>,
-    //pub trend: HashMap<TrendType, HashMap<i32, f64>>,
+    pub trend: HashMap<TrendType, HashMap<usize, f64>>,
     //pub limit_flag: i32,
     pub pre: Option<Handle<CKLineUnit>>,
     pub next: Option<Handle<CKLineUnit>>,
-    pub idx: i32,
-    //pub macd: Option<CMACDItem>,
-    //pub boll: Option<BOLLMetric>,
-    //pub rsi: Option<f64>,
-    //pub kdj: Option<KDJ>,
+    pub idx: usize,
+    pub macd: Option<CMACDItem>,
+    pub boll: Option<BOLLMetric>,
+    pub rsi: Option<f64>,
+    pub kdj: Option<KDJ>,
 }
 
 impl CKLineUnit {
@@ -62,18 +64,18 @@ impl CKLineUnit {
             //sub_kl_list: Vec::new(),
             //sup_kl: None,
             klc: None,
-            //trend: HashMap::new(),
+            trend: HashMap::new(),
             //limit_flag: 0,
             pre: None,
             next: None,
-            idx: -1,
-            //macd: None,
-            //boll: None,
-            //rsi: None,
-            //kdj: None,
+            idx: usize::MAX,
+            macd: None,
+            boll: None,
+            rsi: None,
+            kdj: None,
         };
 
-        //unit.check(autofix)?;
+        unit.check(autofix)?;
         Ok(unit)
     }
 
@@ -131,7 +133,7 @@ impl CKLineUnit {
         self.high
     }
 
-    /*pub fn set_metric(&mut self, metric_model_lst: &[Box<dyn MetricModel>]) {
+    pub fn set_metric(&mut self, metric_model_lst: &[Box<dyn MetricModel>]) {
         for metric_model in metric_model_lst {
             if let Some(macd) = metric_model.as_any().downcast_ref::<CMACD>() {
                 self.macd = Some(macd.add(self.close));
@@ -142,18 +144,20 @@ impl CKLineUnit {
                     .insert(trend_model.get_t(), trend_model.add(self.close));
             } else if let Some(boll_model) = metric_model.as_any().downcast_ref::<BollModel>() {
                 self.boll = Some(boll_model.add(self.close));
-            } else if let Some(demark_engine) =
+            }
+            /*else if let Some(demark_engine) =
                 metric_model.as_any().downcast_ref::<CDemarkEngine>()
             {
                 self.demark = demark_engine.update(self.idx, self.close, self.high, self.low);
-            } else if let Some(rsi) = metric_model.as_any().downcast_ref::<RSI>() {
+            } */
+            else if let Some(rsi) = metric_model.as_any().downcast_ref::<RSI>() {
                 self.rsi = Some(rsi.add(self.close));
             } else if let Some(kdj) = metric_model.as_any().downcast_ref::<KDJ>() {
                 self.kdj = Some(kdj.add(self.high, self.low, self.close));
             }
         }
     }
-
+    /*
     pub fn get_parent_klc(&self) -> Option<Handle<CKLine>> {
         self.sup_kl
             .as_ref()
@@ -186,11 +190,11 @@ impl CKLineUnit {
         self.klc.clone()
     }
 
-    pub fn set_idx(&mut self, idx: i32) {
+    pub fn set_idx(&mut self, idx: usize) {
         self.idx = idx;
     }
 
-    pub fn get_idx(&self) -> i32 {
+    pub fn get_idx(&self) -> usize {
         self.idx
     }
 }

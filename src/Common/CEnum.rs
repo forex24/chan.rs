@@ -174,3 +174,9 @@ impl std::fmt::Display for EqualMode {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZsCombineMode {
+    Zs,
+    Peak,
+}

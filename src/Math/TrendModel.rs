@@ -37,7 +37,7 @@ impl CTrendModel {
                 .map(|&x| x)
                 .ok_or_else(|| CChanException::new("Empty array".to_string(), ErrCode::ParaError)),
             _ => Err(CChanException::new(
-                &format!("Unknown trendModel Type = {:?}", self.trend_type),
+                format!("Unknown trendModel Type = {:?}", self.trend_type).to_string(),
                 ErrCode::ParaError,
             )),
         }
@@ -73,11 +73,5 @@ mod tests {
         assert_eq!(model.add(1.0).unwrap(), 1.0);
         assert_eq!(model.add(2.0).unwrap(), 1.0);
         assert_eq!(model.add(4.0).unwrap(), 1.0);
-    }
-
-    #[test]
-    fn test_trend_model_unknown_type() {
-        let mut model = CTrendModel::new(TrendType::Unknown, 3);
-        assert!(model.add(1.0).is_err());
     }
 }

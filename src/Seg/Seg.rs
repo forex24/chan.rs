@@ -1,7 +1,12 @@
+use std::cell::RefCell;
+use std::rc::Weak;
+
+use crate::BuySellPoint::BS_Point::CBSPoint;
 use crate::Common::types::Handle;
 use crate::Common::CEnum::{BiDir, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::ZS::ZS::CZS;
 
 use super::linetype::Line;
 use super::EigenFX::CEigenFX;
@@ -13,14 +18,13 @@ pub struct CSeg<T> {
     pub end_bi: Handle<T>,
     pub is_sure: bool,
     pub dir: BiDir,
-    //pub zs_lst: Vec<Handle<CZS<T>>>,
+    pub zs_lst: Vec<Handle<CZS<T>>>,
     pub eigen_fx: Option<CEigenFX<T>>,
     pub seg_idx: Option<usize>,
-    //pub parent_seg: Option<Handle<CSeg<CSeg<T>>>>,
-    pub parent_seg: Option<Handle<CSeg<T>>>,
+    pub parent_seg: Option<Weak<RefCell<CSeg<Self>>>>,
     pub pre: Option<Handle<CSeg<T>>>,
     pub next: Option<Handle<CSeg<T>>>,
-    //pub bsp: Option<Handle<CBSPoint>>,
+    pub bsp: Option<Handle<CBSPoint<T>>>,
     pub bi_list: Vec<Handle<T>>,
     pub reason: String,
     //pub support_trend_line: Option<CTrendLine>,
@@ -57,13 +61,13 @@ impl<T: Line> CSeg<T> {
             end_bi,
             is_sure,
             dir,
-            //zs_lst: Vec::new(),
+            zs_lst: Vec::new(),
             eigen_fx: None,
             seg_idx: None,
             parent_seg: None,
             pre: None,
             next: None,
-            //bsp: None,
+            bsp: None,
             bi_list: Vec::new(),
             reason: reason.to_string(),
             //support_trend_line: None,
@@ -117,9 +121,9 @@ impl<T: Line> CSeg<T> {
         Ok(())
     }
 
-    //pub fn add_zs(&mut self, zs: Handle<CZS<T>>) {
-    //    self.zs_lst.insert(0, zs);
-    //}
+    pub fn add_zs(&mut self, zs: Handle<CZS<T>>) {
+        self.zs_lst.insert(0, zs);
+    }
 
     pub fn cal_klu_slope(&self) -> f64 {
         let end_val = self.get_end_val();
@@ -138,9 +142,9 @@ impl<T: Line> CSeg<T> {
         self.end_bi.borrow().idx() - self.start_bi.borrow().idx() + 1
     }
 
-    //pub fn clear_zs_lst(&mut self) {
-    //    self.zs_lst.clear();
-    //}
+    pub fn clear_zs_lst(&mut self) {
+        self.zs_lst.clear();
+    }
 
     pub fn _low(&self) -> f64 {
         if self.is_down() {
@@ -190,7 +194,7 @@ impl<T: Line> CSeg<T> {
         (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1) as usize
     }
 
-    pub fn cal_macd_metric(
+    pub fn _cal_macd_metric(
         &self,
         macd_algo: MacdAlgo,
         is_reverse: bool,
@@ -255,27 +259,27 @@ impl<T: Line> CSeg<T> {
         //}
     }
 
-    //pub fn get_first_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
-    //    self.zs_lst
-    //        .iter()
-    //        .find(|zs| !zs.borrow().is_one_bi_zs())
-    //        .cloned()
-    //}
-    //
-    //pub fn get_final_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
-    //    self.zs_lst
-    //        .iter()
-    //        .rev()
-    //        .find(|zs| !zs.borrow().is_one_bi_zs())
-    //        .cloned()
-    //}
-    //
-    //pub fn get_multi_bi_zs_cnt(&self) -> usize {
-    //    self.zs_lst
-    //        .iter()
-    //        .filter(|zs| !zs.borrow().is_one_bi_zs())
-    //        .count()
-    //}
+    pub fn get_first_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+        self.zs_lst
+            .iter()
+            .find(|zs| !zs.borrow().is_one_bi_zs())
+            .cloned()
+    }
+
+    pub fn get_final_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+        self.zs_lst
+            .iter()
+            .rev()
+            .find(|zs| !zs.borrow().is_one_bi_zs())
+            .cloned()
+    }
+
+    pub fn get_multi_bi_zs_cnt(&self) -> usize {
+        self.zs_lst
+            .iter()
+            .filter(|zs| !zs.borrow().is_one_bi_zs())
+            .count()
+    }
 }
 
 impl<T: Line> std::fmt::Display for CSeg<T> {

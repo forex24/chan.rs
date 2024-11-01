@@ -103,7 +103,7 @@ impl CKLineList {
         } else {
             let dir = CKLine::try_add(self.lst.last().as_ref().unwrap(), &klu)?;
             if dir != KLineDir::Combine {
-                let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len() as i32, dir);
+                let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len(), dir);
                 self.lst.push(new_kline.clone());
                 if self.lst.len() >= 3 {
                     let len = self.lst.len();

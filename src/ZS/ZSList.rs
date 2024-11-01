@@ -1,13 +1,11 @@
-use crate::Bi::Bi::CBi;
-use crate::Bi::BiList::CBiList;
 use crate::Common::func_util::revert_bi_dir;
 use crate::Common::types::Handle;
+use crate::Common::CEnum::BiDir;
 use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
 use crate::ZS::ZSConfig::CZSConfig;
 use crate::ZS::ZS::CZS;
-use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -15,7 +13,7 @@ pub struct CZSList<T> {
     zs_lst: Vec<Handle<CZS<T>>>,
     config: CZSConfig,
     free_item_lst: Vec<Handle<T>>,
-    last_sure_pos: i32,
+    last_sure_pos: Option<usize>,
 }
 
 impl<U: Line> CZSList<U> {
@@ -24,36 +22,42 @@ impl<U: Line> CZSList<U> {
             zs_lst: Vec::new(),
             config: zs_config.unwrap_or_default(),
             free_item_lst: Vec::new(),
-            last_sure_pos: -1,
+            last_sure_pos: None,
         }
     }
 
     pub fn update_last_pos<T: Line>(&mut self, seg_list: &CSegListChan<T>) {
-        self.last_sure_pos = -1;
+        self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
-            if seg.is_sure {
-                self.last_sure_pos = seg.start_bi.borrow().idx;
+            if seg.borrow().is_sure {
+                self.last_sure_pos = Some(seg.borrow().start_bi.borrow().idx());
                 return;
             }
         }
     }
 
-    pub fn seg_need_cal<T: Line>(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.borrow().idx >= self.last_sure_pos
+    pub fn seg_need_cal<T: Line>(&self, seg: &Handle<CSeg<T>>) -> bool {
+        match self.last_sure_pos {
+            None => true,
+            Some(pos) => seg.borrow().start_bi.borrow().idx() >= pos,
+        }
     }
 
-    pub fn add_to_free_lst(&mut self, item: Handle<dyn Any>, is_sure: bool, zs_algo: &str) {
+    pub fn add_to_free_lst(&mut self, item: &Handle<U>, is_sure: bool, zs_algo: &str) {
         if !self.free_item_lst.is_empty()
-            && item.borrow().idx == self.free_item_lst.last().unwrap().borrow().idx
+            && item.borrow().idx() == self.free_item_lst.last().unwrap().borrow().idx()
         {
+            // 防止笔新高或新低的更新带来bug
             self.free_item_lst.pop();
         }
         self.free_item_lst.push(item.clone());
         if let Some(res) = self.try_construct_zs(&self.free_item_lst, is_sure, zs_algo) {
-            if res.begin_bi.borrow().idx > 0 {
-                self.zs_lst.push(Rc::new(RefCell::new(res)));
-                self.clear_free_lst();
-                self.try_combine();
+            if let Some(ref begin_bi) = res.begin_bi {
+                if begin_bi.borrow().idx() > 0 {
+                    self.zs_lst.push(Rc::new(RefCell::new(res)));
+                    self.clear_free_lst();
+                    self.try_combine();
+                }
             }
         }
     }
@@ -62,12 +66,12 @@ impl<U: Line> CZSList<U> {
         self.free_item_lst.clear();
     }
 
-    pub fn update(&mut self, bi: Handle<CBi>, is_sure: bool) {
+    pub fn update(&mut self, bi: Handle<U>, is_sure: bool) {
         if self.free_item_lst.is_empty() && self.try_add_to_end(&bi) {
             self.try_combine();
             return;
         }
-        self.add_to_free_lst(bi, is_sure, "normal");
+        self.add_to_free_lst(&bi, is_sure, "normal");
     }
 
     pub fn try_add_to_end(&mut self, bi: &Handle<U>) -> bool {
@@ -85,7 +89,7 @@ impl<U: Line> CZSList<U> {
     pub fn add_zs_from_bi_range(
         &mut self,
         seg_bi_lst: &[Handle<U>],
-        seg_dir: i32,
+        seg_dir: BiDir,
         seg_is_sure: bool,
     ) {
         let mut deal_bi_cnt = 0;
@@ -94,7 +98,7 @@ impl<U: Line> CZSList<U> {
                 continue;
             }
             if deal_bi_cnt < 1 {
-                self.add_to_free_lst(bi.clone(), seg_is_sure, "normal");
+                self.add_to_free_lst(&bi, seg_is_sure, "normal");
                 deal_bi_cnt += 1;
             } else {
                 self.update(bi.clone(), seg_is_sure);
@@ -104,7 +108,7 @@ impl<U: Line> CZSList<U> {
 
     pub fn try_construct_zs(
         &self,
-        lst: &[Handle<dyn Any>],
+        lst: &[Handle<U>],
         is_sure: bool,
         zs_algo: &str,
     ) -> Option<CZS<U>> {
@@ -125,7 +129,7 @@ impl<U: Line> CZSList<U> {
                     return None;
                 }
                 let lst = &lst[lst.len() - 3..];
-                if lst[0].borrow().dir == lst[0].borrow().parent_seg.borrow().dir {
+                if lst[0].borrow().dir() == lst[0].borrow().get_parent_seg().borrow().dir {
                     &lst[1..]
                 } else {
                     lst
@@ -136,12 +140,12 @@ impl<U: Line> CZSList<U> {
 
         let min_high = lst
             .iter()
-            .map(|item| item.borrow()._high())
+            .map(|item| item.borrow().high())
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         let max_low = lst
             .iter()
-            .map(|item| item.borrow()._low())
+            .map(|item| item.borrow().low())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
 
@@ -152,11 +156,18 @@ impl<U: Line> CZSList<U> {
         }
     }
 
-    pub fn cal_bi_zs<T: Line>(&mut self, bi_lst: &dyn Any, seg_lst: &CSegListChan<T>) {
-        while !self.zs_lst.is_empty()
-            && self.zs_lst.last().unwrap().borrow().begin_bi.borrow().idx >= self.last_sure_pos
-        {
-            self.zs_lst.pop();
+    pub fn cal_bi_zs(&mut self, bi_lst: &[Handle<U>], seg_lst: &CSegListChan<U>) {
+        // 移除不确定的中枢
+        while !self.zs_lst.is_empty() {
+            let last_zs = self.zs_lst.last().unwrap();
+            let begin_idx = last_zs.borrow().begin_bi.as_ref().unwrap().borrow().idx();
+
+            match self.last_sure_pos {
+                Some(pos) if begin_idx >= pos => {
+                    self.zs_lst.pop();
+                }
+                _ => break,
+            }
         }
 
         match self.config.zs_algo.as_str() {
@@ -166,23 +177,18 @@ impl<U: Line> CZSList<U> {
                         continue;
                     }
                     self.clear_free_lst();
-                    let seg_bi_lst = bi_lst
-                        .downcast_ref::<CBiList>()
-                        .unwrap()
-                        .slice(seg.start_bi.borrow().idx, seg.end_bi.borrow().idx + 1);
-                    self.add_zs_from_bi_range(&seg_bi_lst, seg.dir, seg.is_sure);
+                    let seg_bi_lst = &bi_lst[seg.borrow().start_bi.borrow().idx()
+                        ..seg.borrow().end_bi.borrow().idx() + 1];
+                    self.add_zs_from_bi_range(&seg_bi_lst, seg.borrow().dir, seg.borrow().is_sure);
                 }
 
                 if !seg_lst.is_empty() {
                     self.clear_free_lst();
                     let last_seg = seg_lst.last().unwrap();
-                    let remaining_bi_lst = bi_lst
-                        .downcast_ref::<CBiList>()
-                        .unwrap()
-                        .slice(last_seg.end_bi.borrow().idx + 1, bi_lst.len());
+                    let remaining_bi_lst = &bi_lst[last_seg.borrow().end_bi.borrow().idx() + 1..];
                     self.add_zs_from_bi_range(
                         &remaining_bi_lst,
-                        revert_bi_dir(last_seg.dir),
+                        revert_bi_dir(&last_seg.borrow().dir),
                         false,
                     );
                 }
@@ -191,15 +197,20 @@ impl<U: Line> CZSList<U> {
                 assert!(!self.config.one_bi_zs);
                 self.clear_free_lst();
                 let begin_bi_idx = if !self.zs_lst.is_empty() {
-                    self.zs_lst.last().unwrap().borrow().end_bi.borrow().idx + 1
+                    self.zs_lst
+                        .last()
+                        .unwrap()
+                        .borrow()
+                        .end_bi
+                        .as_ref()
+                        .unwrap()
+                        .borrow()
+                        .idx()
+                        + 1
                 } else {
                     0
                 };
-                for bi in bi_lst
-                    .downcast_ref::<CBiList>()
-                    .unwrap()
-                    .slice(begin_bi_idx, bi_lst.len())
-                {
+                for bi in &bi_lst[begin_bi_idx..] {
                     self.update_overseg_zs(bi);
                 }
             }
@@ -207,26 +218,21 @@ impl<U: Line> CZSList<U> {
                 let mut sure_seg_appear = false;
                 let exist_sure_seg = seg_lst.exist_sure_seg();
                 for seg in seg_lst.iter() {
-                    if seg.is_sure {
+                    let seg_ref = seg.borrow();
+                    if seg_ref.is_sure {
                         sure_seg_appear = true;
                     }
                     if !self.seg_need_cal(seg) {
                         continue;
                     }
-                    if seg.is_sure || (!sure_seg_appear && exist_sure_seg) {
+                    if seg_ref.is_sure || (!sure_seg_appear && exist_sure_seg) {
                         self.clear_free_lst();
-                        let seg_bi_lst = bi_lst
-                            .downcast_ref::<CBiList>()
-                            .unwrap()
-                            .slice(seg.start_bi.borrow().idx, seg.end_bi.borrow().idx + 1);
-                        self.add_zs_from_bi_range(&seg_bi_lst, seg.dir, seg.is_sure);
+                        let seg_bi_lst = &bi_lst
+                            [seg_ref.start_bi.borrow().idx()..seg_ref.end_bi.borrow().idx() + 1];
+                        self.add_zs_from_bi_range(&seg_bi_lst, seg_ref.dir, seg_ref.is_sure);
                     } else {
                         self.clear_free_lst();
-                        for bi in bi_lst
-                            .downcast_ref::<CBiList>()
-                            .unwrap()
-                            .slice(seg.start_bi.borrow().idx, bi_lst.len())
-                        {
+                        for bi in &bi_lst[seg_ref.start_bi.borrow().idx()..] {
                             self.update_overseg_zs(bi);
                         }
                         break;
@@ -239,16 +245,16 @@ impl<U: Line> CZSList<U> {
         self.update_last_pos(seg_lst);
     }
 
-    pub fn update_overseg_zs(&mut self, bi: Handle<dyn Any>) {
+    pub fn update_overseg_zs(&mut self, bi: &Handle<U>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
-            if bi.borrow().next.is_none() {
+            if bi.borrow().next().is_none() {
                 return;
             }
             let last_zs = self.zs_lst.last().unwrap();
-            if bi.borrow().idx - last_zs.borrow().end_bi.borrow().idx <= 1
+            if bi.borrow().idx() - last_zs.borrow().end_bi.as_ref().unwrap().borrow().idx() <= 1
                 && last_zs
                     .borrow()
-                    .in_range(&bi.borrow().next.as_ref().unwrap())
+                    .in_range(&bi.borrow().next().as_ref().unwrap())
                 && last_zs.borrow_mut().try_add_to_end(bi)
             {
                 return;
@@ -257,11 +263,22 @@ impl<U: Line> CZSList<U> {
         if !self.zs_lst.is_empty()
             && self.free_item_lst.is_empty()
             && self.zs_lst.last().unwrap().borrow().in_range(&bi)
-            && bi.borrow().idx - self.zs_lst.last().unwrap().borrow().end_bi.borrow().idx <= 1
+            && bi.borrow().idx()
+                - self
+                    .zs_lst
+                    .last()
+                    .unwrap()
+                    .borrow()
+                    .end_bi
+                    .as_ref()
+                    .unwrap()
+                    .borrow()
+                    .idx()
+                <= 1
         {
             return;
         }
-        self.add_to_free_lst(bi, bi.borrow().is_sure, "over_seg");
+        self.add_to_free_lst(bi, bi.borrow().is_sure(), "over_seg");
     }
 
     pub fn try_combine(&mut self) {

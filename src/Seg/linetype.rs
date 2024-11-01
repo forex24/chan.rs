@@ -2,13 +2,18 @@ use std::rc::Rc;
 
 use crate::{
     Bi::Bi::CBi,
-    Common::{types::Handle, CEnum::BiDir},
+    Common::{
+        types::Handle,
+        CEnum::{BiDir, MacdAlgo},
+        ChanException::CChanException,
+    },
     KLine::{KLine::CKLine, KLine_Unit::CKLineUnit},
 };
 
 use super::Seg::CSeg;
 
 pub trait Line {
+    type Parent;
     // 读取属性
     fn idx(&self) -> usize;
     fn high(&self) -> f64;
@@ -18,9 +23,13 @@ pub trait Line {
     fn get_begin_klu(&self) -> Handle<CKLineUnit>;
     fn get_end_klu(&self) -> Handle<CKLineUnit>;
     fn dir(&self) -> BiDir;
-    fn get_pre(&self) -> Option<Handle<Self>>;
-    fn get_next(&self) -> Option<Handle<Self>>;
-    fn set_parent_seg<T>(&mut self, parent_seg: Option<T>);
+    //fn get_pre(&self) -> Option<Handle<Self>>;
+    //fn get_next(&self) -> Option<Handle<Self>>;
+
+    fn get_parent_seg(&self) -> Handle<Self::Parent>;
+    fn set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>);
+
+    fn seg_idx(&self) -> Option<usize>;
     // 修改属性
     fn set_pre(&mut self, pre: Option<Handle<Self>>);
     fn set_next(&mut self, next: Option<Handle<Self>>);
@@ -39,10 +48,15 @@ pub trait Line {
     fn is_sure(&self) -> bool;
     fn next(&self) -> Option<Handle<Self>>;
     fn pre(&self) -> Option<Handle<Self>>;
+
+    fn cal_macd_metric(&self, macd_algo: MacdAlgo, is_reverse: bool)
+        -> Result<f64, CChanException>;
 }
 
 // 更新 CBi 的实现
 impl Line for CBi {
+    type Parent = CSeg<CBi>;
+
     fn idx(&self) -> usize {
         self.idx as usize
     }
@@ -67,13 +81,13 @@ impl Line for CBi {
         self.dir
     }
 
-    fn get_pre(&self) -> Option<Handle<Self>> {
-        self.pre.clone()
-    }
-
-    fn get_next(&self) -> Option<Handle<Self>> {
-        self.next.clone()
-    }
+    //fn get_pre(&self) -> Option<Handle<Self>> {
+    //    self.pre.clone()
+    //}
+    //
+    //fn get_next(&self) -> Option<Handle<Self>> {
+    //    self.next.clone()
+    //}
 
     fn set_pre(&mut self, pre: Option<Handle<Self>>) {
         self.pre = pre;
@@ -91,8 +105,8 @@ impl Line for CBi {
         self.get_end_klu()
     }
 
-    fn set_parent_seg<T>(&mut self, parent_seg: Option<T>) {
-        todo!()
+    fn set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
+        self.parent_seg = parent_seg;
     }
 
     fn get_begin_klc(&self) -> Handle<CKLine> {
@@ -114,10 +128,36 @@ impl Line for CBi {
     fn pre(&self) -> Option<Handle<Self>> {
         self.pre.as_ref().map(|x| Rc::clone(x))
     }
+
+    fn get_parent_seg(&self) -> Handle<Self::Parent> {
+        self.parent_seg.clone().unwrap()
+    }
+
+    fn is_up(&self) -> bool {
+        self.dir() == BiDir::Up
+    }
+
+    fn is_down(&self) -> bool {
+        self.dir() == BiDir::Down
+    }
+
+    fn seg_idx(&self) -> Option<usize> {
+        self.seg_idx
+    }
+
+    fn cal_macd_metric(
+        &self,
+        macd_algo: MacdAlgo,
+        is_reverse: bool,
+    ) -> Result<f64, CChanException> {
+        self._cal_macd_metric(macd_algo, is_reverse)
+    }
 }
 
 // 更新 CSeg 的实现
 impl Line for CSeg<CBi> {
+    type Parent = CSeg<CSeg<CBi>>;
+
     fn idx(&self) -> usize {
         self.idx
     }
@@ -142,13 +182,13 @@ impl Line for CSeg<CBi> {
         self.dir
     }
 
-    fn get_pre(&self) -> Option<Handle<Self>> {
-        self.pre.clone()
-    }
-
-    fn get_next(&self) -> Option<Handle<Self>> {
-        self.next.clone()
-    }
+    //fn get_pre(&self) -> Option<Handle<Self>> {
+    //    self.pre.clone()
+    //}
+    //
+    //fn get_next(&self) -> Option<Handle<Self>> {
+    //    self.next.clone()
+    //}
 
     fn set_pre(&mut self, pre: Option<Handle<Self>>) {
         self.pre = pre;
@@ -166,8 +206,11 @@ impl Line for CSeg<CBi> {
         self.get_end_klu()
     }
 
-    fn set_parent_seg<T>(&mut self, parent_seg: Option<T>) {
-        todo!()
+    fn get_parent_seg(&self) -> Handle<Self::Parent> {
+        self.parent_seg.as_ref().unwrap().upgrade().unwrap()
+    }
+    fn set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
+        self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
     }
 
     fn get_begin_klc(&self) -> Handle<CKLine> {
@@ -188,5 +231,17 @@ impl Line for CSeg<CBi> {
 
     fn pre(&self) -> Option<Handle<Self>> {
         self.pre.as_ref().map(|x| Rc::clone(x))
+    }
+
+    fn seg_idx(&self) -> Option<usize> {
+        self.seg_idx
+    }
+
+    fn cal_macd_metric(
+        &self,
+        macd_algo: MacdAlgo,
+        is_reverse: bool,
+    ) -> Result<f64, CChanException> {
+        self._cal_macd_metric(macd_algo, is_reverse)
     }
 }

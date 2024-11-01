@@ -1,37 +1,33 @@
-use crate::Bi::Bi::CBi;
 use crate::ChanModel::Features::CFeatures;
-use crate::Common::types::{LineType, Handle};
+use crate::Common::types::Handle;
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
-use crate::Seg::Seg::CSeg;
+use crate::Seg::linetype::Line;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-pub struct CBSPoint {
-    pub bi: LineType,
+pub struct CBSPoint<T> {
+    pub bi: Handle<T>,
     pub klu: Handle<CKLineUnit>,
     pub is_buy: bool,
     pub bsp_type: Vec<BspType>,
-    pub relate_bsp1: Option<Handle<CBSPoint>>,
+    pub relate_bsp1: Option<Handle<CBSPoint<T>>>,
     pub features: CFeatures,
     pub is_segbsp: bool,
 }
 
-impl CBSPoint {
+impl<T: Line> CBSPoint<T> {
     pub fn new(
-        bi: LineType,
+        bi: Handle<T>,
         is_buy: bool,
         bs_type: BspType,
-        relate_bsp1: Option<Handle<CBSPoint>>,
-        feature_dict: Option<HashMap<String, f64>>,
-    ) -> Handle<Self> {
-        let klu = match &bi {
-            LineType::Bi(b) => b.borrow().get_end_klu(),
-            LineType::Seg(s) => s.borrow().get_end_klu(),
-        };
+        relate_bsp1: Option<Handle<CBSPoint<T>>>,
+        feature_dict: Option<HashMap<String, Option<f64>>>,
+    ) -> Self {
+        let klu = bi.borrow().get_end_klu();
 
-        let bsp = Rc::new(RefCell::new(CBSPoint {
+        let mut bsp = CBSPoint {
             bi,
             klu,
             is_buy,
@@ -39,14 +35,11 @@ impl CBSPoint {
             relate_bsp1,
             features: CFeatures::new(feature_dict),
             is_segbsp: false,
-        }));
+        };
 
-        match &bsp.borrow().bi {
-            LineType::Bi(b) => b.borrow_mut().bsp = Some(Rc::clone(&bsp)),
-            LineType::Seg(s) => s.borrow_mut().bsp = Some(Rc::clone(&bsp)),
-        }
+        bi.borrow_mut().bsp = Some(Rc::clone(&bsp));
 
-        bsp.borrow_mut().init_common_feature();
+        bsp.init_common_feature();
 
         bsp
     }
@@ -66,7 +59,7 @@ impl CBSPoint {
     pub fn add_another_bsp_prop(
         &mut self,
         bs_type: BspType,
-        relate_bsp1: Option<Handle<CBSPoint>>,
+        relate_bsp1: Option<Handle<CBSPoint<T>>>,
     ) {
         self.add_type(bs_type);
         if self.relate_bsp1.is_none() {
@@ -84,10 +77,7 @@ impl CBSPoint {
     }
 
     fn init_common_feature(&mut self) {
-        let amp = match &self.bi {
-            LineType::Bi(b) => b.borrow().amp(),
-            LineType::Seg(s) => s.borrow().amp(),
-        };
+        let amp = self.bi.borrow().amp();
 
         self.add_feat(
             FeatureInput::Dict(HashMap::from([("bsp_bi_amp".to_string(), amp)])),
