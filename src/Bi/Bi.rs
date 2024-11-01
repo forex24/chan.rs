@@ -261,7 +261,7 @@ impl CBi {
         self.clean_cache();
     }
 
-    pub fn cal_macd_metric(
+    pub fn _cal_macd_metric(
         &self,
         macd_algo: MacdAlgo,
         is_reverse: bool,
@@ -419,7 +419,7 @@ impl CBi {
         }
     }
 
-    pub fn _cal_macd_trade_metric(
+    pub fn cal_macd_trade_metric(
         &self,
         metric: DataField,
         cal_avg: bool,

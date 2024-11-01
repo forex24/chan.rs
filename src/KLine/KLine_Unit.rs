@@ -133,15 +133,15 @@ impl CKLineUnit {
         self.high
     }
 
-    pub fn set_metric(&mut self, metric_model_lst: &[Box<dyn MetricModel>]) {
+    pub fn set_metric(&mut self, metric_model_lst: &mut [Box<dyn MetricModel>]) {
         for metric_model in metric_model_lst {
-            if let Some(macd) = metric_model.as_any().downcast_ref::<CMACD>() {
+            if let Some(macd) = metric_model.as_any().downcast_mut::<CMACD>() {
                 self.macd = Some(macd.add(self.close));
             } else if let Some(trend_model) = metric_model.as_any().downcast_ref::<CTrendModel>() {
                 self.trend
-                    .entry(trend_model.get_type())
+                    .entry(trend_model.trend_type)
                     .or_insert_with(HashMap::new)
-                    .insert(trend_model.get_t(), trend_model.add(self.close));
+                    .insert(trend_model.t, trend_model.add(self.close));
             } else if let Some(boll_model) = metric_model.as_any().downcast_ref::<BollModel>() {
                 self.boll = Some(boll_model.add(self.close));
             }
@@ -152,9 +152,9 @@ impl CKLineUnit {
             } */
             else if let Some(rsi) = metric_model.as_any().downcast_ref::<RSI>() {
                 self.rsi = Some(rsi.add(self.close));
-            } else if let Some(kdj) = metric_model.as_any().downcast_ref::<KDJ>() {
-                self.kdj = Some(kdj.add(self.high, self.low, self.close));
-            }
+            } //else if let Some(kdj) = metric_model.as_any().downcast_ref::<KDJ>() {
+              //  self.kdj = Some(kdj.add(self.high, self.low, self.close));
+              //}
         }
     }
     /*
