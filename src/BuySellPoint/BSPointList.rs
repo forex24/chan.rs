@@ -13,10 +13,10 @@ use super::BS_Point::CBSPoint;
 
 pub struct CBSPointList<T> {
     lst: Vec<Handle<CBSPoint<T>>>,
-    bsp_dict: HashMap<i32, Handle<CBSPoint<T>>>,
+    bsp_dict: HashMap<usize, Handle<CBSPoint<T>>>,
     bsp1_lst: Vec<Handle<CBSPoint<T>>>,
     config: CBSPointConfig,
-    last_sure_pos: i32,
+    last_sure_pos: Option<usize>,
 }
 
 impl<T: Line> CBSPointList<T> {
@@ -26,7 +26,7 @@ impl<T: Line> CBSPointList<T> {
             bsp_dict: HashMap::new(),
             bsp1_lst: Vec::new(),
             config: bs_point_config,
-            last_sure_pos: -1,
+            last_sure_pos: None,
         }
     }
 
@@ -39,8 +39,10 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal(&mut self, bi_list: &[Handle<T>], seg_list: &CSegListChan<T>) {
-        self.lst
-            .retain(|bsp| bsp.borrow().klu.borrow().idx <= self.last_sure_pos);
+        self.lst.retain(|bsp| match self.last_sure_pos {
+            None => false,
+            Some(pos) => bsp.borrow().klu.borrow().idx <= pos,
+        });
         self.bsp_dict = self
             .lst
             .iter()
@@ -51,8 +53,10 @@ impl<T: Line> CBSPointList<T> {
                 )
             })
             .collect();
-        self.bsp1_lst
-            .retain(|bsp| bsp.borrow().klu.borrow().idx <= self.last_sure_pos);
+        self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
+            None => false,
+            Some(pos) => bsp.borrow().klu.borrow().idx <= pos,
+        });
 
         self.cal_seg_bs1point(seg_list, bi_list);
         self.cal_seg_bs2point(seg_list, bi_list);
@@ -62,17 +66,21 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
-        self.last_sure_pos = -1;
+        self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.borrow().is_sure {
-                self.last_sure_pos = seg.borrow().end_bi.borrow().get_begin_klu().borrow().idx;
+                self.last_sure_pos =
+                    Some(seg.borrow().end_bi.borrow().get_begin_klu().borrow().idx);
                 return;
             }
         }
     }
 
     pub fn seg_need_cal(&self, seg: &Handle<CSeg<T>>) -> bool {
-        seg.borrow().end_bi.borrow().get_end_klu().borrow().idx > self.last_sure_pos
+        match self.last_sure_pos {
+            Some(last_pos) => seg.borrow().end_bi.borrow().get_end_klu().borrow().idx > last_pos,
+            None => true,
+        }
     }
 
     pub fn add_bs(

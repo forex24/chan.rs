@@ -27,7 +27,7 @@ impl CBSPointConfig {
 #[derive(Debug, Clone)]
 pub struct CPointConfig {
     pub divergence_rate: f64,
-    pub min_zs_cnt: i32,
+    pub min_zs_cnt: usize,
     pub bsp1_only_multibi_zs: bool,
     pub max_bs2_rate: f64,
     pub macd_algo: MacdAlgo,
@@ -38,7 +38,7 @@ pub struct CPointConfig {
     pub bsp3_follow_1: bool,
     pub bsp3_peak: bool,
     pub bsp2s_follow_2: bool,
-    pub max_bsp2s_lv: Option<i32>,
+    pub max_bsp2s_lv: Option<usize>,
     pub strict_bsp3: bool,
 }
 
