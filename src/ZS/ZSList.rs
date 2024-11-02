@@ -16,7 +16,7 @@ pub struct CZSList<T> {
     last_sure_pos: Option<usize>,
 }
 
-impl<U: Line> CZSList<U> {
+impl<T: Line> CZSList<T> {
     pub fn new(zs_config: Option<CZSConfig>) -> Self {
         CZSList {
             zs_lst: Vec::new(),
@@ -26,7 +26,7 @@ impl<U: Line> CZSList<U> {
         }
     }
 
-    pub fn update_last_pos<T: Line>(&mut self, seg_list: &CSegListChan<T>) {
+    pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.borrow().is_sure {
@@ -36,14 +36,14 @@ impl<U: Line> CZSList<U> {
         }
     }
 
-    pub fn seg_need_cal<T: Line>(&self, seg: &Handle<CSeg<T>>) -> bool {
+    pub fn seg_need_cal(&self, seg: &Handle<CSeg<T>>) -> bool {
         match self.last_sure_pos {
             None => true,
             Some(pos) => seg.borrow().start_bi.borrow().idx() >= pos,
         }
     }
 
-    pub fn add_to_free_lst(&mut self, item: &Handle<U>, is_sure: bool, zs_algo: ZsAlgo) {
+    pub fn add_to_free_lst(&mut self, item: &Handle<T>, is_sure: bool, zs_algo: ZsAlgo) {
         if !self.free_item_lst.is_empty()
             && item.borrow().idx() == self.free_item_lst.last().unwrap().borrow().idx()
         {
@@ -66,7 +66,7 @@ impl<U: Line> CZSList<U> {
         self.free_item_lst.clear();
     }
 
-    pub fn update(&mut self, bi: Handle<U>, is_sure: bool) {
+    pub fn update(&mut self, bi: Handle<T>, is_sure: bool) {
         if self.free_item_lst.is_empty() && self.try_add_to_end(&bi) {
             self.try_combine();
             return;
@@ -74,7 +74,7 @@ impl<U: Line> CZSList<U> {
         self.add_to_free_lst(&bi, is_sure, ZsAlgo::Normal);
     }
 
-    pub fn try_add_to_end(&mut self, bi: &Handle<U>) -> bool {
+    pub fn try_add_to_end(&mut self, bi: &Handle<T>) -> bool {
         if self.zs_lst.is_empty() {
             false
         } else {
@@ -88,7 +88,7 @@ impl<U: Line> CZSList<U> {
 
     pub fn add_zs_from_bi_range(
         &mut self,
-        seg_bi_lst: &[Handle<U>],
+        seg_bi_lst: &[Handle<T>],
         seg_dir: BiDir,
         seg_is_sure: bool,
     ) {
@@ -108,10 +108,10 @@ impl<U: Line> CZSList<U> {
 
     pub fn try_construct_zs(
         &self,
-        lst: &[Handle<U>],
+        lst: &[Handle<T>],
         is_sure: bool,
         zs_algo: ZsAlgo,
-    ) -> Option<CZS<U>> {
+    ) -> Option<CZS<T>> {
         let lst = match zs_algo {
             ZsAlgo::Normal => {
                 if !self.config.one_bi_zs {
@@ -164,7 +164,7 @@ impl<U: Line> CZSList<U> {
         }
     }
 
-    pub fn cal_bi_zs(&mut self, bi_lst: &[Handle<U>], seg_lst: &CSegListChan<U>) {
+    pub fn cal_bi_zs(&mut self, bi_lst: &[Handle<T>], seg_lst: &CSegListChan<T>) {
         // 移除不确定的中枢
         while !self.zs_lst.is_empty() {
             let last_zs = self.zs_lst.last().unwrap();
@@ -252,7 +252,7 @@ impl<U: Line> CZSList<U> {
         self.update_last_pos(seg_lst);
     }
 
-    pub fn update_overseg_zs(&mut self, bi: &Handle<U>) {
+    pub fn update_overseg_zs(&mut self, bi: &Handle<T>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
             if bi.borrow().next().is_none() {
                 return;

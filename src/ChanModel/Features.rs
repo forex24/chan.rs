@@ -27,6 +27,16 @@ impl CFeatures {
             FeatureInput::Multiple(map) => {
                 self.features.extend(map);
             }
+            FeatureInput::MultipleOpt(map) => {
+                for (key, opt_value) in map {
+                    if let Some(value) = opt_value {
+                        self.features.insert(key, value);
+                    }
+                }
+            }
+            FeatureInput::Dict(features) => {
+                self.features.extend(features.features);
+            }
         }
     }
 }
@@ -34,6 +44,8 @@ impl CFeatures {
 pub enum FeatureInput {
     Single(String, f64),
     Multiple(HashMap<String, f64>),
+    MultipleOpt(HashMap<String, Option<f64>>),
+    Dict(CFeatures),
 }
 
 impl From<(String, f64)> for FeatureInput {
@@ -45,5 +57,17 @@ impl From<(String, f64)> for FeatureInput {
 impl From<HashMap<String, f64>> for FeatureInput {
     fn from(map: HashMap<String, f64>) -> Self {
         FeatureInput::Multiple(map)
+    }
+}
+
+impl From<HashMap<String, Option<f64>>> for FeatureInput {
+    fn from(map: HashMap<String, Option<f64>>) -> Self {
+        FeatureInput::MultipleOpt(map)
+    }
+}
+
+impl From<CFeatures> for FeatureInput {
+    fn from(features: CFeatures) -> Self {
+        FeatureInput::Dict(features)
     }
 }

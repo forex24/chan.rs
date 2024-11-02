@@ -170,7 +170,7 @@ impl<T: Line> CZS<T> {
         )
     }
 
-    pub fn is_inside<U: Line>(&self, seg: &CSeg<U>) -> bool {
+    pub fn is_inside(&self, seg: &CSeg<T>) -> bool {
         seg.start_bi.borrow().idx() <= self.begin_bi.as_ref().unwrap().borrow().idx()
             && self.begin_bi.as_ref().unwrap().borrow().idx() <= seg.end_bi.borrow().idx()
     }

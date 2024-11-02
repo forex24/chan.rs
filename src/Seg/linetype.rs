@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::{
@@ -54,7 +53,7 @@ pub trait Line: Sized {
     fn cal_macd_metric(&self, macd_algo: MacdAlgo, is_reverse: bool)
         -> Result<f64, CChanException>;
 
-    fn set_bsp(&mut self, bsp: Option<Rc<CBSPoint<Self>>>)
+    fn set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized;
 
@@ -161,11 +160,11 @@ impl Line for CBi {
         self._cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn set_bsp(&mut self, bsp: Option<Rc<CBSPoint<Self>>>)
+    fn set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized,
     {
-        self.bsp = bsp.map(|b| Rc::new(RefCell::new((*b).clone())));
+        self.bsp = bsp.map(|b| Rc::clone(&b));
     }
 
     fn amp(&self) -> Option<f64> {
@@ -264,11 +263,11 @@ impl Line for CSeg<CBi> {
         self._cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn set_bsp(&mut self, bsp: Option<Rc<CBSPoint<Self>>>)
+    fn set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized,
     {
-        self.bsp = bsp.map(|b| Rc::new(RefCell::new((*b).clone())));
+        self.bsp = bsp.map(|b| Rc::clone(&b));
     }
 
     fn amp(&self) -> Option<f64> {
@@ -336,11 +335,11 @@ impl Line for CSeg<CSeg<CBi>> {
     }
 
     fn get_begin_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.start_bi.borrow().begin_klc)
+        Rc::clone(&self.start_bi.borrow().start_bi.borrow().begin_klc)
     }
 
     fn get_end_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.end_bi.borrow().end_klc)
+        Rc::clone(&self.end_bi.borrow().end_bi.borrow().end_klc)
     }
 
     fn is_sure(&self) -> bool {
@@ -367,14 +366,117 @@ impl Line for CSeg<CSeg<CBi>> {
         self._cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn set_bsp(&mut self, bsp: Option<Rc<CBSPoint<Self>>>)
+    fn set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized,
     {
-        self.bsp = bsp.map(|b| Rc::new(RefCell::new((*b).clone())));
+        self.bsp = bsp.map(|b| Rc::clone(&b));
     }
 
     fn amp(&self) -> Option<f64> {
         None
+    }
+}
+
+// Dummy impl for ZSList
+impl Line for CSeg<CSeg<CSeg<CBi>>> {
+    type Parent = CBi;
+
+    fn idx(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn high(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn low(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn get_begin_val(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn get_end_val(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn dir(&self) -> BiDir {
+        unimplemented!()
+    }
+
+    //fn get_pre(&self) -> Option<Handle<Self>> {
+    //    self.pre.clone()
+    //}
+    //
+    //fn get_next(&self) -> Option<Handle<Self>> {
+    //    self.next.clone()
+    //}
+
+    fn set_pre(&mut self, _pre: Option<Handle<Self>>) {
+        unimplemented!()
+    }
+
+    fn set_next(&mut self, _next: Option<Handle<Self>>) {
+        unimplemented!()
+    }
+
+    fn get_begin_klu(&self) -> Handle<CKLineUnit> {
+        unimplemented!()
+    }
+
+    fn get_end_klu(&self) -> Handle<CKLineUnit> {
+        unimplemented!()
+    }
+
+    fn get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
+        unimplemented!()
+    }
+    fn set_parent_seg(&mut self, _parent_seg: Option<Handle<Self::Parent>>) {
+        unimplemented!()
+    }
+
+    fn get_begin_klc(&self) -> Handle<CKLine> {
+        unimplemented!()
+    }
+
+    fn get_end_klc(&self) -> Handle<CKLine> {
+        unimplemented!()
+    }
+
+    fn is_sure(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn next(&self) -> Option<Handle<Self>> {
+        unimplemented!()
+    }
+
+    fn pre(&self) -> Option<Handle<Self>> {
+        unimplemented!()
+    }
+
+    fn seg_idx(&self) -> Option<usize> {
+        unimplemented!()
+    }
+
+    fn cal_macd_metric(
+        &self,
+        _macd_algo: MacdAlgo,
+        _is_reverse: bool,
+    ) -> Result<f64, CChanException> {
+        unimplemented!()
+    }
+
+    fn set_bsp(&mut self, _bsp: Option<Handle<CBSPoint<Self>>>)
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+
+    fn amp(&self) -> Option<f64> {
+        unimplemented!()
     }
 }

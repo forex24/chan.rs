@@ -1,5 +1,5 @@
 use crate::ChanModel::Features::CFeatures;
-use crate::ChanModel::Features::FeatureInput as CFeatureInput;
+use crate::ChanModel::Features::FeatureInput;
 use crate::Common::types::Handle;
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -25,8 +25,9 @@ impl<T: Line> CBSPoint<T> {
         bs_type: BspType,
         relate_bsp1: Option<Handle<CBSPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
-    ) -> Self {
+    ) -> Handle<Self> {
         let klu = bi.borrow().get_end_klu();
+        let bi_clone = Rc::clone(&bi);
 
         let features = match feature_dict {
             Some(dict) => {
@@ -39,7 +40,7 @@ impl<T: Line> CBSPoint<T> {
             None => CFeatures::new(None),
         };
 
-        let mut bsp = CBSPoint {
+        let bsp = Rc::new(RefCell::new(CBSPoint {
             bi,
             klu,
             is_buy,
@@ -47,11 +48,11 @@ impl<T: Line> CBSPoint<T> {
             relate_bsp1,
             features,
             is_segbsp: false,
-        };
+        }));
 
-        bi.borrow_mut().set_bsp(Some(Rc::new(bsp.clone())));
+        bi_clone.borrow_mut().set_bsp(Some(Rc::clone(&bsp)));
 
-        bsp.init_common_feature();
+        bsp.borrow_mut().init_common_feature();
 
         bsp
     }
@@ -85,28 +86,15 @@ impl<T: Line> CBSPoint<T> {
     }
 
     pub fn add_feat(&mut self, inp1: FeatureInput, inp2: Option<f64>) {
-        let converted_input = match inp1 {
-            FeatureInput::String(s) => FeatureInput::String(s),
-            FeatureInput::Dict(d) => FeatureInput::Dict(d),
-            FeatureInput::DictOpt(d) => FeatureInput::DictOpt(d),
-            FeatureInput::Features(f) => FeatureInput::Features(f),
-        };
-        self.features.add_feat(converted_input, inp2);
+        self.features.add_feat(inp1, inp2);
     }
 
     fn init_common_feature(&mut self) {
         let amp = self.bi.borrow().amp();
 
         self.add_feat(
-            FeatureInput::Dict(HashMap::from([("bsp_bi_amp".to_string(), amp)])),
+            FeatureInput::Single("bsp_bi_amp".to_string(), amp.unwrap()),
             None,
         );
     }
-}
-
-pub enum FeatureInput {
-    String(String),
-    Dict(HashMap<String, f64>),
-    DictOpt(HashMap<String, Option<f64>>),
-    Features(CFeatures),
 }

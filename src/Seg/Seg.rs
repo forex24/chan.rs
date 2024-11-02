@@ -24,7 +24,7 @@ pub struct CSeg<T> {
     pub parent_seg: Option<Weak<RefCell<CSeg<Self>>>>,
     pub pre: Option<Handle<CSeg<T>>>,
     pub next: Option<Handle<CSeg<T>>>,
-    pub bsp: Option<Handle<CBSPoint<T>>>,
+    pub bsp: Option<Handle<CBSPoint<CSeg<T>>>>,
     pub bi_list: Vec<Handle<T>>,
     pub reason: String,
     //pub support_trend_line: Option<CTrendLine>,

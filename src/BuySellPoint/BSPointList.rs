@@ -113,13 +113,7 @@ impl<T: Line> CBSPointList<T> {
         }
 
         if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
-            let bsp = Rc::new(RefCell::new(CBSPoint::new(
-                bi.clone(),
-                is_buy,
-                bs_type,
-                relate_bsp1,
-                feature_dict,
-            )));
+            let bsp = CBSPoint::new(bi.clone(), is_buy, bs_type, relate_bsp1, feature_dict);
             if is_target_bsp {
                 self.lst.push(Rc::clone(&bsp));
                 self.bsp_dict
@@ -203,14 +197,15 @@ impl<T: Line> CBSPointList<T> {
 
     fn treat_bsp1(&mut self, seg: &Handle<CSeg<T>>, is_buy: bool, mut is_target_bsp: bool) {
         let bsp_conf = self.config.get_bs_config(is_buy);
-        let last_zs = seg.borrow().zs_lst.last().unwrap();
+        let seg_ref = seg.borrow();
+        let last_zs = seg_ref.zs_lst.last().unwrap();
         let last_zs_ref = last_zs.borrow();
         let (break_peak, _) = last_zs_ref.out_bi_is_peak(seg.borrow().end_bi.borrow().idx());
         if bsp_conf.bs1_peak && !break_peak {
             is_target_bsp = false;
         }
         let (is_diver, divergence_rate) =
-            last_zs_ref.is_divergence(bsp_conf, Some(seg.borrow().end_bi));
+            last_zs_ref.is_divergence(bsp_conf, Some(Rc::clone(&seg_ref.end_bi)));
         if !is_diver {
             is_target_bsp = false;
         }
@@ -293,7 +288,7 @@ impl<T: Line> CBSPointList<T> {
                 continue;
             }
             let bsp1_bi = &seg.borrow().end_bi;
-            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow().idx).cloned();
+            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow().idx()).cloned();
             if bsp_conf.bsp2_follow_1 && real_bsp1.is_none() {
                 continue;
             }
