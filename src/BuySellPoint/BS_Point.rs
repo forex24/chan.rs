@@ -26,7 +26,7 @@ impl<T: Line> CBSPoint<T> {
         relate_bsp1: Option<Handle<CBSPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
     ) -> Handle<Self> {
-        let klu = bi.borrow()._get_end_klu();
+        let klu = bi.borrow().line_get_end_klu();
         let bi_clone = Rc::clone(&bi);
 
         let features = match feature_dict {
@@ -50,7 +50,7 @@ impl<T: Line> CBSPoint<T> {
             is_segbsp: false,
         }));
 
-        bi_clone.borrow_mut()._set_bsp(Some(Rc::clone(&bsp)));
+        bi_clone.borrow_mut().line_set_bsp(Some(Rc::clone(&bsp)));
 
         bsp.borrow_mut().init_common_feature();
 
@@ -90,7 +90,7 @@ impl<T: Line> CBSPoint<T> {
     }
 
     fn init_common_feature(&mut self) {
-        let amp = self.bi.borrow()._amp();
+        let amp = self.bi.borrow().line_amp();
 
         self.add_feat(FeatureInput::Single("bsp_bi_amp".to_string(), amp.unwrap()));
     }

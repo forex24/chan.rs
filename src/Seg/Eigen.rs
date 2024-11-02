@@ -25,10 +25,10 @@ pub struct CEigen<T> {
 impl<T: Line> CEigen<T> {
     pub fn new(bi: &Handle<T>, dir: KLineDir) -> Result<Self, CChanException> {
         Ok(Self {
-            begin_klc: bi.borrow()._get_begin_klc().borrow().idx as usize,
-            end_klc: bi.borrow()._get_end_klc().borrow().idx as usize,
-            high: bi.borrow()._high(),
-            low: bi.borrow()._low(),
+            begin_klc: bi.borrow().line_get_begin_klc().borrow().idx as usize,
+            end_klc: bi.borrow().line_get_end_klc().borrow().idx as usize,
+            high: bi.borrow().line_high(),
+            low: bi.borrow().line_low(),
             lst: vec![Rc::clone(&bi)],
             dir,
             fx: FxType::Unknown,
@@ -44,18 +44,20 @@ impl<T: Line> CEigen<T> {
         exclude_included: bool,
         allow_top_equal: Option<EqualMode>,
     ) -> KLineDir {
-        if self.high >= item.borrow()._high() && self.low <= item.borrow()._low() {
+        if self.high >= item.borrow().line_high() && self.low <= item.borrow().line_low() {
             return KLineDir::Combine;
         }
-        if self.high <= item.borrow()._high() && self.low >= item.borrow()._low() {
+        if self.high <= item.borrow().line_high() && self.low >= item.borrow().line_low() {
             match allow_top_equal {
                 Some(EqualMode::TopEqual)
-                    if self.high == item.borrow()._high() && self.low > item.borrow()._low() =>
+                    if self.high == item.borrow().line_high()
+                        && self.low > item.borrow().line_low() =>
                 {
                     return KLineDir::Down
                 }
                 Some(EqualMode::BottomEqual)
-                    if self.low == item.borrow()._low() && self.high < item.borrow()._high() =>
+                    if self.low == item.borrow().line_low()
+                        && self.high < item.borrow().line_high() =>
                 {
                     return KLineDir::Up
                 }
@@ -68,10 +70,10 @@ impl<T: Line> CEigen<T> {
                 }
             }
         }
-        if self.high > item.borrow()._high() && self.low > item.borrow()._low() {
+        if self.high > item.borrow().line_high() && self.low > item.borrow().line_low() {
             return KLineDir::Down;
         }
-        if self.high < item.borrow()._high() && self.low < item.borrow()._low() {
+        if self.high < item.borrow().line_high() && self.low < item.borrow().line_low() {
             return KLineDir::Up;
         }
         unreachable!()
@@ -91,20 +93,20 @@ impl<T: Line> CEigen<T> {
 
             match self.dir {
                 KLineDir::Up => {
-                    if item._high() != item._low() || item._high() != self.high {
-                        self.high = self.high.max(item._high());
-                        self.low = self.low.max(item._low());
+                    if item.line_high() != item.line_low() || item.line_high() != self.high {
+                        self.high = self.high.max(item.line_high());
+                        self.low = self.low.max(item.line_low());
                     }
                 }
                 KLineDir::Down => {
-                    if item._high() != item._low() || item._low() != self.low {
-                        self.high = self.high.min(item._high());
-                        self.low = self.low.min(item._low());
+                    if item.line_high() != item.line_low() || item.line_low() != self.low {
+                        self.high = self.high.min(item.line_high());
+                        self.low = self.low.min(item.line_low());
                     }
                 }
                 _ => unreachable!("KLINE_DIR = {:?} err!!! must be Up/Down", self.dir),
             }
-            self.end_klc = item._get_end_klc().borrow().idx as usize;
+            self.end_klc = item.line_get_end_klc().borrow().idx as usize;
         }
         dir
     }
@@ -141,7 +143,7 @@ impl<T: Line> CEigen<T> {
 
     pub fn get_high_peak_klu(&self) -> Handle<T> {
         for kl in self.lst.iter().rev() {
-            if kl.borrow()._high() == self.high {
+            if kl.borrow().line_high() == self.high {
                 return Rc::clone(kl);
             }
         }
@@ -150,7 +152,7 @@ impl<T: Line> CEigen<T> {
 
     pub fn get_low_peak_klu(&self) -> Handle<T> {
         for kl in self.lst.iter().rev() {
-            if kl.borrow()._low() == self.low {
+            if kl.borrow().line_low() == self.low {
                 return Rc::clone(kl);
             }
         }
@@ -236,12 +238,12 @@ impl<T: Line> CEigen<T> {
 
     pub fn get_peak_bi_idx(&self) -> usize {
         assert!(self.fx != FxType::Unknown);
-        let bi_dir = self.lst[0].borrow()._dir();
+        let bi_dir = self.lst[0].borrow().line_dir();
         if bi_dir == BiDir::Up {
             // 下降线段
-            (self.get_peak_klu(false).borrow()._idx() - 1) as usize
+            (self.get_peak_klu(false).borrow().line_idx() - 1) as usize
         } else {
-            (self.get_peak_klu(true).borrow()._idx() - 1) as usize
+            (self.get_peak_klu(true).borrow().line_idx() - 1) as usize
         }
     }
 }
@@ -251,8 +253,8 @@ impl<T: Line> std::fmt::Display for CEigen<T> {
         write!(
             f,
             "{}~{} gap={} fx={:?}",
-            self.lst[0].borrow()._idx(),
-            self.lst.last().unwrap().borrow()._idx(),
+            self.lst[0].borrow().line_idx(),
+            self.lst.last().unwrap().borrow().line_idx(),
             self.gap,
             self.fx
         )

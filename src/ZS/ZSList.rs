@@ -30,7 +30,7 @@ impl<T: Line> CZSList<T> {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.borrow().is_sure {
-                self.last_sure_pos = Some(seg.borrow().start_bi.borrow()._idx());
+                self.last_sure_pos = Some(seg.borrow().start_bi.borrow().line_idx());
                 return;
             }
         }
@@ -39,13 +39,13 @@ impl<T: Line> CZSList<T> {
     pub fn seg_need_cal(&self, seg: &Handle<CSeg<T>>) -> bool {
         match self.last_sure_pos {
             None => true,
-            Some(pos) => seg.borrow().start_bi.borrow()._idx() >= pos,
+            Some(pos) => seg.borrow().start_bi.borrow().line_idx() >= pos,
         }
     }
 
     pub fn add_to_free_lst(&mut self, item: &Handle<T>, is_sure: bool, zs_algo: ZsAlgo) {
         if !self.free_item_lst.is_empty()
-            && item.borrow()._idx() == self.free_item_lst.last().unwrap().borrow()._idx()
+            && item.borrow().line_idx() == self.free_item_lst.last().unwrap().borrow().line_idx()
         {
             // 防止笔新高或新低的更新带来bug
             self.free_item_lst.pop();
@@ -53,7 +53,7 @@ impl<T: Line> CZSList<T> {
         self.free_item_lst.push(item.clone());
         if let Some(res) = self.try_construct_zs(&self.free_item_lst, is_sure, zs_algo) {
             if let Some(ref begin_bi) = res.begin_bi {
-                if begin_bi.borrow()._idx() > 0 {
+                if begin_bi.borrow().line_idx() > 0 {
                     self.zs_lst.push(Rc::new(RefCell::new(res)));
                     self.clear_free_lst();
                     self.try_combine();
@@ -94,7 +94,7 @@ impl<T: Line> CZSList<T> {
     ) {
         let mut deal_bi_cnt = 0;
         for bi in seg_bi_lst {
-            if bi.borrow()._dir() == seg_dir {
+            if bi.borrow().line_dir() == seg_dir {
                 continue;
             }
             if deal_bi_cnt < 1 {
@@ -129,14 +129,14 @@ impl<T: Line> CZSList<T> {
                     return None;
                 }
                 let lst = &lst[lst.len() - 3..];
-                if lst[0].borrow()._dir()
+                if lst[0].borrow().line_dir()
                     == lst[0]
                         .borrow()
-                        ._get_parent_seg()
+                        .line_get_parent_seg()
                         .as_ref()
                         .unwrap()
                         .borrow()
-                        .__dir()
+                        .seg_line_dir()
                 {
                     &lst[1..]
                 } else {
@@ -148,12 +148,12 @@ impl<T: Line> CZSList<T> {
 
         let min_high = lst
             .iter()
-            .map(|item| item.borrow()._high())
+            .map(|item| item.borrow().line_high())
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         let max_low = lst
             .iter()
-            .map(|item| item.borrow()._low())
+            .map(|item| item.borrow().line_low())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
 
@@ -168,7 +168,13 @@ impl<T: Line> CZSList<T> {
         // 移除不确定的中枢
         while !self.zs_lst.is_empty() {
             let last_zs = self.zs_lst.last().unwrap();
-            let begin_idx = last_zs.borrow().begin_bi.as_ref().unwrap().borrow()._idx();
+            let begin_idx = last_zs
+                .borrow()
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .line_idx();
 
             match self.last_sure_pos {
                 Some(pos) if begin_idx >= pos => {
@@ -185,15 +191,16 @@ impl<T: Line> CZSList<T> {
                         continue;
                     }
                     self.clear_free_lst();
-                    let seg_bi_lst = &bi_lst[seg.borrow().start_bi.borrow()._idx()
-                        ..seg.borrow().end_bi.borrow()._idx() + 1];
+                    let seg_bi_lst = &bi_lst[seg.borrow().start_bi.borrow().line_idx()
+                        ..seg.borrow().end_bi.borrow().line_idx() + 1];
                     self.add_zs_from_bi_range(&seg_bi_lst, seg.borrow().dir, seg.borrow().is_sure);
                 }
 
                 if !seg_lst.is_empty() {
                     self.clear_free_lst();
                     let last_seg = seg_lst.last().unwrap();
-                    let remaining_bi_lst = &bi_lst[last_seg.borrow().end_bi.borrow()._idx() + 1..];
+                    let remaining_bi_lst =
+                        &bi_lst[last_seg.borrow().end_bi.borrow().line_idx() + 1..];
                     self.add_zs_from_bi_range(
                         &remaining_bi_lst,
                         revert_bi_dir(&last_seg.borrow().dir),
@@ -213,7 +220,7 @@ impl<T: Line> CZSList<T> {
                         .as_ref()
                         .unwrap()
                         .borrow()
-                        ._idx()
+                        .line_idx()
                         + 1
                 } else {
                     0
@@ -235,12 +242,12 @@ impl<T: Line> CZSList<T> {
                     }
                     if seg_ref.is_sure || (!sure_seg_appear && exist_sure_seg) {
                         self.clear_free_lst();
-                        let seg_bi_lst = &bi_lst
-                            [seg_ref.start_bi.borrow()._idx()..seg_ref.end_bi.borrow()._idx() + 1];
+                        let seg_bi_lst = &bi_lst[seg_ref.start_bi.borrow().line_idx()
+                            ..seg_ref.end_bi.borrow().line_idx() + 1];
                         self.add_zs_from_bi_range(&seg_bi_lst, seg_ref.dir, seg_ref.is_sure);
                     } else {
                         self.clear_free_lst();
-                        for bi in &bi_lst[seg_ref.start_bi.borrow()._idx()..] {
+                        for bi in &bi_lst[seg_ref.start_bi.borrow().line_idx()..] {
                             self.update_overseg_zs(bi);
                         }
                         break;
@@ -254,14 +261,22 @@ impl<T: Line> CZSList<T> {
 
     pub fn update_overseg_zs(&mut self, bi: &Handle<T>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
-            if bi.borrow()._next().is_none() {
+            if bi.borrow().line_next().is_none() {
                 return;
             }
             let last_zs = self.zs_lst.last().unwrap();
-            if bi.borrow()._idx() - last_zs.borrow().end_bi.as_ref().unwrap().borrow()._idx() <= 1
+            if bi.borrow().line_idx()
+                - last_zs
+                    .borrow()
+                    .end_bi
+                    .as_ref()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                <= 1
                 && last_zs
                     .borrow()
-                    .in_range(&bi.borrow()._next().as_ref().unwrap())
+                    .in_range(&bi.borrow().line_next().as_ref().unwrap())
                 && last_zs.borrow_mut().try_add_to_end(bi)
             {
                 return;
@@ -270,7 +285,7 @@ impl<T: Line> CZSList<T> {
         if !self.zs_lst.is_empty()
             && self.free_item_lst.is_empty()
             && self.zs_lst.last().unwrap().borrow().in_range(&bi)
-            && bi.borrow()._idx()
+            && bi.borrow().line_idx()
                 - self
                     .zs_lst
                     .last()
@@ -280,12 +295,12 @@ impl<T: Line> CZSList<T> {
                     .as_ref()
                     .unwrap()
                     .borrow()
-                    ._idx()
+                    .line_idx()
                 <= 1
         {
             return;
         }
-        self.add_to_free_lst(bi, bi.borrow()._is_sure(), ZsAlgo::Normal);
+        self.add_to_free_lst(bi, bi.borrow().line_is_sure(), ZsAlgo::Normal);
     }
 
     pub fn try_combine(&mut self) {

@@ -75,7 +75,7 @@ impl<T: Line> CSegListChan<T> {
                 .last()
                 .unwrap()
                 .borrow()
-                ._is_sure()
+                .line_is_sure()
             {
                 // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                 self.lst.pop();
@@ -88,7 +88,8 @@ impl<T: Line> CSegListChan<T> {
         if self.lst.is_empty() {
             self.cal_seg_sure(bi_lst, 0);
         } else {
-            let begin_idx = self.lst.last().unwrap().borrow().end_bi.borrow()._idx() as usize + 1;
+            let begin_idx =
+                self.lst.last().unwrap().borrow().end_bi.borrow().line_idx() as usize + 1;
             self.cal_seg_sure(bi_lst, begin_idx);
         }
         self.collect_left_seg(bi_lst);
@@ -116,7 +117,7 @@ impl<T: Line> CSegListChan<T> {
 
         for bi in bi_lst.iter().skip(begin_idx) {
             let mut fx_eigen_dir = None;
-            match (bi.borrow()._dir(), last_seg_dir) {
+            match (bi.borrow().line_dir(), last_seg_dir) {
                 (BiDir::Down, Some(BiDir::Down) | None) => {
                     if up_eigen.add(bi.clone()) {
                         fx_eigen_dir = Some(BiDir::Up);
@@ -132,22 +133,22 @@ impl<T: Line> CSegListChan<T> {
 
             if self.lst.is_empty() {
                 // 尝试确定第一段方向，不要以谁先成为分形来决定
-                if up_eigen.ele[1].is_some() && bi.borrow()._is_down() {
+                if up_eigen.ele[1].is_some() && bi.borrow().line_is_down() {
                     last_seg_dir = Some(BiDir::Down);
                     down_eigen.clear();
-                } else if down_eigen.ele[1].is_some() && bi.borrow()._is_up() {
+                } else if down_eigen.ele[1].is_some() && bi.borrow().line_is_up() {
                     up_eigen.clear();
                     last_seg_dir = Some(BiDir::Up);
                 }
 
                 if up_eigen.ele[1].is_none()
                     && last_seg_dir == Some(BiDir::Down)
-                    && bi.borrow()._dir() == BiDir::Down
+                    && bi.borrow().line_dir() == BiDir::Down
                 {
                     last_seg_dir = None;
                 } else if down_eigen.ele[1].is_none()
                     && last_seg_dir == Some(BiDir::Up)
-                    && bi.borrow()._dir() == BiDir::Up
+                    && bi.borrow().line_dir() == BiDir::Up
                 {
                     last_seg_dir = None;
                 }
@@ -190,7 +191,7 @@ impl<T: Line> CSegListChan<T> {
                 }
             }
             Some(false) => {
-                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].borrow()._idx());
+                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].borrow().line_idx());
             }
         }
     }
@@ -210,13 +211,13 @@ impl<T: Line> CSegListChan<T> {
             return false;
         }
         let last_seg_end_bi = &self.lst.last().unwrap().borrow().end_bi;
-        for bi in bi_lst.iter().skip(last_seg_end_bi.borrow()._idx() + 1) {
-            if last_seg_end_bi.borrow()._is_up()
-                && bi.borrow()._high() > last_seg_end_bi.borrow()._high()
+        for bi in bi_lst.iter().skip(last_seg_end_bi.borrow().line_idx() + 1) {
+            if last_seg_end_bi.borrow().line_is_up()
+                && bi.borrow().line_high() > last_seg_end_bi.borrow().line_high()
             {
                 return true;
-            } else if last_seg_end_bi.borrow()._is_down()
-                && bi.borrow()._low() < last_seg_end_bi.borrow()._low()
+            } else if last_seg_end_bi.borrow().line_is_down()
+                && bi.borrow().line_low() < last_seg_end_bi.borrow().line_low()
             {
                 return true;
             }
@@ -232,19 +233,19 @@ impl<T: Line> CSegListChan<T> {
             LeftSegMethod::Peak => {
                 let _high = bi_lst
                     .iter()
-                    .map(|bi| bi.borrow()._high())
+                    .map(|bi| bi.borrow().line_high())
                     .fold(f64::MIN, f64::max);
                 let _low = bi_lst
                     .iter()
-                    .map(|bi| bi.borrow()._low())
+                    .map(|bi| bi.borrow().line_low())
                     .fold(f64::MAX, f64::min);
-                let first_val = bi_lst.first().unwrap().borrow()._get_begin_val();
+                let first_val = bi_lst.first().unwrap().borrow().line_get_begin_val();
 
                 if (_high - first_val).abs() >= (_low - first_val).abs() {
                     if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), true) {
                         self.add_new_seg(
                             bi_lst,
-                            peak_bi.borrow()._idx() as usize,
+                            peak_bi.borrow().line_idx() as usize,
                             false,
                             Some(BiDir::Up),
                             false,
@@ -254,7 +255,7 @@ impl<T: Line> CSegListChan<T> {
                 } else if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), false) {
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi.borrow()._idx() as usize,
+                        peak_bi.borrow().line_idx() as usize,
                         false,
                         Some(BiDir::Down),
                         false,
@@ -264,8 +265,8 @@ impl<T: Line> CSegListChan<T> {
                 self.collect_left_as_seg(bi_lst);
             }
             LeftSegMethod::All => {
-                let _dir = if bi_lst.last().unwrap().borrow()._get_end_val()
-                    >= bi_lst[0].borrow()._get_begin_val()
+                let _dir = if bi_lst.last().unwrap().borrow().line_get_end_val()
+                    >= bi_lst[0].borrow().line_get_begin_val()
                 {
                     BiDir::Up
                 } else {
@@ -273,7 +274,7 @@ impl<T: Line> CSegListChan<T> {
                 };
                 self.add_new_seg(
                     bi_lst,
-                    bi_lst.last().unwrap().borrow()._idx() as usize,
+                    bi_lst.last().unwrap().borrow().line_idx() as usize,
                     false,
                     Some(_dir),
                     false,
@@ -289,15 +290,15 @@ impl<T: Line> CSegListChan<T> {
         last_seg_end_bi: Handle<T>,
         bi_lst: &[Handle<T>],
     ) {
-        if last_seg_end_bi.borrow()._is_down() {
+        if last_seg_end_bi.borrow().line_is_down() {
             if let Some(peak_bi) = find_peak_bi(
-                bi_lst[last_seg_end_bi.borrow()._idx() as usize + 3..].iter(),
+                bi_lst[last_seg_end_bi.borrow().line_idx() as usize + 3..].iter(),
                 true,
             ) {
-                if peak_bi.borrow()._idx() as usize - last_seg_end_bi.borrow()._idx() >= 3 {
+                if peak_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() >= 3 {
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi.borrow()._idx() as usize,
+                        peak_bi.borrow().line_idx() as usize,
                         false,
                         Some(BiDir::Up),
                         true,
@@ -306,13 +307,13 @@ impl<T: Line> CSegListChan<T> {
                 }
             }
         } else if let Some(peak_bi) = find_peak_bi(
-            bi_lst[last_seg_end_bi.borrow()._idx() as usize + 3..].iter(),
+            bi_lst[last_seg_end_bi.borrow().line_idx() as usize + 3..].iter(),
             false,
         ) {
-            if peak_bi.borrow()._idx() as usize - last_seg_end_bi.borrow()._idx() >= 3 {
+            if peak_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() >= 3 {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow()._idx() as usize,
+                    peak_bi.borrow().line_idx() as usize,
                     false,
                     Some(BiDir::Down),
                     true,
@@ -327,19 +328,20 @@ impl<T: Line> CSegListChan<T> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
 
-        if last_bi.borrow()._idx() as usize - last_seg_end_bi.borrow()._idx() < 3 {
+        if last_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() < 3 {
             return;
         }
 
-        if last_seg_end_bi.borrow()._is_down()
-            && last_bi.borrow()._get_end_val() <= last_seg_end_bi.borrow()._get_end_val()
+        if last_seg_end_bi.borrow().line_is_down()
+            && last_bi.borrow().line_get_end_val() <= last_seg_end_bi.borrow().line_get_end_val()
         {
-            if let Some(peak_bi) =
-                find_peak_bi(bi_lst[last_seg_end_bi.borrow()._idx() + 3..].iter(), true)
-            {
+            if let Some(peak_bi) = find_peak_bi(
+                bi_lst[last_seg_end_bi.borrow().line_idx() + 3..].iter(),
+                true,
+            ) {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow()._idx() as usize,
+                    peak_bi.borrow().line_idx() as usize,
                     false,
                     Some(BiDir::Up),
                     true,
@@ -347,15 +349,16 @@ impl<T: Line> CSegListChan<T> {
                 );
                 self.collect_left_seg(bi_lst);
             }
-        } else if last_seg_end_bi.borrow()._is_up()
-            && last_bi.borrow()._get_end_val() >= last_seg_end_bi.borrow()._get_end_val()
+        } else if last_seg_end_bi.borrow().line_is_up()
+            && last_bi.borrow().line_get_end_val() >= last_seg_end_bi.borrow().line_get_end_val()
         {
-            if let Some(peak_bi) =
-                find_peak_bi(bi_lst[last_seg_end_bi.borrow()._idx() + 3..].iter(), false)
-            {
+            if let Some(peak_bi) = find_peak_bi(
+                bi_lst[last_seg_end_bi.borrow().line_idx() + 3..].iter(),
+                false,
+            ) {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow()._idx() as usize,
+                    peak_bi.borrow().line_idx() as usize,
                     false,
                     Some(BiDir::Down),
                     true,
@@ -384,14 +387,14 @@ impl<T: Line> CSegListChan<T> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
 
-        if last_seg_end_bi.borrow()._idx() + 1 >= bi_lst.len() {
+        if last_seg_end_bi.borrow().line_idx() + 1 >= bi_lst.len() {
             return;
         }
 
-        if last_seg_end_bi.borrow()._dir() == last_bi.borrow()._dir() {
+        if last_seg_end_bi.borrow().line_dir() == last_bi.borrow().line_dir() {
             self.add_new_seg(
                 bi_lst,
-                last_bi.borrow()._idx() as usize - 1,
+                last_bi.borrow().line_idx() as usize - 1,
                 false,
                 None,
                 true,
@@ -400,7 +403,7 @@ impl<T: Line> CSegListChan<T> {
         } else {
             self.add_new_seg(
                 bi_lst,
-                last_bi.borrow()._idx() as usize,
+                last_bi.borrow().line_idx() as usize,
                 false,
                 None,
                 true,
@@ -421,21 +424,22 @@ impl<T: Line> CSegListChan<T> {
         if self.lst.is_empty() && split_first_seg && end_bi_idx >= 3 {
             if let Some(peak_bi) = find_peak_bi(
                 bi_lst[..end_bi_idx - 2].iter().rev(),
-                bi_lst[end_bi_idx].borrow()._is_down(),
+                bi_lst[end_bi_idx].borrow().line_is_down(),
             ) {
                 let peak_bi_ref = peak_bi.borrow();
-                if (peak_bi_ref._is_down()
-                    && (peak_bi_ref._low() < bi_lst[0].borrow()._low() || peak_bi_ref._idx() == 0))
-                    || (peak_bi_ref._is_up()
-                        && (peak_bi_ref._high() > bi_lst[0].borrow()._high()
-                            || peak_bi_ref._idx() == 0))
+                if (peak_bi_ref.line_is_down()
+                    && (peak_bi_ref.line_low() < bi_lst[0].borrow().line_low()
+                        || peak_bi_ref.line_idx() == 0))
+                    || (peak_bi_ref.line_is_up()
+                        && (peak_bi_ref.line_high() > bi_lst[0].borrow().line_high()
+                            || peak_bi_ref.line_idx() == 0))
                 {
                     // 要比第一笔开头还高/低（因为没有比较到）
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi_ref._idx() as usize,
+                        peak_bi_ref.line_idx() as usize,
                         false,
-                        Some(peak_bi_ref._dir()),
+                        Some(peak_bi_ref.line_dir()),
                         true,
                         "split_first_1st",
                     );
@@ -448,7 +452,7 @@ impl<T: Line> CSegListChan<T> {
         let bi1_idx = if self.lst.is_empty() {
             0
         } else {
-            self.lst.last().unwrap().borrow().end_bi.borrow()._idx() + 1
+            self.lst.last().unwrap().borrow().end_bi.borrow().line_idx() + 1
         };
         let bi1 = bi_lst[bi1_idx].clone();
         let bi2 = bi_lst[end_bi_idx].clone();
@@ -538,19 +542,20 @@ where
 
     for bi in bi_lst {
         let bi_ref = bi.borrow();
-        if (is_high && bi_ref._get_end_val() >= peak_val && bi_ref._is_up())
-            || (!is_high && bi_ref._get_end_val() <= peak_val && bi_ref._is_down())
+        if (is_high && bi_ref.line_get_end_val() >= peak_val && bi_ref.line_is_up())
+            || (!is_high && bi_ref.line_get_end_val() <= peak_val && bi_ref.line_is_down())
         {
-            if let Some(pre) = &bi_ref._pre() {
-                if let Some(pre_pre) = &pre.borrow()._pre() {
-                    if (is_high && pre_pre.borrow()._get_end_val() > bi_ref._get_end_val())
-                        || (!is_high && pre_pre.borrow()._get_end_val() < bi_ref._get_end_val())
+            if let Some(pre) = &bi_ref.line_pre() {
+                if let Some(pre_pre) = &pre.borrow().line_pre() {
+                    if (is_high && pre_pre.borrow().line_get_end_val() > bi_ref.line_get_end_val())
+                        || (!is_high
+                            && pre_pre.borrow().line_get_end_val() < bi_ref.line_get_end_val())
                     {
                         continue;
                     }
                 }
             }
-            peak_val = bi_ref._get_end_val();
+            peak_val = bi_ref.line_get_end_val();
             peak_bi = Some(bi.clone());
         }
     }

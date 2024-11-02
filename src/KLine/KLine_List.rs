@@ -137,7 +137,7 @@ pub fn cal_seg<U: Line>(
     let mut sure_seg_cnt = 0;
     if seg_list.is_empty() {
         for bi in bi_list.iter() {
-            bi.borrow_mut()._set_seg_idx(0);
+            bi.borrow_mut().line_set_seg_idx(0);
         }
         return Ok(());
     }
@@ -156,21 +156,21 @@ pub fn cal_seg<U: Line>(
 
     let mut cur_seg = seg_list.last().unwrap().clone();
     for bi in bi_list.iter().rev() {
-        if bi.borrow()._seg_idx().is_some()
-            && bi.borrow()._idx() < begin_seg.borrow().start_bi.borrow()._idx()
+        if bi.borrow().line_seg_idx().is_some()
+            && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
         {
             break;
         }
-        if bi.borrow()._idx() > cur_seg.borrow().end_bi.borrow()._idx() {
-            bi.borrow_mut()._set_seg_idx(cur_seg.borrow().idx + 1);
+        if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
+            bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
             continue;
         }
-        if bi.borrow()._idx() < cur_seg.borrow().start_bi.borrow()._idx() {
+        if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
             assert!(cur_seg.borrow().pre.is_some());
             let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
             cur_seg = pre_seg;
         }
-        bi.borrow_mut()._set_seg_idx(cur_seg.borrow().idx);
+        bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
     }
 
     Ok(())
@@ -194,27 +194,28 @@ pub fn update_zs_in_seg<T: Line>(
         for zs in zs_list.iter().rev() {
             let zs_ref = zs.borrow();
             if zs_ref.end.as_ref().unwrap().borrow().idx
-                < seg.start_bi.borrow()._get_begin_klu().borrow().idx
+                < seg.start_bi.borrow().line_get_begin_klu().borrow().idx
             {
                 break;
             }
             if zs_ref.is_inside(&seg) {
                 seg.add_zs(Rc::clone(zs));
             }
-            assert!(zs_ref.begin_bi.as_ref().unwrap().borrow()._idx() > 0);
+            assert!(zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
 
             //let zs_ref = ;
             zs.borrow_mut().set_bi_in(
-                bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow()._idx() as usize - 1].clone(),
+                bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx() as usize - 1].clone(),
             );
-            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow()._idx() + 1 < bi_list.len() {
+            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
                 zs.borrow_mut().set_bi_out(
-                    bi_list[zs_ref.end_bi.as_ref().unwrap().borrow()._idx() as usize + 1].clone(),
+                    bi_list[zs_ref.end_bi.as_ref().unwrap().borrow().line_idx() as usize + 1]
+                        .clone(),
                 );
             }
             zs.borrow_mut().set_bi_lst(
-                &bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow()._idx()
-                    ..=zs_ref.end_bi.as_ref().unwrap().borrow()._idx()]
+                &bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx()
+                    ..=zs_ref.end_bi.as_ref().unwrap().borrow().line_idx()]
                     .to_vec(),
             );
         }

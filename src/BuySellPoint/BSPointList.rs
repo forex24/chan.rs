@@ -47,7 +47,7 @@ impl<T: Line> CBSPointList<T> {
             .iter()
             .map(|bsp| {
                 (
-                    bsp.borrow().bi.borrow()._get_end_klu().borrow().idx,
+                    bsp.borrow().bi.borrow().line_get_end_klu().borrow().idx,
                     Rc::clone(bsp),
                 )
             })
@@ -68,8 +68,14 @@ impl<T: Line> CBSPointList<T> {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.borrow().is_sure {
-                self.last_sure_pos =
-                    Some(seg.borrow().end_bi.borrow()._get_begin_klu().borrow().idx);
+                self.last_sure_pos = Some(
+                    seg.borrow()
+                        .end_bi
+                        .borrow()
+                        .line_get_begin_klu()
+                        .borrow()
+                        .idx,
+                );
                 return;
             }
         }
@@ -77,7 +83,9 @@ impl<T: Line> CBSPointList<T> {
 
     pub fn seg_need_cal(&self, seg: &Handle<CSeg<T>>) -> bool {
         match self.last_sure_pos {
-            Some(last_pos) => seg.borrow().end_bi.borrow()._get_end_klu().borrow().idx > last_pos,
+            Some(last_pos) => {
+                seg.borrow().end_bi.borrow().line_get_end_klu().borrow().idx > last_pos
+            }
             None => true,
         }
     }
@@ -90,8 +98,11 @@ impl<T: Line> CBSPointList<T> {
         is_target_bsp: bool,
         feature_dict: Option<HashMap<String, Option<f64>>>,
     ) {
-        let is_buy = bi.borrow()._is_down();
-        if let Some(exist_bsp) = self.bsp_dict.get(&bi.borrow()._get_end_klu().borrow().idx) {
+        let is_buy = bi.borrow().line_is_down();
+        if let Some(exist_bsp) = self
+            .bsp_dict
+            .get(&bi.borrow().line_get_end_klu().borrow().idx)
+        {
             assert_eq!(exist_bsp.borrow().is_buy, is_buy);
             exist_bsp
                 .borrow_mut()
@@ -116,7 +127,7 @@ impl<T: Line> CBSPointList<T> {
             if is_target_bsp {
                 self.lst.push(Rc::clone(&bsp));
                 self.bsp_dict
-                    .insert(bi.borrow()._get_end_klu().borrow().idx, Rc::clone(&bsp));
+                    .insert(bi.borrow().line_get_end_klu().borrow().idx, Rc::clone(&bsp));
             }
             if bs_type == BspType::T1 || bs_type == BspType::T1P {
                 self.bsp1_lst.push(Rc::clone(&bsp));
@@ -162,8 +173,8 @@ impl<T: Line> CBSPointList<T> {
                     .as_ref()
                     .unwrap()
                     .borrow()
-                    ._idx()
-                    >= seg.borrow().end_bi.borrow()._idx())
+                    .line_idx()
+                    >= seg.borrow().end_bi.borrow().line_idx())
                 || seg
                     .borrow()
                     .zs_lst
@@ -174,9 +185,9 @@ impl<T: Line> CBSPointList<T> {
                     .last()
                     .unwrap()
                     .borrow()
-                    ._idx()
-                    >= seg.borrow().end_bi.borrow()._idx())
-            && seg.borrow().end_bi.borrow()._idx()
+                    .line_idx()
+                    >= seg.borrow().end_bi.borrow().line_idx())
+            && seg.borrow().end_bi.borrow().line_idx()
                 - seg
                     .borrow()
                     .zs_lst
@@ -185,7 +196,7 @@ impl<T: Line> CBSPointList<T> {
                     .borrow()
                     .get_bi_in()
                     .borrow()
-                    ._idx()
+                    .line_idx()
                 > 2
         {
             self.treat_bsp1(seg, is_buy, is_target_bsp);
@@ -199,7 +210,7 @@ impl<T: Line> CBSPointList<T> {
         let seg_ref = seg.borrow();
         let last_zs = seg_ref.zs_lst.last().unwrap();
         let last_zs_ref = last_zs.borrow();
-        let (break_peak, _) = last_zs_ref.out_bi_is_peak(seg.borrow().end_bi.borrow()._idx());
+        let (break_peak, _) = last_zs_ref.out_bi_is_peak(seg.borrow().end_bi.borrow().line_idx());
         if bsp_conf.bs1_peak && !break_peak {
             is_target_bsp = false;
         }
@@ -230,26 +241,32 @@ impl<T: Line> CBSPointList<T> {
     ) {
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_bi = &seg.borrow().end_bi;
-        let pre_bi = &bi_list.get(last_bi.borrow()._idx() as usize - 2).unwrap();
-        if last_bi.borrow()._seg_idx() != pre_bi.borrow()._seg_idx() {
+        let pre_bi = &bi_list
+            .get(last_bi.borrow().line_idx() as usize - 2)
+            .unwrap();
+        if last_bi.borrow().line_seg_idx() != pre_bi.borrow().line_seg_idx() {
             return;
         }
-        if last_bi.borrow()._dir() != seg.borrow().dir {
+        if last_bi.borrow().line_dir() != seg.borrow().dir {
             return;
         }
-        if last_bi.borrow()._is_down() && last_bi.borrow()._low() > pre_bi.borrow()._low() {
+        if last_bi.borrow().line_is_down()
+            && last_bi.borrow().line_low() > pre_bi.borrow().line_low()
+        {
             return;
         }
-        if last_bi.borrow()._is_up() && last_bi.borrow()._high() < pre_bi.borrow()._high() {
+        if last_bi.borrow().line_is_up()
+            && last_bi.borrow().line_high() < pre_bi.borrow().line_high()
+        {
             return;
         }
         let in_metric = pre_bi
             .borrow()
-            ._cal_macd_metric(bsp_conf.macd_algo, false)
+            .line_cal_macd_metric(bsp_conf.macd_algo, false)
             .unwrap_or(0.0);
         let out_metric = last_bi
             .borrow()
-            ._cal_macd_metric(bsp_conf.macd_algo, true)
+            .line_cal_macd_metric(bsp_conf.macd_algo, true)
             .unwrap_or(0.0);
         let (is_diver, divergence_rate) = (
             out_metric <= bsp_conf.divergence_rate * in_metric,
@@ -260,7 +277,7 @@ impl<T: Line> CBSPointList<T> {
         }
         let feature_dict = HashMap::from([
             ("divergence_rate".to_string(), divergence_rate),
-            ("bsp1_bi_amp".to_string(), last_bi.borrow()._amp()),
+            ("bsp1_bi_amp".to_string(), last_bi.borrow().line_amp()),
         ]);
         self.add_bs(
             BspType::T1P,
@@ -275,7 +292,7 @@ impl<T: Line> CBSPointList<T> {
         let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
-            .map(|bsp| (bsp.borrow().bi.borrow()._idx(), Rc::clone(bsp)))
+            .map(|bsp| (bsp.borrow().bi.borrow().line_idx(), Rc::clone(bsp)))
             .collect();
 
         for seg in seg_list.iter() {
@@ -288,7 +305,7 @@ impl<T: Line> CBSPointList<T> {
                 continue;
             }
             let bsp1_bi = &seg.borrow().end_bi;
-            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow()._idx()).cloned();
+            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow().line_idx()).cloned();
             if bsp_conf.bsp2_follow_1 && real_bsp1.is_none() {
                 continue;
             }
@@ -315,40 +332,57 @@ impl<T: Line> CBSPointList<T> {
         }
         let first_zs = first_zs.unwrap();
         if first_zs.borrow().bi_out.is_none()
-            || first_zs.borrow().bi_out.as_ref().unwrap().borrow()._idx() + 1 >= bi_list.len()
+            || first_zs
+                .borrow()
+                .bi_out
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                + 1
+                >= bi_list.len()
         {
             return;
         }
         let bsp2_bi = bi_list
-            .get((first_zs.borrow().bi_out.as_ref().unwrap().borrow()._idx() + 1) as usize)
+            .get(
+                (first_zs
+                    .borrow()
+                    .bi_out
+                    .as_ref()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    + 1) as usize,
+            )
             .unwrap();
-        if bsp2_bi.borrow()._get_parent_seg().is_none() {
+        if bsp2_bi.borrow().line_get_parent_seg().is_none() {
             if next_seg.borrow().idx != seg_list.len() - 1 {
                 return;
             }
         } else if bsp2_bi
             .borrow()
-            ._get_parent_seg()
+            .line_get_parent_seg()
             .as_ref()
             .unwrap()
             .borrow()
-            .__idx()
+            .seg_line_idx()
             != next_seg.borrow().idx
             && bsp2_bi
                 .borrow()
-                ._get_parent_seg()
+                .line_get_parent_seg()
                 .as_ref()
                 .unwrap()
                 .borrow()
-                .__get_bi_list_len()
+                .seg_line_get_bi_list_len()
                 >= 3
         {
             return;
         }
-        if bsp2_bi.borrow()._dir() == next_seg.borrow().dir {
+        if bsp2_bi.borrow().line_dir() == next_seg.borrow().dir {
             return;
         }
-        if bsp2_bi.borrow()._seg_idx() != Some(next_seg.borrow().idx)
+        if bsp2_bi.borrow().line_seg_idx() != Some(next_seg.borrow().idx)
             && next_seg.borrow().idx < seg_list.len() - 2
         {
             return;
@@ -360,17 +394,24 @@ impl<T: Line> CBSPointList<T> {
             .as_ref()
             .unwrap()
             .borrow()
-            ._get_end_val();
-        let bsp2_break_bi_amp = first_zs.borrow().bi_out.as_ref().unwrap().borrow()._amp();
-        let retrace_rate = (bsp2_bi.borrow()._get_end_val() - bsp2_break_bi_end_val).abs()
-            / (bsp2_break_bi_end_val - first_zs.borrow().get_bi_in().borrow()._get_end_val()).abs();
+            .line_get_end_val();
+        let bsp2_break_bi_amp = first_zs
+            .borrow()
+            .bi_out
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .line_amp();
+        let retrace_rate = (bsp2_bi.borrow().line_get_end_val() - bsp2_break_bi_end_val).abs()
+            / (bsp2_break_bi_end_val - first_zs.borrow().get_bi_in().borrow().line_get_end_val())
+                .abs();
         if retrace_rate > bsp_conf.max_bs2_rate {
             return;
         }
         let feature_dict = HashMap::from([
             ("bsp2_retrace_rate".to_string(), Some(retrace_rate)),
             ("bsp2_break_bi_amp".to_string(), bsp2_break_bi_amp),
-            ("bsp2_bi_amp".to_string(), bsp2_bi.borrow()._amp()),
+            ("bsp2_bi_amp".to_string(), bsp2_bi.borrow().line_amp()),
         ]);
         self.add_bs(
             BspType::T2,
@@ -385,7 +426,7 @@ impl<T: Line> CBSPointList<T> {
         let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
-            .map(|bsp| (bsp.borrow().bi.borrow()._idx(), Rc::clone(bsp)))
+            .map(|bsp| (bsp.borrow().bi.borrow().line_idx(), Rc::clone(bsp)))
             .collect();
 
         for seg in seg_list.iter() {
@@ -401,9 +442,9 @@ impl<T: Line> CBSPointList<T> {
             let (bsp1_bi, bsp1_bi_idx, real_bsp1, next_seg_idx, next_seg, is_buy) =
                 if seg_list.len() > 1 {
                     let bsp1_bi = Rc::clone(&seg.borrow().end_bi);
-                    let bsp1_bi_idx = bsp1_bi.borrow()._idx();
+                    let bsp1_bi_idx = bsp1_bi.borrow().line_idx();
                     let is_buy = seg.borrow().is_down();
-                    let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow()._idx()).cloned();
+                    let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow().line_idx()).cloned();
                     let next_seg_idx = seg.borrow().idx + 1;
                     let next_seg = seg.borrow().next.clone();
                     (
@@ -422,10 +463,9 @@ impl<T: Line> CBSPointList<T> {
                 };
             let bsp_conf = self.config.get_bs_config(is_buy);
             if bsp_conf.bsp3_follow_1
-                && !self
-                    .bsp_dict
-                    .values()
-                    .any(|bsp| bsp.borrow().bi.borrow()._idx() == bsp1_bi_idx.unwrap_or(usize::MAX))
+                && !self.bsp_dict.values().any(|bsp| {
+                    bsp.borrow().bi.borrow().line_idx() == bsp1_bi_idx.unwrap_or(usize::MAX)
+                })
             {
                 continue;
             }
@@ -470,46 +510,63 @@ impl<T: Line> CBSPointList<T> {
         let first_zs = first_zs.unwrap();
         let bsp_conf = self.config.get_bs_config(is_buy);
         if bsp_conf.strict_bsp3
-            && first_zs.borrow().get_bi_in().borrow()._idx()
+            && first_zs.borrow().get_bi_in().borrow().line_idx()
                 != bsp1_bi_idx.unwrap_or(usize::MAX) + 1
         {
             return;
         }
         if first_zs.borrow().bi_out.is_none()
-            || first_zs.borrow().bi_out.as_ref().unwrap().borrow()._idx() + 1 >= bi_list.len()
+            || first_zs
+                .borrow()
+                .bi_out
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                + 1
+                >= bi_list.len()
         {
             return;
         }
         let bsp3_bi = bi_list
-            .get((first_zs.borrow().bi_out.as_ref().unwrap().borrow()._idx() + 1) as usize)
+            .get(
+                (first_zs
+                    .borrow()
+                    .bi_out
+                    .as_ref()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    + 1) as usize,
+            )
             .unwrap();
-        if bsp3_bi.borrow()._get_parent_seg().is_none() {
+        if bsp3_bi.borrow().line_get_parent_seg().is_none() {
             if next_seg.borrow().idx != seg_list.len() - 1 {
                 return;
             }
         } else if bsp3_bi
             .borrow()
-            ._get_parent_seg()
+            .line_get_parent_seg()
             .as_ref()
             .unwrap()
             .borrow()
-            .__idx()
+            .seg_line_idx()
             != next_seg.borrow().idx
             && bsp3_bi
                 .borrow()
-                ._get_parent_seg()
+                .line_get_parent_seg()
                 .as_ref()
                 .unwrap()
                 .borrow()
-                .__get_bi_list_len()
+                .seg_line_get_bi_list_len()
                 >= 3
         {
             return;
         }
-        if bsp3_bi.borrow()._dir() == next_seg.borrow().dir {
+        if bsp3_bi.borrow().line_dir() == next_seg.borrow().dir {
             return;
         }
-        if bsp3_bi.borrow()._seg_idx().unwrap_or(usize::MAX) != next_seg_idx
+        if bsp3_bi.borrow().line_seg_idx().unwrap_or(usize::MAX) != next_seg_idx
             && next_seg_idx < seg_list.len() - 2
         {
             return;
@@ -526,7 +583,7 @@ impl<T: Line> CBSPointList<T> {
                 "bsp3_zs_height".to_string(),
                 Some((first_zs.borrow().high - first_zs.borrow().low) / first_zs.borrow().low),
             ),
-            ("bsp3_bi_amp".to_string(), bsp3_bi.borrow()._amp()),
+            ("bsp3_bi_amp".to_string(), bsp3_bi.borrow().line_amp()),
         ]);
         self.add_bs(
             BspType::T3A,
@@ -560,23 +617,23 @@ impl<T: Line> CBSPointList<T> {
         let bsp_conf = self.config.get_bs_config(is_buy);
         if bsp_conf.strict_bsp3
             && (cmp_zs.borrow().bi_out.is_none()
-                || cmp_zs.borrow().bi_out.as_ref().unwrap().borrow()._idx()
-                    != bsp1_bi.borrow()._idx())
+                || cmp_zs.borrow().bi_out.as_ref().unwrap().borrow().line_idx()
+                    != bsp1_bi.borrow().line_idx())
         {
             return;
         }
         let end_bi_idx = cal_bsp3_bi_end_idx(next_seg);
         for bsp3_bi in bi_list
             .iter()
-            .skip((bsp1_bi.borrow()._idx() + 2) as usize)
+            .skip((bsp1_bi.borrow().line_idx() + 2) as usize)
             .step_by(2)
         {
-            if bsp3_bi.borrow()._idx() > end_bi_idx {
+            if bsp3_bi.borrow().line_idx() > end_bi_idx {
                 break;
             }
-            assert!(bsp3_bi.borrow()._seg_idx().is_some());
-            if bsp3_bi.borrow()._seg_idx().unwrap() != next_seg_idx
-                && bsp3_bi.borrow()._seg_idx().unwrap() < seg_list.len() - 1
+            assert!(bsp3_bi.borrow().line_seg_idx().is_some());
+            if bsp3_bi.borrow().line_seg_idx().unwrap() != next_seg_idx
+                && bsp3_bi.borrow().line_seg_idx().unwrap() < seg_list.len() - 1
             {
                 break;
             }
@@ -590,7 +647,7 @@ impl<T: Line> CBSPointList<T> {
                 ),
                 (
                     "bsp3_bi_amp".to_string(),
-                    Some(bsp3_bi.borrow()._amp().unwrap()),
+                    Some(bsp3_bi.borrow().line_amp().unwrap()),
                 ),
             ]);
             self.add_bs(
@@ -613,27 +670,28 @@ impl<T: Line> CBSPointList<T> {
             b.borrow()
                 .bi
                 .borrow()
-                ._idx()
-                .cmp(&a.borrow().bi.borrow()._idx())
+                .line_idx()
+                .cmp(&a.borrow().bi.borrow().line_idx())
         });
         result
     }
 }
 
 fn bsp2s_break_bsp1<T: Line>(bsp2s_bi: &Handle<T>, bsp2_break_bi: &Handle<T>) -> bool {
-    (bsp2s_bi.borrow()._is_down() && bsp2s_bi.borrow()._low() < bsp2_break_bi.borrow()._low())
-        || (bsp2s_bi.borrow()._is_up()
-            && bsp2s_bi.borrow()._high() > bsp2_break_bi.borrow()._high())
+    (bsp2s_bi.borrow().line_is_down()
+        && bsp2s_bi.borrow().line_low() < bsp2_break_bi.borrow().line_low())
+        || (bsp2s_bi.borrow().line_is_up()
+            && bsp2s_bi.borrow().line_high() > bsp2_break_bi.borrow().line_high())
 }
 
 fn bsp3_back2zs<T: Line>(bsp3_bi: &Handle<T>, zs: &Handle<CZS<T>>) -> bool {
-    (bsp3_bi.borrow()._is_down() && bsp3_bi.borrow()._low() < zs.borrow().high)
-        || (bsp3_bi.borrow()._is_up() && bsp3_bi.borrow()._high() > zs.borrow().low)
+    (bsp3_bi.borrow().line_is_down() && bsp3_bi.borrow().line_low() < zs.borrow().high)
+        || (bsp3_bi.borrow().line_is_up() && bsp3_bi.borrow().line_high() > zs.borrow().low)
 }
 
 fn bsp3_break_zspeak<T: Line>(bsp3_bi: &Handle<T>, zs: &Handle<CZS<T>>) -> bool {
-    (bsp3_bi.borrow()._is_down() && bsp3_bi.borrow()._high() >= zs.borrow().peak_high)
-        || (bsp3_bi.borrow()._is_up() && bsp3_bi.borrow()._low() <= zs.borrow().peak_low)
+    (bsp3_bi.borrow().line_is_down() && bsp3_bi.borrow().line_high() >= zs.borrow().peak_high)
+        || (bsp3_bi.borrow().line_is_up() && bsp3_bi.borrow().line_low() <= zs.borrow().peak_low)
 }
 
 fn cal_bsp3_bi_end_idx<T: Line>(seg: &Option<Handle<CSeg<T>>>) -> usize {
@@ -643,11 +701,11 @@ fn cal_bsp3_bi_end_idx<T: Line>(seg: &Option<Handle<CSeg<T>>>) -> usize {
             if seg.borrow().get_multi_bi_zs_cnt() == 0 && seg.borrow().next.is_none() {
                 usize::MAX
             } else {
-                let mut end_bi_idx = seg.borrow().end_bi.borrow()._idx() - 1;
+                let mut end_bi_idx = seg.borrow().end_bi.borrow().line_idx() - 1;
                 for zs in &seg.borrow().zs_lst {
                     if !zs.borrow().is_one_bi_zs() {
                         if let Some(bi_out) = &zs.borrow().bi_out {
-                            end_bi_idx = bi_out.borrow()._idx();
+                            end_bi_idx = bi_out.borrow().line_idx();
                             break;
                         }
                     }
