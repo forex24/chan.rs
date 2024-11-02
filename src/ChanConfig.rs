@@ -47,19 +47,19 @@ impl CChanConfig {
         let mut res: Vec<Box<dyn MetricModel>> = Vec::new();
 
         res.push(Box::new(CMACD::new(
-            *self.macd_config.get("fast").unwrap(),
-            *self.macd_config.get("slow").unwrap(),
-            *self.macd_config.get("signal").unwrap(),
+            *self.macd_config.get("fast").unwrap_or(&12.0),
+            *self.macd_config.get("slow").unwrap_or(&26.0),
+            *self.macd_config.get("signal").unwrap_or(&9.0),
         )));
 
-        for &mean_t in &self.mean_metrics {
-            res.push(Box::new(CTrendModel::new(TrendType::Mean, mean_t)));
-        }
-
-        for &trend_t in &self.trend_metrics {
-            res.push(Box::new(CTrendModel::new(TrendType::Max, trend_t)));
-            res.push(Box::new(CTrendModel::new(TrendType::Min, trend_t)));
-        }
+        //for &mean_t in &self.mean_metrics {
+        //    res.push(Box::new(CTrendModel::new(TrendType::Mean, mean_t)));
+        //}
+        //
+        //for &trend_t in &self.trend_metrics {
+        //    res.push(Box::new(CTrendModel::new(TrendType::Max, trend_t)));
+        //    res.push(Box::new(CTrendModel::new(TrendType::Min, trend_t)));
+        //}
 
         //res.push(Box::new(BollModel::new(self.boll_n)));
 
@@ -75,13 +75,13 @@ impl CChanConfig {
         //    )));
         //}
 
-        if self.cal_rsi {
-            res.push(Box::new(RSI::new(self.rsi_cycle)));
-        }
-
-        if self.cal_kdj {
-            res.push(Box::new(KDJ::new(self.kdj_cycle)));
-        }
+        //if self.cal_rsi {
+        //    res.push(Box::new(RSI::new(self.rsi_cycle)));
+        //}
+        //
+        //if self.cal_kdj {
+        //    res.push(Box::new(KDJ::new(self.kdj_cycle)));
+        //}
 
         res
     }

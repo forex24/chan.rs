@@ -36,9 +36,9 @@ impl<T: Line> CSegListChan<T> {
             let _seg = self.lst.last().unwrap().clone();
             let _seg_ref = _seg.borrow();
             // TODO:
-            //for bi in &_seg_ref.bi_list {
-            //    bi.borrow_mut().parent_seg = None;
-            //}
+            for bi in &_seg_ref.bi_list {
+                bi.borrow_mut().line_set_parent_seg(None);
+            }
             if let Some(pre) = &_seg_ref.pre {
                 pre.borrow_mut().next = None;
             }

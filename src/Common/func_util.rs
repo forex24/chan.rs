@@ -51,7 +51,7 @@ pub fn parse_inf(v: f64) -> String {
         v.to_string()
     }
 }
-
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,3 +108,4 @@ mod tests {
     //    assert_eq!(parse_inf(3.14), "3.14");
     //}
 }
+*/

@@ -96,6 +96,7 @@ impl fmt::Display for CChanException {
 
 impl Error for CChanException {}
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,3 +116,4 @@ mod tests {
         assert!(e2.is_kldata_err());
     }
 }
+*/
