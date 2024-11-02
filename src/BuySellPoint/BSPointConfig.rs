@@ -1,10 +1,11 @@
-use crate::Common::func_util::parse_inf;
 use crate::Common::CEnum::{BspType, MacdAlgo};
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
+
 #[derive(Debug, Clone)]
 pub struct CBSPointConfig {
-    b_conf: CPointConfig,
-    s_conf: CPointConfig,
+    pub b_conf: CPointConfig,
+    pub s_conf: CPointConfig,
 }
 
 impl CBSPointConfig {
@@ -20,6 +21,15 @@ impl CBSPointConfig {
             &self.b_conf
         } else {
             &self.s_conf
+        }
+    }
+}
+
+impl Default for CBSPointConfig {
+    fn default() -> Self {
+        CBSPointConfig {
+            b_conf: CPointConfig::default(),
+            s_conf: CPointConfig::default(),
         }
     }
 }
@@ -101,7 +111,7 @@ impl CPointConfig {
         if k == "macd_algo" {
             self.set_macd_algo(v);
         } else {
-            let v = parse_inf(v);
+            //let v = parse_inf(v);
             match k {
                 "divergence_rate" => self.divergence_rate = v.parse().unwrap(),
                 "min_zs_cnt" => self.min_zs_cnt = v.parse().unwrap(),
@@ -116,6 +126,27 @@ impl CPointConfig {
                 "strict_bsp3" => self.strict_bsp3 = v.parse().unwrap(),
                 _ => panic!("Unknown key: {}", k),
             }
+        }
+    }
+}
+
+impl Default for CPointConfig {
+    fn default() -> Self {
+        CPointConfig {
+            divergence_rate: 0.0,         // 默认值
+            min_zs_cnt: 0,                // 默认值
+            bsp1_only_multibi_zs: false,  // 默认值
+            max_bs2_rate: 1.0,            // 默认值，假设最大值为1.0
+            macd_algo: MacdAlgo::Area,    // 默认值，假设选择 Area
+            bs1_peak: false,              // 默认值
+            tmp_target_types: Vec::new(), // 默认值
+            target_types: Vec::new(),     // 默认值
+            bsp2_follow_1: false,         // 默认值
+            bsp3_follow_1: false,         // 默认值
+            bsp3_peak: false,             // 默认值
+            bsp2s_follow_2: false,        // 默认值
+            max_bsp2s_lv: None,           // 默认值
+            strict_bsp3: false,           // 默认值
         }
     }
 }

@@ -12,9 +12,12 @@ use crate::{
 };
 
 use super::Seg::CSeg;
+pub trait SegLine: Sized {
+    fn get_bi_list_len(&self) -> usize;
+}
 
 pub trait Line: Sized {
-    type Parent: Line;
+    type Parent: Line + SegLine;
     // 读取属性
     fn idx(&self) -> usize;
     fn high(&self) -> f64;
@@ -31,6 +34,7 @@ pub trait Line: Sized {
     fn set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>);
 
     fn seg_idx(&self) -> Option<usize>;
+    fn set_seg_idx(&mut self, idx: usize);
     // 修改属性
     fn set_pre(&mut self, pre: Option<Handle<Self>>);
     fn set_next(&mut self, next: Option<Handle<Self>>);
@@ -170,8 +174,17 @@ impl Line for CBi {
     fn amp(&self) -> Option<f64> {
         None
     }
+
+    fn set_seg_idx(&mut self, idx: usize) {
+        self.seg_idx = Some(idx);
+    }
 }
 
+impl SegLine for CSeg<CBi> {
+    fn get_bi_list_len(&self) -> usize {
+        self.bi_list.len()
+    }
+}
 // 更新 CSeg 的实现
 impl Line for CSeg<CBi> {
     type Parent = CSeg<CSeg<CBi>>;
@@ -273,8 +286,17 @@ impl Line for CSeg<CBi> {
     fn amp(&self) -> Option<f64> {
         None
     }
+
+    fn set_seg_idx(&mut self, idx: usize) {
+        self.seg_idx = Some(idx);
+    }
 }
 
+impl SegLine for CSeg<CSeg<CBi>> {
+    fn get_bi_list_len(&self) -> usize {
+        self.bi_list.len()
+    }
+}
 // Add this implementation
 impl Line for CSeg<CSeg<CBi>> {
     type Parent = CSeg<CSeg<CSeg<CBi>>>;
@@ -376,9 +398,25 @@ impl Line for CSeg<CSeg<CBi>> {
     fn amp(&self) -> Option<f64> {
         None
     }
+
+    fn set_seg_idx(&mut self, idx: usize) {
+        self.seg_idx = Some(idx);
+    }
 }
 
 // Dummy impl for ZSList
+impl SegLine for CSeg<CSeg<CSeg<CBi>>> {
+    fn get_bi_list_len(&self) -> usize {
+        unimplemented!()
+    }
+}
+
+impl SegLine for CBi {
+    fn get_bi_list_len(&self) -> usize {
+        unimplemented!()
+    }
+}
+
 impl Line for CSeg<CSeg<CSeg<CBi>>> {
     type Parent = CBi;
 
@@ -477,6 +515,10 @@ impl Line for CSeg<CSeg<CSeg<CBi>>> {
     }
 
     fn amp(&self) -> Option<f64> {
+        unimplemented!()
+    }
+
+    fn set_seg_idx(&mut self, idx: usize) {
         unimplemented!()
     }
 }

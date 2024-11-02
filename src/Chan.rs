@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::BuySellPoint::BS_Point::CBSPoint;
 use crate::ChanConfig::CChanConfig;
 use crate::Common::func_util::check_kltype_order;
 use crate::Common::CEnum::{AuType, KlType, DATA_SRC};
@@ -412,7 +413,7 @@ impl CChan {
         self.kl_datas.get(&n)
     }
 
-    pub fn get_bsp(&self, idx: Option<usize>) -> Vec<CBSPoint> {
+    pub fn get_bsp<T>(&self, idx: Option<usize>) -> Vec<CBSPoint<T>> {
         if let Some(idx) = idx {
             if let Some(kl_data) = self.kl_datas.get(&self.lv_list[idx]) {
                 kl_data.bs_point_lst.lst.clone()

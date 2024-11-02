@@ -1,4 +1,4 @@
-use strum_macros::{Display, EnumString};
+use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DATA_SRC {
@@ -65,7 +65,7 @@ pub enum BiType {
 
 pub type BSP_MAIN_TYPE = String;
 
-#[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, EnumString, EnumIter, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BspType {
     T1,
     T1P,

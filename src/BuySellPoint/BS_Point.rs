@@ -31,9 +31,9 @@ impl<T: Line> CBSPoint<T> {
 
         let features = match feature_dict {
             Some(dict) => {
-                let flattened: HashMap<String, f64> = dict
+                let flattened = dict
                     .into_iter()
-                    .filter_map(|(k, v)| v.map(|val| (k, val)))
+                    .filter_map(|(k, v)| v.map(|val| (k, Some(val))))
                     .collect();
                 CFeatures::new(Some(flattened))
             }
@@ -85,16 +85,13 @@ impl<T: Line> CBSPoint<T> {
         }
     }
 
-    pub fn add_feat(&mut self, inp1: FeatureInput, inp2: Option<f64>) {
-        self.features.add_feat(inp1, inp2);
+    pub fn add_feat(&mut self, inp1: impl Into<FeatureInput>) {
+        self.features.add_feat(inp1);
     }
 
     fn init_common_feature(&mut self) {
         let amp = self.bi.borrow().amp();
 
-        self.add_feat(
-            FeatureInput::Single("bsp_bi_amp".to_string(), amp.unwrap()),
-            None,
-        );
+        self.add_feat(FeatureInput::Single("bsp_bi_amp".to_string(), amp.unwrap()));
     }
 }
