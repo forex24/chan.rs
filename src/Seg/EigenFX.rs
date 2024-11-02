@@ -120,7 +120,7 @@ impl<T: Line> CEigenFX<T> {
         self.last_evidence_bi = Some(Rc::clone(&bi));
 
         let allow_top_equal = if self.exclude_included {
-            if bi.borrow().is_down() {
+            if bi.borrow()._is_down() {
                 Some(EqualMode::TopEqual)
             } else {
                 Some(EqualMode::BottomEqual)
@@ -166,7 +166,7 @@ impl<T: Line> CEigenFX<T> {
     }
 
     pub fn add(&mut self, bi: Handle<T>) -> bool {
-        assert!(bi.borrow().dir() != self.dir);
+        assert!(bi.borrow()._dir() != self.dir);
         self.lst.push(bi.clone());
 
         if self.ele[0].is_none() {
@@ -193,7 +193,9 @@ impl<T: Line> CEigenFX<T> {
         } else {
             assert!(self.ele[1].is_some());
 
-            let ele1_begin_idx = self.ele[1].as_ref().unwrap().borrow().lst[0].borrow().idx();
+            let ele1_begin_idx = self.ele[1].as_ref().unwrap().borrow().lst[0]
+                .borrow()
+                ._idx();
 
             self.ele[0] = self.ele[1].take();
             self.ele[1] = self.ele[2].take();
@@ -201,7 +203,7 @@ impl<T: Line> CEigenFX<T> {
 
             self.lst = bi_tmp_list
                 .into_iter()
-                .filter(|bi| bi.borrow().idx() >= ele1_begin_idx)
+                .filter(|bi| bi.borrow()._idx() >= ele1_begin_idx)
                 .collect();
         }
         false
@@ -213,7 +215,7 @@ impl<T: Line> CEigenFX<T> {
         if ele1_gap {
             assert!(self.ele[0].is_some());
             let end_bi_idx = self.get_peak_bi_idx();
-            let thred_value = bi_lst[end_bi_idx].borrow().get_end_val();
+            let thred_value = bi_lst[end_bi_idx].borrow()._get_end_val();
             let break_thred = if self.is_up() {
                 self.ele[0].as_ref().unwrap().borrow().low
             } else {
@@ -242,12 +244,12 @@ impl<T: Line> CEigenFX<T> {
         assert!(self.last_evidence_bi.is_some());
 
         for bi in &self.lst {
-            if !bi.borrow().is_sure() {
+            if !bi.borrow()._is_sure() {
                 return false;
             }
         }
 
-        self.last_evidence_bi.as_ref().unwrap().borrow().is_sure()
+        self.last_evidence_bi.as_ref().unwrap().borrow()._is_sure()
     }
 
     pub fn clear(&mut self) {
@@ -265,8 +267,8 @@ impl<T: Line> CEigenFX<T> {
         let ele2 = self.ele[2].as_ref().unwrap().borrow();
         let ele1 = self.ele[1].as_ref().unwrap().borrow();
 
-        if (self.is_up() && ele2.low < ele1.lst.last().unwrap().borrow().low())
-            || (self.is_down() && ele2.high > ele1.lst.last().unwrap().borrow().high())
+        if (self.is_up() && ele2.low < ele1.lst.last().unwrap().borrow()._low())
+            || (self.is_down() && ele2.high > ele1.lst.last().unwrap().borrow()._high())
         {
             return true;
         }
@@ -276,12 +278,12 @@ impl<T: Line> CEigenFX<T> {
         let ele2_bi = &ele2.lst[0];
         let ele2_bi_ref = ele2_bi.borrow();
 
-        if let Some(next) = &ele2_bi_ref.next() {
-            if let Some(next_next) = &next.borrow().next() {
-                if ele2_bi_ref.is_down() && next_next.borrow().low() < ele2_bi_ref.low() {
+        if let Some(next) = &ele2_bi_ref._next() {
+            if let Some(next_next) = &next.borrow()._next() {
+                if ele2_bi_ref._is_down() && next_next.borrow()._low() < ele2_bi_ref._low() {
                     self.last_evidence_bi = Some(next_next.clone());
                     return true;
-                } else if ele2_bi_ref.is_up() && next_next.borrow().high() > ele2_bi_ref.high() {
+                } else if ele2_bi_ref._is_up() && next_next.borrow()._high() > ele2_bi_ref._high() {
                     self.last_evidence_bi = Some(next_next.clone());
                     return true;
                 }
@@ -299,7 +301,7 @@ impl<T: Line> CEigenFX<T> {
     ) -> Option<bool> {
         const COMMON_COMBINE: bool = true;
 
-        let first_bi_dir = bi_list[begin_idx].borrow().dir();
+        let first_bi_dir = bi_list[begin_idx].borrow()._dir();
         let mut eigen_fx =
             CEigenFX::<T>::new(revert_bi_dir(&first_bi_dir), !COMMON_COMBINE, self.lv);
 
@@ -326,16 +328,16 @@ impl<T: Line> CEigenFX<T> {
 
             let bi_ref = bi.borrow();
 
-            if (bi_ref.is_down() && bi_ref.low() < thred_value)
-                || (bi_ref.is_up() && bi_ref.high() > thred_value)
+            if (bi_ref._is_down() && bi_ref._low() < thred_value)
+                || (bi_ref._is_up() && bi_ref._high() > thred_value)
             {
                 return Some(false);
             }
 
             if eigen_fx.ele[1].is_some() {
                 let ele1 = eigen_fx.ele[1].as_ref().unwrap().borrow();
-                if (bi_ref.is_down() && ele1.high > break_thred)
-                    || (bi_ref.is_up() && ele1.low < break_thred)
+                if (bi_ref._is_down() && ele1.high > break_thred)
+                    || (bi_ref._is_up() && ele1.low < break_thred)
                 {
                     return Some(true);
                 }
@@ -355,7 +357,7 @@ impl<T: Line> std::fmt::Display for CEigenFX<T> {
                     e.borrow()
                         .lst
                         .iter()
-                        .map(|b| b.borrow().idx().to_string())
+                        .map(|b| b.borrow()._idx().to_string())
                         .collect::<Vec<_>>()
                         .join(",")
                 } else {

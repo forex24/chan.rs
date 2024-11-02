@@ -42,19 +42,19 @@ impl<T: Line> CSeg<T> {
         reason: &str,
     ) -> Result<Self, CChanException> {
         assert!(
-            start_bi.borrow().idx() == 0
-                || start_bi.borrow().dir() == end_bi.borrow().dir()
+            start_bi.borrow()._idx() == 0
+                || start_bi.borrow()._dir() == end_bi.borrow()._dir()
                 || !is_sure,
             "start_bi and end_bi direction mismatch"
         );
 
-        let is_sure = if end_bi.borrow().idx() - start_bi.borrow().idx() < 2 {
+        let is_sure = if end_bi.borrow()._idx() - start_bi.borrow()._idx() < 2 {
             false
         } else {
             is_sure
         };
 
-        let dir = seg_dir.unwrap_or_else(|| end_bi.borrow().dir());
+        let dir = seg_dir.unwrap_or_else(|| end_bi.borrow()._dir());
         let seg = Self {
             idx,
             start_bi,
@@ -88,10 +88,10 @@ impl<T: Line> CSeg<T> {
             return Ok(());
         }
 
-        let start_val = self.start_bi.borrow().get_begin_val();
-        let end_val = self.end_bi.borrow().get_end_val();
-        let start_idx = self.start_bi.borrow().idx();
-        let end_idx = self.end_bi.borrow().idx();
+        let start_val = self.start_bi.borrow()._get_begin_val();
+        let end_val = self.end_bi.borrow()._get_end_val();
+        let start_idx = self.start_bi.borrow()._idx();
+        let end_idx = self.end_bi.borrow()._idx();
 
         if self.is_down() {
             if start_val < end_val {
@@ -139,7 +139,7 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn cal_bi_cnt(&self) -> usize {
-        self.end_bi.borrow().idx() - self.start_bi.borrow().idx() + 1
+        self.end_bi.borrow()._idx() - self.start_bi.borrow()._idx() + 1
     }
 
     pub fn clear_zs_lst(&mut self) {
@@ -148,17 +148,17 @@ impl<T: Line> CSeg<T> {
 
     pub fn _low(&self) -> f64 {
         if self.is_down() {
-            self.end_bi.borrow().get_end_klu().borrow().low
+            self.end_bi.borrow()._get_end_klu().borrow().low
         } else {
-            self.start_bi.borrow().get_begin_klu().borrow().low
+            self.start_bi.borrow()._get_begin_klu().borrow().low
         }
     }
 
     pub fn _high(&self) -> f64 {
         if self.is_up() {
-            self.end_bi.borrow().get_end_klu().borrow().high
+            self.end_bi.borrow()._get_end_klu().borrow().high
         } else {
-            self.start_bi.borrow().get_begin_klu().borrow().high
+            self.start_bi.borrow()._get_begin_klu().borrow().high
         }
     }
 
@@ -171,11 +171,11 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn get_end_val(&self) -> f64 {
-        self.end_bi.borrow().get_end_val()
+        self.end_bi.borrow()._get_end_val()
     }
 
     pub fn get_begin_val(&self) -> f64 {
-        self.start_bi.borrow().get_begin_val()
+        self.start_bi.borrow()._get_begin_val()
     }
 
     pub fn amp(&self) -> f64 {
@@ -183,18 +183,18 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
-        self.end_bi.borrow().get_end_klu()
+        self.end_bi.borrow()._get_end_klu()
     }
 
     pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
-        self.start_bi.borrow().get_begin_klu()
+        self.start_bi.borrow()._get_begin_klu()
     }
 
     pub fn get_klu_cnt(&self) -> usize {
         (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1) as usize
     }
 
-    pub fn _cal_macd_metric(
+    pub fn cal_macd_metric(
         &self,
         macd_algo: MacdAlgo,
         is_reverse: bool,
@@ -287,8 +287,8 @@ impl<T: Line> std::fmt::Display for CSeg<T> {
         write!(
             f,
             "{}->{}: {:?}  {}",
-            self.start_bi.borrow().idx(),
-            self.end_bi.borrow().idx(),
+            self.start_bi.borrow()._idx(),
+            self.end_bi.borrow()._idx(),
             self.dir,
             self.is_sure
         )

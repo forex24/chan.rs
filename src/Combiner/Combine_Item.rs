@@ -25,7 +25,7 @@ impl CCombineItem {
                 Ok(CCombineItem {
                     time_begin: bi.begin_klc.borrow().idx,
                     time_end: bi.end_klc.borrow().idx,
-                    high: bi._high(),
+                    high: bi.high(),
                     low: bi._low(),
                 })
             }
@@ -43,7 +43,7 @@ impl CCombineItem {
                 Ok(CCombineItem {
                     time_begin: seg.start_bi.borrow().begin_klc.borrow().idx,
                     time_end: seg.end_bi.borrow().end_klc.borrow().idx,
-                    high: seg._high(),
+                    high: seg.high(),
                     low: seg._low(),
                 })
             }

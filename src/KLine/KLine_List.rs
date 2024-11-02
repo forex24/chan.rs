@@ -28,11 +28,11 @@ pub struct CKLineList {
     pub lst: Vec<Handle<CKLine>>,
     pub bi_list: CBiList,
     pub seg_list: CSegListChan<CBi>,
-    pub segseg_list: CSegListChan<CSeg<CBi>>,
+    //pub segseg_list: CSegListChan<CSeg<CBi>>,
     pub zs_list: CZSList<CBi>,
-    pub segzs_list: CZSList<CSeg<CBi>>,
+    //pub segzs_list: CZSList<CSeg<CBi>>,
     pub bs_point_lst: CBSPointList<CBi>,
-    pub seg_bs_point_lst: CBSPointList<CSeg<CBi>>,
+    //pub seg_bs_point_lst: CBSPointList<CSeg<CBi>>,
     pub metric_model_lst: Vec<Box<dyn MetricModel>>,
     pub step_calculation: bool,
     pub bs_point_history: Vec<HashMap<String, String>>,
@@ -42,7 +42,7 @@ pub struct CKLineList {
 impl CKLineList {
     pub fn new(kl_type: String, conf: CChanConfig) -> Self {
         let seg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Bi);
-        let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
+        //let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
 
         CKLineList {
             kl_type,
@@ -50,11 +50,11 @@ impl CKLineList {
             lst: Vec::new(),
             bi_list: CBiList::new(CBiConfig::default()),
             seg_list,
-            segseg_list,
+            //segseg_list,
             zs_list: CZSList::new(Some(conf.zs_conf.clone())),
-            segzs_list: CZSList::new(Some(conf.zs_conf.clone())),
+            //segzs_list: CZSList::new(Some(conf.zs_conf.clone())),
             bs_point_lst: CBSPointList::new(conf.bs_point_conf.clone()),
-            seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf.clone()),
+            //seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf.clone()),
             metric_model_lst: conf.get_metric_model(),
             step_calculation: true,
             bs_point_history: Vec::new(),
@@ -71,17 +71,17 @@ impl CKLineList {
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
-        cal_seg(&self.seg_list.lst, &mut self.segseg_list);
-        self.segzs_list
-            .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
-        update_zs_in_seg(
-            &self.seg_list.lst,
-            &mut self.segseg_list.lst,
-            &mut self.segzs_list,
-        )?;
+        //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
+        //self.segzs_list
+        //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
+        //update_zs_in_seg(
+        //    &self.seg_list.lst,
+        //    &mut self.segseg_list.lst,
+        //    &mut self.segzs_list,
+        //)?;
 
-        self.seg_bs_point_lst
-            .cal(&self.seg_list.lst, &self.segseg_list);
+        //self.seg_bs_point_lst
+        //    .cal(&self.seg_list.lst, &self.segseg_list);
         self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
         //self.record_current_bs_points();
 
@@ -137,7 +137,7 @@ pub fn cal_seg<U: Line>(
     let mut sure_seg_cnt = 0;
     if seg_list.is_empty() {
         for bi in bi_list.iter() {
-            bi.borrow_mut().set_seg_idx(0);
+            bi.borrow_mut()._set_seg_idx(0);
         }
         return Ok(());
     }
@@ -156,21 +156,21 @@ pub fn cal_seg<U: Line>(
 
     let mut cur_seg = seg_list.last().unwrap().clone();
     for bi in bi_list.iter().rev() {
-        if bi.borrow().seg_idx().is_some()
-            && bi.borrow().idx() < begin_seg.borrow().start_bi.borrow().idx()
+        if bi.borrow()._seg_idx().is_some()
+            && bi.borrow()._idx() < begin_seg.borrow().start_bi.borrow()._idx()
         {
             break;
         }
-        if bi.borrow().idx() > cur_seg.borrow().end_bi.borrow().idx() {
-            bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx + 1);
+        if bi.borrow()._idx() > cur_seg.borrow().end_bi.borrow()._idx() {
+            bi.borrow_mut()._set_seg_idx(cur_seg.borrow().idx + 1);
             continue;
         }
-        if bi.borrow().idx() < cur_seg.borrow().start_bi.borrow().idx() {
+        if bi.borrow()._idx() < cur_seg.borrow().start_bi.borrow()._idx() {
             assert!(cur_seg.borrow().pre.is_some());
             let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
             cur_seg = pre_seg;
         }
-        bi.borrow_mut().set_seg_idx(cur_seg.borrow().idx);
+        bi.borrow_mut()._set_seg_idx(cur_seg.borrow().idx);
     }
 
     Ok(())
@@ -194,27 +194,27 @@ pub fn update_zs_in_seg<T: Line>(
         for zs in zs_list.iter().rev() {
             let zs_ref = zs.borrow();
             if zs_ref.end.as_ref().unwrap().borrow().idx
-                < seg.start_bi.borrow().get_begin_klu().borrow().idx
+                < seg.start_bi.borrow()._get_begin_klu().borrow().idx
             {
                 break;
             }
             if zs_ref.is_inside(&seg) {
                 seg.add_zs(Rc::clone(zs));
             }
-            assert!(zs_ref.begin_bi.as_ref().unwrap().borrow().idx() > 0);
+            assert!(zs_ref.begin_bi.as_ref().unwrap().borrow()._idx() > 0);
 
             //let zs_ref = ;
             zs.borrow_mut().set_bi_in(
-                bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().idx() as usize - 1].clone(),
+                bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow()._idx() as usize - 1].clone(),
             );
-            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().idx() + 1 < bi_list.len() {
+            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow()._idx() + 1 < bi_list.len() {
                 zs.borrow_mut().set_bi_out(
-                    bi_list[zs_ref.end_bi.as_ref().unwrap().borrow().idx() as usize + 1].clone(),
+                    bi_list[zs_ref.end_bi.as_ref().unwrap().borrow()._idx() as usize + 1].clone(),
                 );
             }
             zs.borrow_mut().set_bi_lst(
-                &bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().idx()
-                    ..=zs_ref.end_bi.as_ref().unwrap().borrow().idx()]
+                &bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow()._idx()
+                    ..=zs_ref.end_bi.as_ref().unwrap().borrow()._idx()]
                     .to_vec(),
             );
         }

@@ -50,7 +50,7 @@ impl<T: Line> CZS<T> {
 
         if let Some(lst) = lst {
             if !lst.is_empty() {
-                zs.begin = Some(lst[0].borrow().get_begin_klu());
+                zs.begin = Some(lst[0].borrow()._get_begin_klu());
                 zs.begin_bi = Some(lst[0].clone());
                 zs.update_zs_range(&lst);
                 for item in lst {
@@ -66,12 +66,12 @@ impl<T: Line> CZS<T> {
     pub fn update_zs_range(&mut self, lst: &[Handle<T>]) {
         self.low = lst
             .iter()
-            .map(|bi| bi.borrow().low())
+            .map(|bi| bi.borrow()._low())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         self.high = lst
             .iter()
-            .map(|bi| bi.borrow().high())
+            .map(|bi| bi.borrow()._high())
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         self.mid = (self.low + self.high) / 2.0;
@@ -81,19 +81,19 @@ impl<T: Line> CZS<T> {
     pub fn is_one_bi_zs(&self) -> bool {
         self.end_bi.as_ref().map_or(false, |end_bi| {
             self.begin_bi.as_ref().map_or(false, |begin_bi| {
-                begin_bi.borrow().idx() == end_bi.borrow().idx()
+                begin_bi.borrow()._idx() == end_bi.borrow()._idx()
             })
         })
     }
 
     pub fn update_zs_end(&mut self, item: &Handle<T>) {
-        self.end = Some(item.borrow().get_end_klu());
+        self.end = Some(item.borrow()._get_end_klu());
         self.end_bi = Some(item.clone());
-        if item.borrow().low() < self.peak_low {
-            self.peak_low = item.borrow().low();
+        if item.borrow()._low() < self.peak_low {
+            self.peak_low = item.borrow()._low();
         }
-        if item.borrow().high() > self.peak_high {
-            self.peak_high = item.borrow().high();
+        if item.borrow()._high() > self.peak_high {
+            self.peak_high = item.borrow()._high();
         }
         //self.clean_cache();
     }
@@ -102,8 +102,8 @@ impl<T: Line> CZS<T> {
         if zs2.is_one_bi_zs() {
             return false;
         }
-        if self.begin_bi.as_ref().unwrap().borrow().seg_idx()
-            != zs2.begin_bi.as_ref().unwrap().borrow().seg_idx()
+        if self.begin_bi.as_ref().unwrap().borrow()._seg_idx()
+            != zs2.begin_bi.as_ref().unwrap().borrow()._seg_idx()
         {
             return false;
         }
@@ -164,15 +164,15 @@ impl<T: Line> CZS<T> {
         has_overlap(
             self.low,
             self.high,
-            item.borrow().low(),
-            item.borrow().high(),
+            item.borrow()._low(),
+            item.borrow()._high(),
             false,
         )
     }
 
     pub fn is_inside(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.borrow().idx() <= self.begin_bi.as_ref().unwrap().borrow().idx()
-            && self.begin_bi.as_ref().unwrap().borrow().idx() <= seg.end_bi.borrow().idx()
+        seg.start_bi.borrow()._idx() <= self.begin_bi.as_ref().unwrap().borrow()._idx()
+            && self.begin_bi.as_ref().unwrap().borrow()._idx() <= seg.end_bi.borrow()._idx()
     }
 
     pub fn is_divergence(
@@ -187,17 +187,17 @@ impl<T: Line> CZS<T> {
         let in_metric = self
             .get_bi_in()
             .borrow()
-            .cal_macd_metric(config.macd_algo, false)
+            ._cal_macd_metric(config.macd_algo, false)
             .unwrap();
         let out_metric = match &out_bi {
             Some(out_bi) => out_bi
                 .borrow()
-                .cal_macd_metric(config.macd_algo, true)
+                ._cal_macd_metric(config.macd_algo, true)
                 .unwrap(),
             None => self
                 .get_bi_out()
                 .borrow()
-                .cal_macd_metric(config.macd_algo, true)
+                ._cal_macd_metric(config.macd_algo, true)
                 .unwrap(),
         };
 
@@ -234,8 +234,8 @@ impl<T: Line> CZS<T> {
     pub fn end_bi_break(&self, end_bi: Option<Handle<T>>) -> bool {
         let end_bi = end_bi.unwrap_or_else(|| Rc::clone(self.get_bi_out()));
         let end_bi = end_bi.borrow();
-        (end_bi.is_down() && end_bi.low() < self.low)
-            || (end_bi.is_up() && end_bi.high() > self.high)
+        (end_bi._is_down() && end_bi._low() < self.low)
+            || (end_bi._is_up() && end_bi._high() > self.high)
     }
 
     pub fn out_bi_is_peak(&self, end_bi_idx: usize) -> (bool, Option<f64>) {
@@ -247,15 +247,15 @@ impl<T: Line> CZS<T> {
         let mut peak_rate = f64::INFINITY;
         for bi in &self.bi_lst {
             let bi_ref = bi.borrow();
-            if bi_ref.idx() > end_bi_idx {
+            if bi_ref._idx() > end_bi_idx {
                 break;
             }
-            if (bi_out.is_down() && bi_ref.low() < bi_out.low())
-                || (bi_out.is_up() && bi_ref.high() > bi_out.high())
+            if (bi_out._is_down() && bi_ref._low() < bi_out._low())
+                || (bi_out._is_up() && bi_ref._high() > bi_out._high())
             {
                 return (false, None);
             }
-            let r = (bi_ref.get_end_val() - bi_out.get_end_val()).abs() / bi_out.get_end_val();
+            let r = (bi_ref._get_end_val() - bi_out._get_end_val()).abs() / bi_out._get_end_val();
             if r < peak_rate {
                 peak_rate = r;
             }
