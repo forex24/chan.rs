@@ -9,7 +9,7 @@ use crate::{
         //TradeInfo::CTradeInfo,
     },
     Math::{
-        //Demark::{CDemarkEngine, CDemarkIndex},
+        Demark::{CDemarkEngine, CDemarkIndex},
         TrendModel::CTrendModel,
         BOLL::{BOLLMetric, BollModel},
         KDJ::KDJ,
@@ -28,7 +28,7 @@ pub struct CKLineUnit {
     pub high: f64,
     pub low: f64,
     //pub trade_info: CTradeInfo,
-    //pub demark: CDemarkIndex,
+    pub demark: CDemarkIndex,
     //pub sub_kl_list: Vec<Handle<CKLineUnit>>,
     //pub sup_kl: Option<Handle<CKLineUnit>>,
     pub klc: Option<Handle<CKLine>>,
@@ -60,7 +60,7 @@ impl CKLineUnit {
             high,  //: kl_dict[&DataField::FieldHigh],
             low,   //: kl_dict[&DataField::FieldLow],
             //trade_info: CTradeInfo::new(kl_dict),
-            //demark: CDemarkIndex::new(),
+            demark: CDemarkIndex::new(),
             //sub_kl_list: Vec::new(),
             //sup_kl: None,
             klc: None,
@@ -134,23 +134,23 @@ impl CKLineUnit {
     }
 
     pub fn set_metric(&mut self, metric_model_lst: &mut [Box<dyn MetricModel>]) {
-        for metric_model in metric_model_lst {
-            if let Some(macd) = metric_model.as_any().downcast_mut::<CMACD>() {
+        for metric_model in metric_model_lst.iter_mut() {
+            if let Some(macd) = metric_model.as_any_mut().downcast_mut::<CMACD>() {
                 self.macd = Some(macd.add(self.close));
-            } else if let Some(trend_model) = metric_model.as_any().downcast_ref::<CTrendModel>() {
+            } else if let Some(trend_model) =
+                metric_model.as_any_mut().downcast_mut::<CTrendModel>()
+            {
                 self.trend
                     .entry(trend_model.trend_type)
                     .or_insert_with(HashMap::new)
                     .insert(trend_model.t, trend_model.add(self.close));
-            } else if let Some(boll_model) = metric_model.as_any().downcast_ref::<BollModel>() {
+            } else if let Some(boll_model) = metric_model.as_any_mut().downcast_mut::<BollModel>() {
                 self.boll = Some(boll_model.add(self.close));
-            }
-            /*else if let Some(demark_engine) =
-                metric_model.as_any().downcast_ref::<CDemarkEngine>()
+            } else if let Some(demark_engine) =
+                metric_model.as_any_mut().downcast_mut::<CDemarkEngine>()
             {
                 self.demark = demark_engine.update(self.idx, self.close, self.high, self.low);
-            } */
-            else if let Some(rsi) = metric_model.as_any().downcast_ref::<RSI>() {
+            } else if let Some(rsi) = metric_model.as_any_mut().downcast_mut::<RSI>() {
                 self.rsi = Some(rsi.add(self.close));
             } //else if let Some(kdj) = metric_model.as_any().downcast_ref::<KDJ>() {
               //  self.kdj = Some(kdj.add(self.high, self.low, self.close));
@@ -218,17 +218,61 @@ impl CKLineUnit {
 
 pub trait MetricModel {
     fn as_any(&self) -> &dyn std::any::Any;
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
-/*
-impl MetricModel for CMACD {}
-impl MetricModel for CTrendModel {}
-impl MetricModel for BollModel {}
-impl MetricModel for CDemarkEngine {}
-impl MetricModel for RSI {}
-impl MetricModel for KDJ {}
+impl MetricModel for CMACD {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
 
-impl Clone for CKLineUnit {
+impl MetricModel for CTrendModel {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+impl MetricModel for BollModel {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+impl MetricModel for CDemarkEngine {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+impl MetricModel for RSI {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+impl MetricModel for KDJ {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+/*impl Clone for CKLineUnit {
     fn clone(&self) -> Self {
         let mut kl_dict = HashMap::new();
         kl_dict.insert(DataField::FieldTime, self.time.to_f64());

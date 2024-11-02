@@ -1,4 +1,5 @@
 use crate::ChanModel::Features::CFeatures;
+use crate::ChanModel::Features::FeatureInput as CFeatureInput;
 use crate::Common::types::Handle;
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -27,17 +28,28 @@ impl<T: Line> CBSPoint<T> {
     ) -> Self {
         let klu = bi.borrow().get_end_klu();
 
+        let features = match feature_dict {
+            Some(dict) => {
+                let flattened: HashMap<String, f64> = dict
+                    .into_iter()
+                    .filter_map(|(k, v)| v.map(|val| (k, val)))
+                    .collect();
+                CFeatures::new(Some(flattened))
+            }
+            None => CFeatures::new(None),
+        };
+
         let mut bsp = CBSPoint {
             bi,
             klu,
             is_buy,
             bsp_type: vec![bs_type],
             relate_bsp1,
-            features: CFeatures::new(feature_dict),
+            features,
             is_segbsp: false,
         };
 
-        bi.borrow_mut().bsp = Some(Rc::clone(&bsp));
+        bi.borrow_mut().set_bsp(Some(Rc::new(bsp.clone())));
 
         bsp.init_common_feature();
 
@@ -73,7 +85,13 @@ impl<T: Line> CBSPoint<T> {
     }
 
     pub fn add_feat(&mut self, inp1: FeatureInput, inp2: Option<f64>) {
-        self.features.add_feat(inp1, inp2);
+        let converted_input = match inp1 {
+            FeatureInput::String(s) => FeatureInput::String(s),
+            FeatureInput::Dict(d) => FeatureInput::Dict(d),
+            FeatureInput::DictOpt(d) => FeatureInput::DictOpt(d),
+            FeatureInput::Features(f) => FeatureInput::Features(f),
+        };
+        self.features.add_feat(converted_input, inp2);
     }
 
     fn init_common_feature(&mut self) {

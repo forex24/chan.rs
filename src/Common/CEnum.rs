@@ -180,3 +180,35 @@ pub enum ZsCombineMode {
     Zs,
     Peak,
 }
+
+impl std::str::FromStr for ZsCombineMode {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "zs" => Ok(ZsCombineMode::Zs),
+            "peak" => Ok(ZsCombineMode::Peak),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZsAlgo {
+    Normal,
+    OverSeg,
+    Auto,
+}
+
+impl std::str::FromStr for ZsAlgo {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "over_seg" => Ok(ZsAlgo::OverSeg),
+            "normal" => Ok(ZsAlgo::Normal),
+            "auto" => Ok(ZsAlgo::Auto),
+            _ => Err(()),
+        }
+    }
+}

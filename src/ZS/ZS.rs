@@ -180,8 +180,8 @@ impl<T: Line> CZS<T> {
         config: &CPointConfig,
         out_bi: Option<Handle<T>>,
     ) -> (bool, Option<f64>) {
-        let out_bi = out_bi.map(|x| Rc::clone(&x));
-        if !self.end_bi_break(out_bi) {
+        let out_bi = out_bi.as_ref().map(|x| Rc::clone(&x));
+        if !self.end_bi_break(out_bi.clone()) {
             return (false, None);
         }
         let in_metric = self
@@ -189,16 +189,16 @@ impl<T: Line> CZS<T> {
             .borrow()
             .cal_macd_metric(config.macd_algo, false)
             .unwrap();
-        let out_metric = if let Some(out_bi) = out_bi {
-            out_bi
+        let out_metric = match &out_bi {
+            Some(out_bi) => out_bi
                 .borrow()
                 .cal_macd_metric(config.macd_algo, true)
-                .unwrap()
-        } else {
-            self.get_bi_out()
+                .unwrap(),
+            None => self
+                .get_bi_out()
                 .borrow()
                 .cal_macd_metric(config.macd_algo, true)
-                .unwrap()
+                .unwrap(),
         };
 
         let ratio = out_metric / in_metric;

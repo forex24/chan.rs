@@ -1,6 +1,6 @@
 use crate::Common::func_util::revert_bi_dir;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::BiDir;
+use crate::Common::CEnum::{BiDir, ZsAlgo};
 use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
@@ -43,7 +43,7 @@ impl<U: Line> CZSList<U> {
         }
     }
 
-    pub fn add_to_free_lst(&mut self, item: &Handle<U>, is_sure: bool, zs_algo: &str) {
+    pub fn add_to_free_lst(&mut self, item: &Handle<U>, is_sure: bool, zs_algo: ZsAlgo) {
         if !self.free_item_lst.is_empty()
             && item.borrow().idx() == self.free_item_lst.last().unwrap().borrow().idx()
         {
@@ -71,7 +71,7 @@ impl<U: Line> CZSList<U> {
             self.try_combine();
             return;
         }
-        self.add_to_free_lst(&bi, is_sure, "normal");
+        self.add_to_free_lst(&bi, is_sure, ZsAlgo::Normal);
     }
 
     pub fn try_add_to_end(&mut self, bi: &Handle<U>) -> bool {
@@ -98,7 +98,7 @@ impl<U: Line> CZSList<U> {
                 continue;
             }
             if deal_bi_cnt < 1 {
-                self.add_to_free_lst(&bi, seg_is_sure, "normal");
+                self.add_to_free_lst(&bi, seg_is_sure, ZsAlgo::Normal);
                 deal_bi_cnt += 1;
             } else {
                 self.update(bi.clone(), seg_is_sure);
@@ -110,10 +110,10 @@ impl<U: Line> CZSList<U> {
         &self,
         lst: &[Handle<U>],
         is_sure: bool,
-        zs_algo: &str,
+        zs_algo: ZsAlgo,
     ) -> Option<CZS<U>> {
         let lst = match zs_algo {
-            "normal" => {
+            ZsAlgo::Normal => {
                 if !self.config.one_bi_zs {
                     if lst.len() == 1 {
                         return None;
@@ -124,12 +124,20 @@ impl<U: Line> CZSList<U> {
                     lst
                 }
             }
-            "over_seg" => {
+            ZsAlgo::OverSeg => {
                 if lst.len() < 3 {
                     return None;
                 }
                 let lst = &lst[lst.len() - 3..];
-                if lst[0].borrow().dir() == lst[0].borrow().get_parent_seg().borrow().dir {
+                if lst[0].borrow().dir()
+                    == lst[0]
+                        .borrow()
+                        .get_parent_seg()
+                        .as_ref()
+                        .unwrap()
+                        .borrow()
+                        .dir()
+                {
                     &lst[1..]
                 } else {
                     lst
@@ -170,8 +178,8 @@ impl<U: Line> CZSList<U> {
             }
         }
 
-        match self.config.zs_algo.as_str() {
-            "normal" => {
+        match self.config.zs_algo {
+            ZsAlgo::Normal => {
                 for seg in seg_lst.iter() {
                     if !self.seg_need_cal(seg) {
                         continue;
@@ -193,7 +201,7 @@ impl<U: Line> CZSList<U> {
                     );
                 }
             }
-            "over_seg" => {
+            ZsAlgo::OverSeg => {
                 assert!(!self.config.one_bi_zs);
                 self.clear_free_lst();
                 let begin_bi_idx = if !self.zs_lst.is_empty() {
@@ -214,7 +222,7 @@ impl<U: Line> CZSList<U> {
                     self.update_overseg_zs(bi);
                 }
             }
-            "auto" => {
+            ZsAlgo::Auto => {
                 let mut sure_seg_appear = false;
                 let exist_sure_seg = seg_lst.exist_sure_seg();
                 for seg in seg_lst.iter() {
@@ -239,7 +247,6 @@ impl<U: Line> CZSList<U> {
                     }
                 }
             }
-            _ => panic!("unknown zs_algo {}", self.config.zs_algo),
         }
 
         self.update_last_pos(seg_lst);
@@ -278,7 +285,7 @@ impl<U: Line> CZSList<U> {
         {
             return;
         }
-        self.add_to_free_lst(bi, bi.borrow().is_sure(), "over_seg");
+        self.add_to_free_lst(bi, bi.borrow().is_sure(), ZsAlgo::Normal);
     }
 
     pub fn try_combine(&mut self) {
@@ -290,7 +297,7 @@ impl<U: Line> CZSList<U> {
             let second_last = self.zs_lst.last_mut().unwrap();
             if second_last
                 .borrow_mut()
-                .combine(&last.borrow(), &self.config.zs_combine_mode)
+                .combine(&last.borrow(), self.config.zs_combine_mode)
             {
                 continue;
             }

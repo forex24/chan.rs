@@ -273,11 +273,11 @@ impl CBi {
             MacdAlgo::Diff => self.cal_macd_diff(),
             MacdAlgo::Slope => self.cal_macd_slope(),
             MacdAlgo::Amp => self.cal_macd_amp(),
-            MacdAlgo::Amount => self.cal_macd_trade_metric(DataField::FieldTurnover, false),
-            MacdAlgo::Volumn => self.cal_macd_trade_metric(DataField::FieldVolume, false),
-            MacdAlgo::VolumnAvg => self.cal_macd_trade_metric(DataField::FieldVolume, true),
-            MacdAlgo::AmountAvg => self.cal_macd_trade_metric(DataField::FieldTurnover, true),
-            MacdAlgo::TurnrateAvg => self.cal_macd_trade_metric(DataField::FieldTurnrate, true),
+            //MacdAlgo::Amount => self.cal_macd_trade_metric(DataField::FieldTurnover, false),
+            //MacdAlgo::Volumn => self.cal_macd_trade_metric(DataField::FieldVolume, false),
+            //MacdAlgo::VolumnAvg => self.cal_macd_trade_metric(DataField::FieldVolume, true),
+            //MacdAlgo::AmountAvg => self.cal_macd_trade_metric(DataField::FieldTurnover, true),
+            //MacdAlgo::TurnrateAvg => self.cal_macd_trade_metric(DataField::FieldTurnrate, true),
             MacdAlgo::Rsi => self.cal_rsi(),
             _ => Err(CChanException::new(
                 format!(
@@ -290,19 +290,22 @@ impl CBi {
     }
 
     pub fn cal_rsi(&self) -> Result<f64, CChanException> {
-        let mut rsi_lst = Vec::new();
+        let mut rsi_lst: Vec<f64> = Vec::new();
         for klc in self.klc_lst() {
             for klu in klc.borrow().lst.iter() {
-                rsi_lst.push(klu.rsi);
+                if let Some(rsi) = klu.borrow().rsi {
+                    rsi_lst.push(rsi);
+                }
             }
         }
         if self.is_down() {
             Ok(10000.0 / (rsi_lst.iter().fold(f64::INFINITY, |a, &b| a.min(b)) + 1e-7))
         } else {
-            Ok(*rsi_lst
+            Ok(rsi_lst
                 .iter()
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap())
+                .copied()
+                .unwrap_or(0.0))
         }
     }
 
@@ -310,7 +313,7 @@ impl CBi {
         let mut s = 1e-7;
         for klc in self.klc_lst() {
             for klu in klc.borrow().lst.iter() {
-                s += klu.macd.macd.abs();
+                s += klu.borrow().macd.as_ref().unwrap().macd.abs();
             }
         }
         Ok(s)
@@ -320,11 +323,12 @@ impl CBi {
         let mut peak = 1e-7;
         for klc in self.klc_lst() {
             for klu in klc.borrow().lst.iter() {
-                if klu.macd.macd.abs() > peak {
-                    if self.is_down() && klu.macd.macd < 0.0 {
-                        peak = klu.macd.macd.abs();
-                    } else if self.is_up() && klu.macd.macd > 0.0 {
-                        peak = klu.macd.macd.abs();
+                let macd_val = klu.borrow().macd.as_ref().unwrap().macd;
+                if macd_val.abs() > peak {
+                    if self.is_down() && macd_val < 0.0 {
+                        peak = macd_val.abs();
+                    } else if self.is_up() && macd_val > 0.0 {
+                        peak = macd_val.abs();
                     }
                 }
             }
@@ -383,7 +387,7 @@ impl CBi {
         let mut min = f64::INFINITY;
         for klc in self.klc_lst() {
             for klu in klc.borrow().lst.iter() {
-                let macd = klu.borrow().macd.macd;
+                let macd = klu.borrow().macd.as_ref().unwrap().macd;
                 if macd > max {
                     max = macd;
                 }
@@ -419,29 +423,29 @@ impl CBi {
         }
     }
 
-    pub fn cal_macd_trade_metric(
-        &self,
-        metric: DataField,
-        cal_avg: bool,
-    ) -> Result<f64, CChanException> {
-        let mut s = 0.0;
-        let mut count = 0;
-        for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                if let Some(metric_res) = klu.borrow().trade_info.metric.get(&metric.to_string()) {
-                    s += metric_res;
-                    count += 1;
-                } else {
-                    return Ok(0.0);
-                }
-            }
-        }
-        if cal_avg && count > 0 {
-            Ok(s / count as f64)
-        } else {
-            Ok(s)
-        }
-    }
+    //pub fn cal_macd_trade_metric(
+    //    &self,
+    //    metric: DataField,
+    //    cal_avg: bool,
+    //) -> Result<f64, CChanException> {
+    //    let mut s = 0.0;
+    //    let mut count = 0;
+    //    for klc in self.klc_lst() {
+    //        for klu in klc.borrow().lst.iter() {
+    //            if let Some(metric_res) = klu.borrow().trade_info.metric.get(&metric.to_string()) {
+    //                s += metric_res;
+    //                count += 1;
+    //            } else {
+    //                return Ok(0.0);
+    //            }
+    //        }
+    //    }
+    //    if cal_avg && count > 0 {
+    //        Ok(s / count as f64)
+    //    } else {
+    //        Ok(s)
+    //    }
+    //}
 
     // Helper methods for iterating over KLines
     fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {

@@ -53,16 +53,23 @@ pub struct DemarkIndex {
     series: Handle<CDemarkSetup>,
 }
 
+#[derive(Clone)]
 pub struct CDemarkIndex {
     data: Vec<DemarkIndex>,
 }
 
 impl CDemarkIndex {
-    fn new() -> Self {
+    pub fn new() -> Self {
         CDemarkIndex { data: Vec::new() }
     }
 
-    fn add(&mut self, dir: BiDir, demark_type: DemarkType, idx: i32, series: Handle<CDemarkSetup>) {
+    pub fn add(
+        &mut self,
+        dir: BiDir,
+        demark_type: DemarkType,
+        idx: i32,
+        series: Handle<CDemarkSetup>,
+    ) {
         self.data.push(DemarkIndex {
             dir,
             idx,
@@ -90,6 +97,7 @@ impl CDemarkIndex {
     }
 }
 
+#[derive(Clone)]
 pub struct CDemarkCountdown {
     dir: BiDir,
     kl_list: VecDeque<CKL>,
@@ -186,7 +194,12 @@ impl CDemarkSetup {
         if self.idx == CDemarkEngine::DEMARK_LEN && !self.setup_finished && self.countdown.is_none()
         {
             let tdst_peak = self.cal_tdst_peak();
-            self.countdown = Some(CDemarkCountdown::new(self.dir, &self.kl_list, tdst_peak));
+            self.kl_list.make_contiguous();
+            self.countdown = Some(CDemarkCountdown::new(
+                self.dir,
+                self.kl_list.as_slices().0,
+                tdst_peak,
+            ));
         }
         if let Some(countdown) = &mut self.countdown {
             if countdown.update(kl) {
@@ -194,7 +207,7 @@ impl CDemarkSetup {
                     self.dir,
                     DemarkType::Countdown,
                     countdown.idx,
-                    Rc::new(RefCell::new(self.clone())),
+                    Rc::new(RefCell::new(self.clone_without_index())),
                 );
             }
         }
@@ -207,7 +220,7 @@ impl CDemarkSetup {
             self.dir,
             DemarkType::Setup,
             self.idx,
-            Rc::new(RefCell::new(self.clone())),
+            Rc::new(RefCell::new(self.clone_without_index())),
         );
     }
 
@@ -241,6 +254,19 @@ impl CDemarkSetup {
         };
         self.tdst_peak = Some(res);
         res
+    }
+
+    fn clone_without_index(&self) -> Self {
+        CDemarkSetup {
+            dir: self.dir,
+            kl_list: self.kl_list.clone(),
+            pre_kl: self.pre_kl,
+            countdown: self.countdown.clone(),
+            setup_finished: self.setup_finished,
+            idx: self.idx,
+            tdst_peak: self.tdst_peak,
+            last_demark_index: CDemarkIndex::new(),
+        }
     }
 }
 

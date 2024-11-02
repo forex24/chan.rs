@@ -98,10 +98,10 @@ impl CPointConfig {
     }
 
     pub fn set(&mut self, k: &str, v: &str) {
-        let v = parse_inf(v);
         if k == "macd_algo" {
             self.set_macd_algo(v);
         } else {
+            let v = parse_inf(v);
             match k {
                 "divergence_rate" => self.divergence_rate = v.parse().unwrap(),
                 "min_zs_cnt" => self.min_zs_cnt = v.parse().unwrap(),

@@ -1,11 +1,11 @@
-use crate::Common::CEnum::ZsCombineMode;
+use crate::Common::CEnum::{ZsAlgo, ZsCombineMode};
 
 #[derive(Debug, Clone)]
 pub struct CZSConfig {
     pub need_combine: bool,
     pub zs_combine_mode: ZsCombineMode,
     pub one_bi_zs: bool,
-    pub zs_algo: String,
+    pub zs_algo: ZsAlgo,
 }
 
 impl CZSConfig {
@@ -17,9 +17,15 @@ impl CZSConfig {
     ) -> Self {
         CZSConfig {
             need_combine: need_combine.unwrap_or(true),
-            zs_combine_mode: zs_combine_mode.unwrap_or_else(|| "zs".to_string()),
+            zs_combine_mode: zs_combine_mode
+                .unwrap_or_else(|| "zs".to_string())
+                .parse()
+                .unwrap_or(ZsCombineMode::Zs),
             one_bi_zs: one_bi_zs.unwrap_or(false),
-            zs_algo: zs_algo.unwrap_or_else(|| "normal".to_string()),
+            zs_algo: zs_algo
+                .unwrap_or_else(|| "normal".to_string())
+                .parse()
+                .unwrap_or(ZsAlgo::Normal),
         }
     }
 }

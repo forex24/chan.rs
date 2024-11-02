@@ -204,15 +204,13 @@ impl<T: Line> CBSPointList<T> {
     fn treat_bsp1(&mut self, seg: &Handle<CSeg<T>>, is_buy: bool, mut is_target_bsp: bool) {
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_zs = seg.borrow().zs_lst.last().unwrap();
-        let (break_peak, _) = last_zs
-            .borrow()
-            .out_bi_is_peak(seg.borrow().end_bi.borrow().idx());
+        let last_zs_ref = last_zs.borrow();
+        let (break_peak, _) = last_zs_ref.out_bi_is_peak(seg.borrow().end_bi.borrow().idx());
         if bsp_conf.bs1_peak && !break_peak {
             is_target_bsp = false;
         }
-        let (is_diver, divergence_rate) = last_zs
-            .borrow()
-            .is_divergence(bsp_conf, Some(seg.borrow().end_bi));
+        let (is_diver, divergence_rate) =
+            last_zs_ref.is_divergence(bsp_conf, Some(seg.borrow().end_bi));
         if !is_diver {
             is_target_bsp = false;
         }
@@ -239,7 +237,7 @@ impl<T: Line> CBSPointList<T> {
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_bi = &seg.borrow().end_bi;
         let pre_bi = &bi_list.get(last_bi.borrow().idx() as usize - 2).unwrap();
-        if last_bi.borrow().seg_idx != pre_bi.borrow().seg_idx {
+        if last_bi.borrow().seg_idx() != pre_bi.borrow().seg_idx() {
             return;
         }
         if last_bi.borrow().dir() != seg.borrow().dir {
@@ -251,11 +249,17 @@ impl<T: Line> CBSPointList<T> {
         if last_bi.borrow().is_up() && last_bi.borrow().high() < pre_bi.borrow().high() {
             return;
         }
-        let in_metric = pre_bi.borrow().cal_macd_metric(bsp_conf.macd_algo, false);
-        let out_metric = last_bi.borrow().cal_macd_metric(bsp_conf.macd_algo, true);
+        let in_metric = pre_bi
+            .borrow()
+            .cal_macd_metric(bsp_conf.macd_algo, false)
+            .unwrap_or(0.0);
+        let out_metric = last_bi
+            .borrow()
+            .cal_macd_metric(bsp_conf.macd_algo, true)
+            .unwrap_or(0.0);
         let (is_diver, divergence_rate) = (
             out_metric <= bsp_conf.divergence_rate * in_metric,
-            out_metric / (in_metric + 1e-7),
+            Some(out_metric / (in_metric + 1e-7)),
         );
         if !is_diver {
             is_target_bsp = false;
@@ -274,7 +278,7 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
-        let bsp1_bi_idx_dict: HashMap<i32, Handle<CBSPoint<T>>> = self
+        let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
             .map(|bsp| (bsp.borrow().bi.borrow().idx(), Rc::clone(bsp)))
@@ -321,30 +325,28 @@ impl<T: Line> CBSPointList<T> {
         let bsp2_bi = bi_list
             .get((first_zs.borrow().bi_out.as_ref().unwrap().borrow().idx() + 1) as usize)
             .unwrap();
-        if bsp2_bi.borrow().parent_seg.is_none() {
-            if next_seg.borrow().idx != seg_list.len() - 1 {
+        if bsp2_bi.borrow().get_parent_seg().is_none() {
+            if next_seg.borrow().idx() != seg_list.len() - 1 {
                 return;
             }
         } else if bsp2_bi.borrow().parent_seg.as_ref().unwrap().borrow().idx
             != next_seg.borrow().idx
-        {
-            if bsp2_bi
+            && bsp2_bi
                 .borrow()
-                .parent_seg
+                .get_parent_seg()
                 .as_ref()
                 .unwrap()
                 .borrow()
                 .bi_list
                 .len()
                 >= 3
-            {
-                return;
-            }
+        {
+            return;
         }
         if bsp2_bi.borrow().dir() == next_seg.borrow().dir {
             return;
         }
-        if bsp2_bi.borrow().seg_idx != next_seg.borrow().idx
+        if bsp2_bi.borrow().seg_idx() != Some(next_seg.borrow().idx())
             && next_seg.borrow().idx < seg_list.len() - 2
         {
             return;
@@ -376,7 +378,7 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
-        let bsp1_bi_idx_dict: HashMap<i32, Handle<CBSPoint<T>>> = self
+        let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
             .map(|bsp| (bsp.borrow().bi.borrow().idx(), Rc::clone(bsp)))
@@ -478,8 +480,7 @@ impl<T: Line> CBSPointList<T> {
             }
         } else if bsp3_bi.borrow().parent_seg.as_ref().unwrap().borrow().idx
             != next_seg.borrow().idx
-        {
-            if bsp3_bi
+            && bsp3_bi
                 .borrow()
                 .parent_seg
                 .as_ref()
@@ -488,14 +489,13 @@ impl<T: Line> CBSPointList<T> {
                 .bi_list
                 .len()
                 >= 3
-            {
-                return;
-            }
+        {
+            return;
         }
         if bsp3_bi.borrow().dir() == next_seg.borrow().dir {
             return;
         }
-        if bsp3_bi.borrow().seg_idx != next_seg_idx && next_seg_idx < seg_list.len() - 2 {
+        if bsp3_bi.borrow().seg_idx() != next_seg_idx && next_seg_idx < seg_list.len() - 2 {
             return;
         }
         if bsp3_back2zs(bsp3_bi, &first_zs) {
@@ -530,7 +530,7 @@ impl<T: Line> CBSPointList<T> {
         bsp_conf: &CPointConfig,
         bi_list: &[Handle<T>],
         real_bsp1: Option<Handle<CBSPoint<T>>>,
-        next_seg_idx: i32,
+        next_seg_idx: usize,
     ) {
         let cmp_zs = seg.borrow().get_final_multi_bi_zs();
         if cmp_zs.is_none() {
@@ -557,9 +557,9 @@ impl<T: Line> CBSPointList<T> {
             if bsp3_bi.borrow().idx() > end_bi_idx {
                 break;
             }
-            assert!(bsp3_bi.borrow().seg_idx.is_some());
-            if bsp3_bi.borrow().seg_idx.unwrap() != next_seg_idx
-                && bsp3_bi.borrow().seg_idx.unwrap() < seg_list.len() as i32 - 1
+            assert!(bsp3_bi.borrow().seg_idx().is_some());
+            if bsp3_bi.borrow().seg_idx().unwrap() != next_seg_idx
+                && bsp3_bi.borrow().seg_idx().unwrap() < seg_list.len() - 1
             {
                 break;
             }
@@ -569,9 +569,12 @@ impl<T: Line> CBSPointList<T> {
             let feature_dict = HashMap::from([
                 (
                     "bsp3_zs_height".to_string(),
-                    (cmp_zs.borrow().high - cmp_zs.borrow().low) / cmp_zs.borrow().low,
+                    Some((cmp_zs.borrow().high - cmp_zs.borrow().low) / cmp_zs.borrow().low),
                 ),
-                ("bsp3_bi_amp".to_string(), bsp3_bi.borrow().amp()),
+                (
+                    "bsp3_bi_amp".to_string(),
+                    Some(bsp3_bi.borrow().amp().unwrap()),
+                ),
             ]);
             self.add_bs(
                 BspType::T3B,
@@ -605,14 +608,14 @@ fn bsp2s_break_bsp1<T: Line>(bsp2s_bi: &Handle<T>, bsp2_break_bi: &Handle<T>) ->
         || (bsp2s_bi.borrow().is_up() && bsp2s_bi.borrow().high() > bsp2_break_bi.borrow().high())
 }
 
-fn bsp3_back2zs<T: Line>(bsp3_bi: &Handle<T>, zs: &CZS<T>) -> bool {
-    (bsp3_bi.borrow().is_down() && bsp3_bi.borrow().low() < zs.high)
-        || (bsp3_bi.borrow().is_up() && bsp3_bi.borrow().high() > zs.low)
+fn bsp3_back2zs<T: Line>(bsp3_bi: &Handle<T>, zs: &Handle<CZS<T>>) -> bool {
+    (bsp3_bi.borrow().is_down() && bsp3_bi.borrow().low() < zs.borrow().high)
+        || (bsp3_bi.borrow().is_up() && bsp3_bi.borrow().high() > zs.borrow().low)
 }
 
-fn bsp3_break_zspeak<T: Line>(bsp3_bi: &Handle<T>, zs: &CZS<T>) -> bool {
-    (bsp3_bi.borrow().is_down() && bsp3_bi.borrow().high() >= zs.peak_high)
-        || (bsp3_bi.borrow().is_up() && bsp3_bi.borrow().low() <= zs.peak_low)
+fn bsp3_break_zspeak<T: Line>(bsp3_bi: &Handle<T>, zs: &Handle<CZS<T>>) -> bool {
+    (bsp3_bi.borrow().is_down() && bsp3_bi.borrow().high() >= zs.borrow().peak_high)
+        || (bsp3_bi.borrow().is_up() && bsp3_bi.borrow().low() <= zs.borrow().peak_low)
 }
 
 fn cal_bsp3_bi_end_idx<T: Line>(seg: Option<&Handle<CSeg<T>>>) -> usize {
