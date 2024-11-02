@@ -211,7 +211,7 @@ impl CBi {
         self.end_klc.borrow().idx - self.begin_klc.borrow().idx + 1
     }
 
-    pub fn _high(&self) -> f64 {
+    pub fn high(&self) -> f64 {
         if self.is_up() {
             self.end_klc.borrow().high
         } else {
@@ -219,7 +219,7 @@ impl CBi {
         }
     }
 
-    pub fn _low(&self) -> f64 {
+    pub fn low(&self) -> f64 {
         if self.is_up() {
             self.begin_klc.borrow().low
         } else {
@@ -228,7 +228,7 @@ impl CBi {
     }
 
     pub fn mid(&self) -> f64 {
-        (self._high() + self._low()) / 2.0
+        (self.high() + self.low()) / 2.0
     }
 
     pub fn is_down(&self) -> bool {
@@ -267,6 +267,7 @@ impl CBi {
         is_reverse: bool,
     ) -> Result<f64, CChanException> {
         match macd_algo {
+            MacdAlgo::Rsi => self.cal_rsi(),
             MacdAlgo::Area => self.cal_macd_half(is_reverse),
             MacdAlgo::Peak => self.cal_macd_peak(),
             MacdAlgo::FullArea => self.cal_macd_area(),
@@ -278,7 +279,6 @@ impl CBi {
             //MacdAlgo::VolumnAvg => self.cal_macd_trade_metric(DataField::FieldVolume, true),
             //MacdAlgo::AmountAvg => self.cal_macd_trade_metric(DataField::FieldTurnover, true),
             //MacdAlgo::TurnrateAvg => self.cal_macd_trade_metric(DataField::FieldTurnrate, true),
-            MacdAlgo::Rsi => self.cal_rsi(),
             _ => Err(CChanException::new(
                 format!(
                     "unsupport macd_algo={:?}, should be one of area/full_area/peak/diff/slope/amp",

@@ -146,7 +146,7 @@ impl<T: Line> CSeg<T> {
         self.zs_lst.clear();
     }
 
-    pub fn _low(&self) -> f64 {
+    pub fn low(&self) -> f64 {
         if self.is_down() {
             self.end_bi.borrow()._get_end_klu().borrow().low
         } else {
@@ -154,7 +154,7 @@ impl<T: Line> CSeg<T> {
         }
     }
 
-    pub fn _high(&self) -> f64 {
+    pub fn high(&self) -> f64 {
         if self.is_up() {
             self.end_bi.borrow()._get_end_klu().borrow().high
         } else {
@@ -197,7 +197,7 @@ impl<T: Line> CSeg<T> {
     pub fn cal_macd_metric(
         &self,
         macd_algo: MacdAlgo,
-        is_reverse: bool,
+        _is_reverse: bool,
     ) -> Result<f64, CChanException> {
         match macd_algo {
             MacdAlgo::Slope => Ok(self.cal_macd_slope()),

@@ -28,11 +28,11 @@ pub struct CKLineList {
     pub lst: Vec<Handle<CKLine>>,
     pub bi_list: CBiList,
     pub seg_list: CSegListChan<CBi>,
-    //pub segseg_list: CSegListChan<CSeg<CBi>>,
+    pub segseg_list: CSegListChan<CSeg<CBi>>,
     pub zs_list: CZSList<CBi>,
-    //pub segzs_list: CZSList<CSeg<CBi>>,
+    pub segzs_list: CZSList<CSeg<CBi>>,
     pub bs_point_lst: CBSPointList<CBi>,
-    //pub seg_bs_point_lst: CBSPointList<CSeg<CBi>>,
+    pub seg_bs_point_lst: CBSPointList<CSeg<CBi>>,
     pub metric_model_lst: Vec<Box<dyn MetricModel>>,
     pub step_calculation: bool,
     pub bs_point_history: Vec<HashMap<String, String>>,
@@ -42,7 +42,7 @@ pub struct CKLineList {
 impl CKLineList {
     pub fn new(kl_type: String, conf: CChanConfig) -> Self {
         let seg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Bi);
-        //let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
+        let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
 
         CKLineList {
             kl_type,
@@ -50,11 +50,11 @@ impl CKLineList {
             lst: Vec::new(),
             bi_list: CBiList::new(CBiConfig::default()),
             seg_list,
-            //segseg_list,
+            segseg_list,
             zs_list: CZSList::new(Some(conf.zs_conf.clone())),
-            //segzs_list: CZSList::new(Some(conf.zs_conf.clone())),
+            segzs_list: CZSList::new(Some(conf.zs_conf.clone())),
             bs_point_lst: CBSPointList::new(conf.bs_point_conf.clone()),
-            //seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf.clone()),
+            seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf.clone()),
             metric_model_lst: conf.get_metric_model(),
             step_calculation: true,
             bs_point_history: Vec::new(),
@@ -71,17 +71,17 @@ impl CKLineList {
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
-        //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
-        //self.segzs_list
-        //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
-        //update_zs_in_seg(
-        //    &self.seg_list.lst,
-        //    &mut self.segseg_list.lst,
-        //    &mut self.segzs_list,
-        //)?;
+        cal_seg(&self.seg_list.lst, &mut self.segseg_list);
+        self.segzs_list
+            .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
+        update_zs_in_seg(
+            &self.seg_list.lst,
+            &mut self.segseg_list.lst,
+            &mut self.segzs_list,
+        )?;
 
-        //self.seg_bs_point_lst
-        //    .cal(&self.seg_list.lst, &self.segseg_list);
+        self.seg_bs_point_lst
+            .cal(&self.seg_list.lst, &self.segseg_list);
         self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
         //self.record_current_bs_points();
 
