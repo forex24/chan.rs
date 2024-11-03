@@ -171,6 +171,20 @@ pub fn cal_seg<U: Line>(
             continue;
         }
         if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
+            // FIXME: assert!有错
+            if cur_seg.borrow().pre.is_none() {
+                println!("seg pre is none, list len:{}", seg_list.len());
+                println!(
+                    "[0].next:{:?} [0].reason:{}",
+                    seg_list.first().as_ref().unwrap().borrow().idx,
+                    seg_list.first().as_ref().unwrap().borrow().reason
+                );
+                println!(
+                    "[1].idx:{} [1].reason:{}",
+                    seg_list.first().as_ref().unwrap().borrow().idx,
+                    seg_list.first().as_ref().unwrap().borrow().reason
+                )
+            }
             assert!(cur_seg.borrow().pre.is_some());
             let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
             cur_seg = pre_seg;
