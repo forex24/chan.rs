@@ -1,4 +1,5 @@
 use crate::BuySellPoint::BSPointConfig::{CBSPointConfig, CPointConfig};
+use crate::Common::func_util::has_overlap;
 use crate::Common::types::Handle;
 use crate::Common::CEnum::{BspType, MacdAlgo};
 use crate::Seg::linetype::{Line, SegLine};
@@ -245,7 +246,15 @@ impl<T: Line> CBSPointList<T> {
     ) {
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_bi = &seg.borrow().end_bi;
-        let pre_bi = &bi_list.get(last_bi.borrow().line_idx() - 2).unwrap();
+
+        let pre_bi_index = last_bi.borrow().line_idx() as isize - 2;
+        let pre_bi_index = if pre_bi_index < 0 {
+            (pre_bi_index + bi_list.len() as isize) as usize
+        } else {
+            pre_bi_index as usize
+        };
+
+        let pre_bi = &bi_list[pre_bi_index];
         if last_bi.borrow().line_seg_idx() != pre_bi.borrow().line_seg_idx() {
             return;
         }
@@ -290,7 +299,7 @@ impl<T: Line> CBSPointList<T> {
         );
     }
 
-    pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
+    /*pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
         let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
@@ -298,9 +307,10 @@ impl<T: Line> CBSPointList<T> {
             .collect();
 
         for seg in seg_list.iter() {
-            if !self.seg_need_cal(seg) {
-                continue;
-            }
+            // FIXME:
+            //if !self.seg_need_cal(seg) {
+            //    continue;
+            //}
             let is_buy = seg.borrow().is_down();
             let bsp_conf = self.config.get_bs_config(is_buy);
             if !bsp_conf.target_types.contains(&BspType::T2) {
@@ -317,9 +327,9 @@ impl<T: Line> CBSPointList<T> {
                 self.treat_bsp2(seg_list, &next_seg, is_buy, bi_list, real_bsp1);
             }
         }
-    }
+    }*/
 
-    fn treat_bsp2(
+    /*fn treat_bsp2(
         &mut self,
         seg_list: &CSegListChan<T>,
         next_seg: &Handle<CSeg<T>>,
@@ -422,6 +432,238 @@ impl<T: Line> CBSPointList<T> {
             true,
             Some(feature_dict),
         );
+    }*/
+
+    fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
+        // 创建 bsp1_bi_idx 到 BsPoint 的映射
+        let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
+            .bsp1_lst
+            .iter()
+            .map(|bsp| (bsp.borrow().bi.borrow().line_idx(), Rc::clone(bsp)))
+            .collect();
+
+        // 遍历所有段
+        for seg in seg_list.iter() {
+            let config = self.config.get_bs_config(seg.borrow().is_down());
+
+            // 检查目标类型
+            if !config.target_types.contains(&BspType::T2)
+                && !config.target_types.contains(&BspType::T2S)
+            {
+                continue;
+            }
+
+            // 处理 bsp2 点
+            self.treat_bsp2(seg, &bsp1_bi_idx_dict, seg_list, bi_list);
+        }
+    }
+
+    fn treat_bsp2(
+        &mut self,
+        seg: &Handle<CSeg<T>>,
+        bsp1_bi_idx_dict: &HashMap<usize, Handle<CBSPoint<T>>>,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[Handle<T>],
+    ) {
+        if !self.seg_need_cal(seg) {
+            return;
+        }
+
+        let (is_buy, bsp1_bi, bsp1_bi_idx, real_bsp1, break_bi, bsp2_bi) = if seg_list.len() > 1 {
+            // 多段情况
+            let is_buy = seg.borrow().is_down();
+            let bsp1_bi = Rc::clone(&seg.borrow().end_bi);
+            let bsp1_bi_idx = bsp1_bi.borrow().line_idx();
+            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi.borrow().line_idx()).cloned();
+
+            if bsp1_bi.borrow().line_idx() + 2 >= bi_list.len() {
+                return;
+            }
+
+            let break_bi = &bi_list[bsp1_bi.borrow().line_idx() + 1];
+            let bsp2_bi = &bi_list[bsp1_bi.borrow().line_idx() + 2];
+
+            (
+                is_buy,
+                Some(bsp1_bi),
+                bsp1_bi_idx,
+                real_bsp1,
+                break_bi,
+                bsp2_bi,
+            )
+        } else {
+            // 单段情况
+            let is_buy = seg.borrow().is_up();
+
+            if bi_list.len() == 1 {
+                return;
+            }
+
+            let bsp2_bi = &bi_list[1];
+            let break_bi = &bi_list[0];
+
+            (is_buy, None, -1_i32 as usize, None, break_bi, bsp2_bi)
+        };
+
+        // 检查 bsp2_follow_1
+        let bsp_conf = self.config.get_bs_config(is_buy);
+        if bsp_conf.bsp2_follow_1
+            && !self
+                .bsp_dict
+                .values()
+                .any(|bsp| bsp.borrow().bi.borrow().line_idx() == bsp1_bi_idx)
+        {
+            return;
+        }
+
+        let retrace_rate =
+            bsp2_bi.borrow().line_amp().unwrap() / break_bi.borrow().line_amp().unwrap();
+        let bsp2_flag = retrace_rate <= bsp_conf.max_bs2_rate;
+
+        if bsp2_flag {
+            let feature_dict = HashMap::from([
+                ("bsp2_retrace_rate".to_string(), Some(retrace_rate)),
+                (
+                    "bsp2_break_bi_amp".to_string(),
+                    break_bi.borrow().line_amp(),
+                ),
+                ("bsp2_bi_amp".to_string(), bsp2_bi.borrow().line_amp()),
+            ]);
+
+            self.add_bs(
+                BspType::T2,
+                bsp2_bi.clone(),
+                real_bsp1.clone(),
+                true,
+                Some(feature_dict),
+            );
+        } else if bsp_conf.bsp2s_follow_2 {
+            return;
+        }
+
+        if !self
+            .config
+            .get_bs_config(seg.borrow().is_down())
+            .target_types
+            .contains(&BspType::T2S)
+        {
+            return;
+        }
+
+        self.treat_bsp2s(seg_list, bi_list, bsp2_bi, break_bi, real_bsp1, is_buy);
+    }
+
+    fn treat_bsp2s(
+        &mut self,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[Handle<T>],
+        bsp2_bi: &Handle<T>,
+        break_bi: &Handle<T>,
+        real_bsp1: Option<Handle<CBSPoint<T>>>,
+        is_buy: bool,
+    ) {
+        let mut bias = 2;
+        let mut overlap_range: Option<(f64, f64)> = None;
+
+        while bsp2_bi.borrow().line_idx() + bias < bi_list.len() {
+            let bsp2s_bi = &bi_list[bsp2_bi.borrow().line_idx() + bias];
+
+            // 断言检查
+            debug_assert!(
+                bsp2s_bi.borrow().line_seg_idx().is_some()
+                    && bsp2_bi.borrow().line_seg_idx().is_some()
+            );
+
+            // 检查最大级别限制
+            let bsp_conf = self.config.get_bs_config(is_buy);
+            if let Some(max_level) = bsp_conf.max_bsp2s_lv {
+                //FIXME: 潜在Bug
+                if (bias as f64 / 2.0) > max_level as f64 {
+                    break;
+                }
+            }
+
+            // 检查段落索引条件
+            if bsp2s_bi.borrow().line_seg_idx().unwrap() != bsp2_bi.borrow().line_seg_idx().unwrap()
+                && (bsp2s_bi.borrow().line_seg_idx().unwrap() < seg_list.len() - 1
+                    || bsp2s_bi.borrow().line_seg_idx().unwrap()
+                        - bsp2_bi.borrow().line_seg_idx().unwrap()
+                        >= 2
+                    || seg_list[bsp2_bi.borrow().line_seg_idx().unwrap()]
+                        .borrow()
+                        .is_sure)
+            {
+                break;
+            }
+
+            // 处理重叠区间
+            if bias == 2 {
+                if !has_overlap(
+                    bsp2_bi.borrow().line_low(),
+                    bsp2_bi.borrow().line_high(),
+                    bsp2s_bi.borrow().line_low(),
+                    bsp2s_bi.borrow().line_high(),
+                    false,
+                ) {
+                    break;
+                }
+                overlap_range = Some((
+                    bsp2_bi
+                        .borrow()
+                        .line_low()
+                        .max(bsp2s_bi.borrow().line_low()),
+                    bsp2_bi
+                        .borrow()
+                        .line_high()
+                        .min(bsp2s_bi.borrow().line_high()),
+                ));
+            } else if let Some((low, high)) = overlap_range {
+                if !has_overlap(
+                    low,
+                    high,
+                    bsp2s_bi.borrow().line_low(),
+                    bsp2s_bi.borrow().line_high(),
+                    false,
+                ) {
+                    break;
+                }
+            }
+
+            // 检查是否突破
+            if bsp2s_break_bsp1(bsp2s_bi, break_bi) {
+                break;
+            }
+
+            // 计算回撤率
+            let retrace_rate =
+                (bsp2s_bi.borrow().line_get_end_val() - break_bi.borrow().line_get_end_val()).abs()
+                    / break_bi.borrow().line_amp().unwrap();
+            if retrace_rate > bsp_conf.max_bs2_rate {
+                break;
+            }
+
+            // 构建特征字典
+            let feature_dict = HashMap::from([
+                ("bsp2s_retrace_rate".to_string(), Some(retrace_rate)),
+                (
+                    "bsp2s_break_bi_amp".to_string(),
+                    break_bi.borrow().line_amp(),
+                ),
+                ("bsp2s_bi_amp".to_string(), bsp2s_bi.borrow().line_amp()),
+                ("bsp2s_lv".to_string(), Some(bias as f64 / 2.0)),
+            ]);
+
+            // 添加买卖点
+            self.add_bs(
+                BspType::T2S,
+                bsp2s_bi.clone(),
+                real_bsp1.clone(),
+                true,
+                Some(feature_dict),
+            );
+
+            bias += 2;
+        }
     }
 
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
