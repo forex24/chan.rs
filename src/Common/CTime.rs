@@ -89,6 +89,20 @@ impl CTime {
         };
         self.ts = DateTime::<Utc>::from_utc(date, Utc).timestamp() as f64;
     }
+
+    pub fn from_timestamp(timestamp: f64) -> Self {
+        let naive = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).unwrap_or_default();
+        CTime::from_naive_date_time(naive, true, timestamp)
+    }
+
+    pub fn from_datetime_str(datetime_str: &str) -> Result<Self, chrono::ParseError> {
+        let naive = NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")?;
+        Ok(CTime::from_naive_date_time(
+            naive,
+            true,
+            DateTime::<Utc>::from_utc(naive, Utc).timestamp() as f64,
+        ))
+    }
 }
 
 impl fmt::Display for CTime {

@@ -235,11 +235,13 @@ mod test {
 
     use chrono::{Duration, NaiveDateTime};
     use rand::Rng;
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
 
     use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
 
     use super::CKLineList;
-
+    /*
     #[test]
     fn test_insert_large_data() {
         // 创建一个随机数生成器
@@ -277,5 +279,41 @@ mod test {
         let end = start.elapsed();
         // 打印执行时间
         println!("耗时: {:?}", end); // 30s
+    }*/
+
+    #[test]
+    fn test_load_audusd() -> Result<(), Box<dyn std::error::Error>> {
+        // 记录开始时间
+        let start = Instant::now();
+        let total_data = 10_000_000;
+        let mut list = CKLineList::new("test".to_string(), CChanConfig::default());
+        let file = File::open("/opt/data/raw_data/audusd.csv")?;
+        let reader = BufReader::new(file);
+
+        for line in reader.lines().skip(1) {
+            // skip header
+            let line = line?;
+            let fields: Vec<&str> = line.split(',').collect();
+
+            if fields.len() < 6 {
+                continue;
+            }
+
+            let time = CTime::from_datetime_str(&fields[0])?;
+            let open = fields[1].parse::<f64>()?;
+            let high = fields[2].parse::<f64>()?;
+            let low = fields[3].parse::<f64>()?;
+            let close = fields[4].parse::<f64>()?;
+
+            let klu = CKLineUnit::new(time, open, high, low, close, false)?;
+            list.add_single_klu(klu)?;
+        }
+
+        println!("Total KLines: {}", list.lst.len());
+        // 记录结束时间
+        let end = start.elapsed();
+        // 打印执行时间
+        println!("耗时: {:?}", end); // 30s
+        Ok(())
     }
 }
