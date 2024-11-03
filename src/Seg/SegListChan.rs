@@ -209,7 +209,9 @@ impl<T: Line> CSegListChan<T> {
         self.lst.is_empty()
     }
 
+    // 已完备
     pub fn left_bi_break(&self, bi_lst: &[Handle<T>]) -> bool {
+        // 最后一个确定线段之后的笔有突破该线段最后一笔的
         if self.lst.is_empty() {
             return false;
         }
@@ -228,6 +230,7 @@ impl<T: Line> CSegListChan<T> {
         false
     }
 
+    // 已完备
     pub fn collect_first_seg(&mut self, bi_lst: &[Handle<T>]) {
         if bi_lst.len() < 3 {
             return;
@@ -245,6 +248,7 @@ impl<T: Line> CSegListChan<T> {
                 let first_val = bi_lst.first().unwrap().borrow().line_get_begin_val();
 
                 if (_high - first_val).abs() >= (_low - first_val).abs() {
+                    assert!(find_peak_bi(bi_lst.iter(), true).is_some());
                     if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), true) {
                         self.add_new_seg(
                             bi_lst,
@@ -255,15 +259,18 @@ impl<T: Line> CSegListChan<T> {
                             "0seg_find_high",
                         );
                     }
-                } else if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), false) {
-                    self.add_new_seg(
-                        bi_lst,
-                        peak_bi.borrow().line_idx(),
-                        false,
-                        Some(BiDir::Down),
-                        false,
-                        "0seg_find_low",
-                    );
+                } else {
+                    assert!(find_peak_bi(bi_lst.iter(), false).is_some());
+                    if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), false) {
+                        self.add_new_seg(
+                            bi_lst,
+                            peak_bi.borrow().line_idx(),
+                            false,
+                            Some(BiDir::Down),
+                            false,
+                            "0seg_find_low",
+                        );
+                    }
                 }
                 self.collect_left_as_seg(bi_lst);
             }
@@ -284,10 +291,10 @@ impl<T: Line> CSegListChan<T> {
                     "0seg_collect_all",
                 );
             }
-            _ => panic!("unknown seg left_method = {:?}", self.config.left_method),
         }
     }
 
+    // 99% 已完备，注意FIXME
     pub fn collect_left_seg_peak_method(
         &mut self,
         last_seg_end_bi: Handle<T>,
@@ -324,9 +331,11 @@ impl<T: Line> CSegListChan<T> {
                 );
             }
         }
+        //FIXME: python last_seg_end_bi = self[-1].end_bi
         self.collect_left_as_seg(bi_lst);
     }
 
+    // 99% 已完备，理由同上
     pub fn collect_segs(&mut self, bi_lst: &[Handle<T>]) {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
@@ -369,15 +378,17 @@ impl<T: Line> CSegListChan<T> {
                 );
                 self.collect_left_seg(bi_lst);
             }
-        } else if self.config.left_method == LeftSegMethod::All {
+        }
+        //  剩下线段的尾部相比于最后一个线段的尾部，高低关系和最后一个虚线段的方向一致
+        else if self.config.left_method == LeftSegMethod::All {
+            // 容易找不到二类买卖点！！
             self.collect_left_as_seg(bi_lst);
         } else if self.config.left_method == LeftSegMethod::Peak {
             self.collect_left_seg_peak_method(last_seg_end_bi, bi_lst);
-        } else {
-            panic!("unknown seg left_method = {:?}", self.config.left_method);
         }
     }
 
+    // 已完备
     pub fn collect_left_seg(&mut self, bi_lst: &[Handle<T>]) {
         if self.lst.is_empty() {
             self.collect_first_seg(bi_lst);
@@ -386,6 +397,7 @@ impl<T: Line> CSegListChan<T> {
         }
     }
 
+    // 已完备
     pub fn collect_left_as_seg(&mut self, bi_lst: &[Handle<T>]) {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
@@ -414,7 +426,34 @@ impl<T: Line> CSegListChan<T> {
             );
         }
     }
+    pub fn exist_sure_seg(&self) -> bool {
+        self.lst.iter().any(|seg| seg.borrow().is_sure)
+    }
 
+    // 实现 iter() 方法返回不可变迭代器
+    pub fn iter(&self) -> Iter<'_, Handle<CSeg<T>>> {
+        self.lst.iter()
+    }
+
+    // 实现 iter_mut() 方法返回可变迭代器
+    pub fn iter_mut(&mut self) -> IterMut<'_, Handle<CSeg<T>>> {
+        self.lst.iter_mut()
+    }
+
+    // last() 方法已经通过 Vec 的方法自动获得
+    pub fn last(&self) -> Option<&Handle<CSeg<T>>> {
+        self.lst.last()
+    }
+
+    // 如果需要可变的 last()
+    pub fn last_mut(&mut self) -> Option<&mut Handle<CSeg<T>>> {
+        self.lst.last_mut()
+    }
+}
+
+// 以下要特别注意
+impl<T: Line> CSegListChan<T> {
+    // 已完备
     pub fn try_add_new_seg(
         &mut self,
         bi_lst: &[Handle<T>],
@@ -426,7 +465,7 @@ impl<T: Line> CSegListChan<T> {
     ) -> Result<(), CChanException> {
         if self.lst.is_empty() && split_first_seg && end_bi_idx >= 3 {
             if let Some(peak_bi) = find_peak_bi(
-                bi_lst[..end_bi_idx - 2].iter().rev(),
+                bi_lst[..end_bi_idx - 2].iter().rev(), //TODO: 需要仔细分析，潜在bug，FindPeakBi(bi_lst[end_bi_idx-3::-1], bi_lst[end_bi_idx].is_down())
                 bi_lst[end_bi_idx].borrow().line_is_down(),
             ) {
                 let peak_bi_ref = peak_bi.borrow();
@@ -469,7 +508,7 @@ impl<T: Line> CSegListChan<T> {
             reason,
         )?));
 
-        if self.lst.len() >= 2 {
+        if !self.lst.is_empty() {
             let last_seg = self.lst.last().unwrap().clone();
             last_seg.borrow_mut().next = Some(Rc::clone(&new_seg));
             new_seg.borrow_mut().pre = Some(last_seg);
@@ -483,6 +522,7 @@ impl<T: Line> CSegListChan<T> {
         Ok(())
     }
 
+    // 已完备
     pub fn add_new_seg(
         &mut self,
         bi_lst: &[Handle<T>],
@@ -509,30 +549,6 @@ impl<T: Line> CSegListChan<T> {
                 }
             }
         }
-    }
-
-    pub fn exist_sure_seg(&self) -> bool {
-        self.lst.iter().any(|seg| seg.borrow().is_sure)
-    }
-
-    // 实现 iter() 方法返回不可变迭代器
-    pub fn iter(&self) -> Iter<'_, Handle<CSeg<T>>> {
-        self.lst.iter()
-    }
-
-    // 实现 iter_mut() 方法返回可变迭代器
-    pub fn iter_mut(&mut self) -> IterMut<'_, Handle<CSeg<T>>> {
-        self.lst.iter_mut()
-    }
-
-    // last() 方法已经通过 Vec 的方法自动获得
-    pub fn last(&self) -> Option<&Handle<CSeg<T>>> {
-        self.lst.last()
-    }
-
-    // 如果需要可变的 last()
-    pub fn last_mut(&mut self) -> Option<&mut Handle<CSeg<T>>> {
-        self.lst.last_mut()
     }
 }
 
