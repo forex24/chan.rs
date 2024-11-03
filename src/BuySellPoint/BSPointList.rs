@@ -469,7 +469,7 @@ impl<T: Line> CBSPointList<T> {
             return;
         }
 
-        let (is_buy, bsp1_bi, bsp1_bi_idx, real_bsp1, break_bi, bsp2_bi) = if seg_list.len() > 1 {
+        let (is_buy, bsp1_bi_idx, real_bsp1, break_bi, bsp2_bi) = if seg_list.len() > 1 {
             // 多段情况
             let is_buy = seg.borrow().is_down();
             let bsp1_bi = Rc::clone(&seg.borrow().end_bi);
@@ -483,14 +483,7 @@ impl<T: Line> CBSPointList<T> {
             let break_bi = &bi_list[bsp1_bi.borrow().line_idx() + 1];
             let bsp2_bi = &bi_list[bsp1_bi.borrow().line_idx() + 2];
 
-            (
-                is_buy,
-                Some(bsp1_bi),
-                bsp1_bi_idx,
-                real_bsp1,
-                break_bi,
-                bsp2_bi,
-            )
+            (is_buy, bsp1_bi_idx, real_bsp1, break_bi, bsp2_bi)
         } else {
             // 单段情况
             let is_buy = seg.borrow().is_up();
@@ -502,7 +495,8 @@ impl<T: Line> CBSPointList<T> {
             let bsp2_bi = &bi_list[1];
             let break_bi = &bi_list[0];
 
-            (is_buy, None, -1_i32 as usize, None, break_bi, bsp2_bi)
+            //FIXME:bug -1_i32 as usize
+            (is_buy, -1_i32 as usize, None, break_bi, bsp2_bi)
         };
 
         // 检查 bsp2_follow_1

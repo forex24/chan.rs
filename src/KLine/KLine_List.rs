@@ -207,6 +207,9 @@ pub fn update_zs_in_seg<T: Line>(
             }
             assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
 
+            assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1 > 0);
+
+            assert!(!bi_list.is_empty());
             zs.borrow_mut().set_bi_in(
                 bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1].clone(),
             );
