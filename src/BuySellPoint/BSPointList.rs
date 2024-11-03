@@ -145,6 +145,7 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal_single_bs1point(&mut self, seg: &Handle<CSeg<T>>, bi_list: &[Handle<T>]) {
+        return;
         let is_buy = seg.borrow().is_down();
         let bsp_conf = self.config.get_bs_config(is_buy);
         let zs_cnt = if bsp_conf.bsp1_only_multibi_zs {
@@ -239,6 +240,7 @@ impl<T: Line> CBSPointList<T> {
         bi_list: &[Handle<T>],
         mut is_target_bsp: bool,
     ) {
+        return;
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_bi = &seg.borrow().end_bi;
         let pre_bi = &bi_list

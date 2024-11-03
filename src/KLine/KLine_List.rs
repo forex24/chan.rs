@@ -19,6 +19,7 @@ use crate::ZS::ZS::CZS;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::Instant;
 
 use super::KLine_Unit::MetricModel;
 
@@ -67,19 +68,20 @@ impl CKLineList {
             self.bi_list
                 .try_add_virtual_bi(self.lst.last().unwrap().clone(), false);
         }
+        //let start_time = Instant::now();
         cal_seg(&mut self.bi_list, &mut self.seg_list);
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
-        cal_seg(&self.seg_list.lst, &mut self.segseg_list);
-        self.segzs_list
-            .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
-        update_zs_in_seg(
-            &self.seg_list.lst,
-            &mut self.segseg_list.lst,
-            &mut self.segzs_list,
-        )?;
-
+        //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
+        //self.segzs_list
+        //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
+        //update_zs_in_seg(
+        //    &self.seg_list.lst,
+        //    &mut self.segseg_list.lst,
+        //    &mut self.segzs_list,
+        //)?;
+        //println!("cal_seg 耗时: {:?}", start_time.elapsed()); // 打印耗时 println!("cal_seg 耗时: {:?}", start_time.elapsed()); // 打印耗时
         self.seg_bs_point_lst
             .cal(&self.seg_list.lst, &self.segseg_list);
         self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
@@ -154,24 +156,24 @@ pub fn cal_seg<U: Line>(
         }
     }
 
-    let mut cur_seg = seg_list.last().unwrap().clone();
-    for bi in bi_list.iter().rev() {
-        if bi.borrow().line_seg_idx().is_some()
-            && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
-        {
-            break;
-        }
-        if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
-            bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
-            continue;
-        }
-        if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
-            assert!(cur_seg.borrow().pre.is_some());
-            let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
-            cur_seg = pre_seg;
-        }
-        bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
-    }
+    //let mut cur_seg = seg_list.last().unwrap().clone();
+    //for bi in bi_list.iter().rev() {
+    //    if bi.borrow().line_seg_idx().is_some()
+    //        && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
+    //    {
+    //        break;
+    //    }
+    //    if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
+    //        bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
+    //        continue;
+    //    }
+    //    if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
+    //        assert!(cur_seg.borrow().pre.is_some());
+    //        let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
+    //        cur_seg = pre_seg;
+    //    }
+    //    bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
+    //}
 
     Ok(())
 }
@@ -192,32 +194,31 @@ pub fn update_zs_in_seg<T: Line>(
         }
         seg.clear_zs_lst();
         for zs in zs_list.iter().rev() {
-            let zs_ref = zs.borrow();
-            if zs_ref.end.as_ref().unwrap().borrow().idx
+            if zs.borrow().end.as_ref().unwrap().borrow().idx
                 < seg.start_bi.borrow().line_get_begin_klu().borrow().idx
             {
                 break;
             }
-            if zs_ref.is_inside(&seg) {
+            if zs.borrow().is_inside(&seg) {
                 seg.add_zs(Rc::clone(zs));
             }
-            assert!(zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
+            assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
 
-            //let zs_ref = ;
-            zs.borrow_mut().set_bi_in(
-                bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx() as usize - 1].clone(),
-            );
-            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
-                zs.borrow_mut().set_bi_out(
-                    bi_list[zs_ref.end_bi.as_ref().unwrap().borrow().line_idx() as usize + 1]
-                        .clone(),
-                );
-            }
-            zs.borrow_mut().set_bi_lst(
-                &bi_list[zs_ref.begin_bi.as_ref().unwrap().borrow().line_idx()
-                    ..=zs_ref.end_bi.as_ref().unwrap().borrow().line_idx()]
-                    .to_vec(),
-            );
+            //zs.borrow_mut().set_bi_in(
+            //    bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() as usize - 1]
+            //        .clone(),
+            //);
+            //if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
+            //    zs.borrow_mut().set_bi_out(
+            //        bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() as usize + 1]
+            //            .clone(),
+            //    );
+            //}
+            //zs.borrow_mut().set_bi_lst(
+            //    &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
+            //        ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
+            //        .to_vec(),
+            //);
         }
 
         if sure_seg_cnt > 2 && !seg.ele_inside_is_sure {
@@ -243,7 +244,7 @@ mod test {
         // 创建一个随机数生成器
         let mut rng = rand::thread_rng();
         let start_time = NaiveDateTime::new(
-            chrono::NaiveDate::from_ymd(2023, 1, 1),
+            chrono::NaiveDate::from_ymd(2000, 1, 1),
             chrono::NaiveTime::from_hms(0, 0, 0),
         );
 
@@ -251,8 +252,9 @@ mod test {
 
         // 记录开始时间
         let start = Instant::now();
+        let total_data = 10_000_000;
 
-        for i in 0..10_000_000 {
+        for i in 0..total_data {
             let time = start_time + Duration::minutes(i as i64);
             let time = CTime::from_naive_date_time(time, true, i as f64);
             let open_price: f64 = rng.gen_range(100.0..200.0);
@@ -262,6 +264,12 @@ mod test {
             let klu = CKLineUnit::new(time, open_price, high_price, low_price, close_price, false)
                 .unwrap();
             list.add_single_klu(klu);
+
+            // 每处理10000个数据，更新进度条
+            if (i + 1) % 10_000 == 0 {
+                let progress = (i + 1) as f64 / total_data as f64 * 100.0;
+                println!("进度: {:.2}%", progress);
+            }
         }
 
         // 记录结束时间
