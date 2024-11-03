@@ -69,11 +69,11 @@ macro_rules! impl_series {
 
             fn index(&self, index: isize) -> &Self::Output {
                 let idx: usize = if index >= 0 {
-                    index as usize
+                    index 
                 } else {
                     assert!(index.unsigned_abs() <= self.$fieldname.len());
                     let len = self.$fieldname.len();
-                    (len as isize + index) as usize
+                    (len as isize + index) 
                 };
                 &self.$fieldname[idx]
             }
@@ -82,11 +82,11 @@ macro_rules! impl_series {
         impl std::ops::IndexMut<isize> for $SeriesClassName {
             fn index_mut(&mut self, index: isize) -> &mut Self::Output {
                 let idx: usize = if index >= 0 {
-                    index as usize
+                    index 
                 } else {
                     assert!(index.unsigned_abs() <= self.$fieldname.len());
                     let len = self.$fieldname.len();
-                    (len as isize + index) as usize
+                    (len as isize + index) 
                 };
                 &mut self.$fieldname[idx]
             }
@@ -97,11 +97,11 @@ macro_rules! impl_series {
 
             fn index(&self, index: i32) -> &Self::Output {
                 let idx: usize = if index >= 0 {
-                    index as usize
+                    index 
                 } else {
-                    assert!(index.unsigned_abs() as usize <= self.$fieldname.len());
+                    assert!(index.unsigned_abs()  <= self.$fieldname.len());
                     let len = self.$fieldname.len();
-                    (len as isize + index as isize) as usize
+                    (len as isize + index as isize) 
                 };
                 &self.$fieldname[idx]
             }
@@ -110,11 +110,11 @@ macro_rules! impl_series {
         impl std::ops::IndexMut<i32> for $SeriesClassName {
             fn index_mut(&mut self, index: i32) -> &mut Self::Output {
                 let idx: usize = if index >= 0 {
-                    index as usize
+                    index 
                 } else {
-                    assert!(index.unsigned_abs() as usize <= self.$fieldname.len());
+                    assert!(index.unsigned_abs()  <= self.$fieldname.len());
                     let len = self.$fieldname.len();
-                    (len as isize + index as isize) as usize
+                    (len as isize + index as isize) 
                 };
                 &mut self.$fieldname[idx]
             }

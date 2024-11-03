@@ -89,7 +89,7 @@ impl<T: Line> CSegListChan<T> {
             self.cal_seg_sure(bi_lst, 0);
         } else {
             let begin_idx =
-                self.lst.last().unwrap().borrow().end_bi.borrow().line_idx() as usize + 1;
+                self.lst.last().unwrap().borrow().end_bi.borrow().line_idx()  + 1;
             self.cal_seg_sure(bi_lst, begin_idx);
         }
         self.collect_left_seg(bi_lst);
@@ -245,7 +245,7 @@ impl<T: Line> CSegListChan<T> {
                     if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), true) {
                         self.add_new_seg(
                             bi_lst,
-                            peak_bi.borrow().line_idx() as usize,
+                            peak_bi.borrow().line_idx() ,
                             false,
                             Some(BiDir::Up),
                             false,
@@ -255,7 +255,7 @@ impl<T: Line> CSegListChan<T> {
                 } else if let Some(peak_bi) = find_peak_bi(bi_lst.iter(), false) {
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi.borrow().line_idx() as usize,
+                        peak_bi.borrow().line_idx() ,
                         false,
                         Some(BiDir::Down),
                         false,
@@ -274,7 +274,7 @@ impl<T: Line> CSegListChan<T> {
                 };
                 self.add_new_seg(
                     bi_lst,
-                    bi_lst.last().unwrap().borrow().line_idx() as usize,
+                    bi_lst.last().unwrap().borrow().line_idx() ,
                     false,
                     Some(_dir),
                     false,
@@ -292,13 +292,13 @@ impl<T: Line> CSegListChan<T> {
     ) {
         if last_seg_end_bi.borrow().line_is_down() {
             if let Some(peak_bi) = find_peak_bi(
-                bi_lst[last_seg_end_bi.borrow().line_idx() as usize + 3..].iter(),
+                bi_lst[last_seg_end_bi.borrow().line_idx()  + 3..].iter(),
                 true,
             ) {
-                if peak_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() >= 3 {
+                if peak_bi.borrow().line_idx()  - last_seg_end_bi.borrow().line_idx() >= 3 {
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi.borrow().line_idx() as usize,
+                        peak_bi.borrow().line_idx() ,
                         false,
                         Some(BiDir::Up),
                         true,
@@ -307,13 +307,13 @@ impl<T: Line> CSegListChan<T> {
                 }
             }
         } else if let Some(peak_bi) = find_peak_bi(
-            bi_lst[last_seg_end_bi.borrow().line_idx() as usize + 3..].iter(),
+            bi_lst[last_seg_end_bi.borrow().line_idx()  + 3..].iter(),
             false,
         ) {
-            if peak_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() >= 3 {
+            if peak_bi.borrow().line_idx()  - last_seg_end_bi.borrow().line_idx() >= 3 {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow().line_idx() as usize,
+                    peak_bi.borrow().line_idx() ,
                     false,
                     Some(BiDir::Down),
                     true,
@@ -328,7 +328,7 @@ impl<T: Line> CSegListChan<T> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
 
-        if last_bi.borrow().line_idx() as usize - last_seg_end_bi.borrow().line_idx() < 3 {
+        if last_bi.borrow().line_idx()  - last_seg_end_bi.borrow().line_idx() < 3 {
             return;
         }
 
@@ -341,7 +341,7 @@ impl<T: Line> CSegListChan<T> {
             ) {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow().line_idx() as usize,
+                    peak_bi.borrow().line_idx() ,
                     false,
                     Some(BiDir::Up),
                     true,
@@ -358,7 +358,7 @@ impl<T: Line> CSegListChan<T> {
             ) {
                 self.add_new_seg(
                     bi_lst,
-                    peak_bi.borrow().line_idx() as usize,
+                    peak_bi.borrow().line_idx() ,
                     false,
                     Some(BiDir::Down),
                     true,
@@ -394,7 +394,7 @@ impl<T: Line> CSegListChan<T> {
         if last_seg_end_bi.borrow().line_dir() == last_bi.borrow().line_dir() {
             self.add_new_seg(
                 bi_lst,
-                last_bi.borrow().line_idx() as usize - 1,
+                last_bi.borrow().line_idx()  - 1,
                 false,
                 None,
                 true,
@@ -403,7 +403,7 @@ impl<T: Line> CSegListChan<T> {
         } else {
             self.add_new_seg(
                 bi_lst,
-                last_bi.borrow().line_idx() as usize,
+                last_bi.borrow().line_idx() ,
                 false,
                 None,
                 true,
@@ -437,7 +437,7 @@ impl<T: Line> CSegListChan<T> {
                     // 要比第一笔开头还高/低（因为没有比较到）
                     self.add_new_seg(
                         bi_lst,
-                        peak_bi_ref.line_idx() as usize,
+                        peak_bi_ref.line_idx() ,
                         false,
                         Some(peak_bi_ref.line_dir()),
                         true,

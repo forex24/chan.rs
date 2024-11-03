@@ -25,8 +25,8 @@ pub struct CEigen<T> {
 impl<T: Line> CEigen<T> {
     pub fn new(bi: &Handle<T>, dir: KLineDir) -> Result<Self, CChanException> {
         Ok(Self {
-            begin_klc: bi.borrow().line_get_begin_klc().borrow().idx as usize,
-            end_klc: bi.borrow().line_get_end_klc().borrow().idx as usize,
+            begin_klc: bi.borrow().line_get_begin_klc().borrow().idx ,
+            end_klc: bi.borrow().line_get_end_klc().borrow().idx ,
             high: bi.borrow().line_high(),
             low: bi.borrow().line_low(),
             lst: vec![Rc::clone(&bi)],
@@ -106,7 +106,7 @@ impl<T: Line> CEigen<T> {
                 }
                 _ => unreachable!("KLINE_DIR = {:?} err!!! must be Up/Down", self.dir),
             }
-            self.end_klc = item.line_get_end_klc().borrow().idx as usize;
+            self.end_klc = item.line_get_end_klc().borrow().idx ;
         }
         dir
     }
@@ -130,7 +130,7 @@ impl<T: Line> CEigen<T> {
     //        }
     //        _ => panic!("Invalid KLineDir"),
     //    }
-    //    self.end_klc = item.get_end_klc().borrow().idx as usize;
+    //    self.end_klc = item.get_end_klc().borrow().idx ;
     //}
 
     pub fn get_peak_klu(&self, is_high: bool) -> Handle<T> {
@@ -241,9 +241,9 @@ impl<T: Line> CEigen<T> {
         let bi_dir = self.lst[0].borrow().line_dir();
         if bi_dir == BiDir::Up {
             // 下降线段
-            (self.get_peak_klu(false).borrow().line_idx() - 1) as usize
+            (self.get_peak_klu(false).borrow().line_idx() - 1) 
         } else {
-            (self.get_peak_klu(true).borrow().line_idx() - 1) as usize
+            (self.get_peak_klu(true).borrow().line_idx() - 1) 
         }
     }
 }

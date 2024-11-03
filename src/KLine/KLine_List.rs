@@ -159,24 +159,24 @@ pub fn cal_seg<U: Line>(
         }
     }
 
-    //let mut cur_seg = seg_list.last().unwrap().clone();
-    //for bi in bi_list.iter().rev() {
-    //    if bi.borrow().line_seg_idx().is_some()
-    //        && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
-    //    {
-    //        break;
-    //    }
-    //    if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
-    //        bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
-    //        continue;
-    //    }
-    //    if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
-    //        assert!(cur_seg.borrow().pre.is_some());
-    //        let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
-    //        cur_seg = pre_seg;
-    //    }
-    //    bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
-    //}
+    let mut cur_seg = seg_list.last().unwrap().clone();
+    for bi in bi_list.iter().rev() {
+        if bi.borrow().line_seg_idx().is_some()
+            && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
+        {
+            break;
+        }
+        if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
+            bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
+            continue;
+        }
+        if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
+            assert!(cur_seg.borrow().pre.is_some());
+            let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
+            cur_seg = pre_seg;
+        }
+        bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
+    }
 
     Ok(())
 }
@@ -207,21 +207,19 @@ pub fn update_zs_in_seg<T: Line>(
             }
             assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
 
-            //zs.borrow_mut().set_bi_in(
-            //    bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() as usize - 1]
-            //        .clone(),
-            //);
-            //if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
-            //    zs.borrow_mut().set_bi_out(
-            //        bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() as usize + 1]
-            //            .clone(),
-            //    );
-            //}
-            //zs.borrow_mut().set_bi_lst(
-            //    &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
-            //        ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
-            //        .to_vec(),
-            //);
+            zs.borrow_mut().set_bi_in(
+                bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1].clone(),
+            );
+            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
+                zs.borrow_mut().set_bi_out(
+                    bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() + 1].clone(),
+                );
+            }
+            zs.borrow_mut().set_bi_lst(
+                &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
+                    ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
+                    .to_vec(),
+            );
         }
 
         if sure_seg_cnt > 2 && !seg.ele_inside_is_sure {

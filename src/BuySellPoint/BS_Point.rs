@@ -92,6 +92,6 @@ impl<T: Line> CBSPoint<T> {
     fn init_common_feature(&mut self) {
         let amp = self.bi.borrow().line_amp();
 
-        self.add_feat(FeatureInput::SingleOpt("bsp_bi_amp".to_string(), amp));
+        self.add_feat(("bsp_bi_amp", amp));
     }
 }

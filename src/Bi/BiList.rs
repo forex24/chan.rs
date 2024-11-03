@@ -149,15 +149,7 @@ impl CBiList {
 
     pub fn delete_virtual_bi(&mut self) {
         if !self.bi_list.is_empty() && !self.bi_list.last().unwrap().borrow().is_sure {
-            let sure_end_list: Vec<_> = self
-                .bi_list
-                .last()
-                .unwrap()
-                .borrow()
-                .sure_end()
-                .iter()
-                .cloned()
-                .collect();
+            let sure_end_list: Vec<_> = self.bi_list.last().unwrap().borrow().sure_end().to_vec();
             if !sure_end_list.is_empty() {
                 self.bi_list
                     .last_mut()

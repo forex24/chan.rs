@@ -5,9 +5,9 @@ use crate::Common::CTime::CTime;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
+// 合并后的K线
 pub struct CKLine {
     pub idx: usize,
     pub kl_type: Option<String>,
@@ -20,38 +20,40 @@ pub struct CKLine {
     pub lst: Vec<Handle<CKLineUnit>>,
     pub pre: Option<Handle<CKLine>>,
     pub next: Option<Handle<CKLine>>,
-    memoize_cache: HashMap<String, f64>,
 }
 
 impl CKLine {
-    pub fn new(kl_unit: Handle<CKLineUnit>, idx: usize, dir: KLineDir) -> Handle<Self> {
+    pub fn new(
+        kl_unit: Handle<CKLineUnit>,
+        idx: usize,
+        dir: KLineDir, /*缺省值为KLINE_DIR.UP*/
+    ) -> Handle<Self> {
         let kline = Rc::new(RefCell::new(CKLine {
             idx,
             kl_type: kl_unit.borrow().kl_type.clone(),
             fx: FxType::Unknown,
-            time_begin: kl_unit.borrow().time.clone(),
-            time_end: kl_unit.borrow().time.clone(),
+            time_begin: kl_unit.borrow().time,
+            time_end: kl_unit.borrow().time,
             low: kl_unit.borrow().low,
             high: kl_unit.borrow().high,
             dir,
             lst: vec![Rc::clone(&kl_unit)],
             pre: None,
             next: None,
-            memoize_cache: HashMap::new(),
         }));
 
         kl_unit.borrow_mut().set_klc(Rc::clone(&kline));
         kline
     }
 
-    //pub fn get_sub_klc(&self) -> impl Iterator<Item = Handle<CKLine>> + '_ {
+    //pub fn get_sub_klc(&self) -> impl Iterator<Item = &Handle<CKLine>> + '_ {
     //    let mut last_klc = None;
     //    self.lst.iter().flat_map(move |klu| {
     //        klu.borrow().get_children().filter_map(move |sub_klu| {
     //            let sub_klc = sub_klu.borrow().get_klc();
-    //            if sub_klc != last_klc {
-    //                last_klc = sub_klc.clone();
-    //                sub_klc
+    //            if last_klc.as_ref() != Some(&sub_klc) {
+    //                last_klc = Some(sub_klc.clone());
+    //                Some(&sub_klc)
     //            } else {
     //                None
     //            }
@@ -457,5 +459,26 @@ impl std::fmt::Display for CKLine {
             self.low,
             self.high
         )
+    }
+}
+
+// Add these implementations after the CKLine struct definition
+impl PartialEq for CKLine {
+    fn eq(&self, other: &Self) -> bool {
+        self.idx == other.idx
+    }
+}
+
+impl Eq for CKLine {}
+
+impl PartialOrd for CKLine {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.idx.partial_cmp(&other.idx)
+    }
+}
+
+impl Ord for CKLine {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.idx.cmp(&other.idx)
     }
 }

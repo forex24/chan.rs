@@ -52,6 +52,12 @@ pub enum FeatureInput {
     Dict(CFeatures),
 }
 
+impl From<(&str, f64)> for FeatureInput {
+    fn from(pair: (&str, f64)) -> Self {
+        FeatureInput::Single(pair.0.to_string(), pair.1)
+    }
+}
+
 impl From<(String, f64)> for FeatureInput {
     fn from(pair: (String, f64)) -> Self {
         FeatureInput::Single(pair.0, pair.1)
@@ -64,9 +70,21 @@ impl From<HashMap<String, f64>> for FeatureInput {
     }
 }
 
+impl From<HashMap<&str, f64>> for FeatureInput {
+    fn from(map: HashMap<&str, f64>) -> Self {
+        FeatureInput::Multiple(map.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+    }
+}
+
 impl From<HashMap<String, Option<f64>>> for FeatureInput {
     fn from(map: HashMap<String, Option<f64>>) -> Self {
         FeatureInput::MultipleOpt(map)
+    }
+}
+
+impl From<HashMap<&str, Option<f64>>> for FeatureInput {
+    fn from(map: HashMap<&str, Option<f64>>) -> Self {
+        FeatureInput::MultipleOpt(map.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
     }
 }
 
@@ -79,5 +97,11 @@ impl From<CFeatures> for FeatureInput {
 impl From<(String, Option<f64>)> for FeatureInput {
     fn from(pair: (String, Option<f64>)) -> Self {
         FeatureInput::SingleOpt(pair.0, pair.1)
+    }
+}
+
+impl From<(&str, Option<f64>)> for FeatureInput {
+    fn from(pair: (&str, Option<f64>)) -> Self {
+        FeatureInput::SingleOpt(pair.0.to_string(), pair.1)
     }
 }

@@ -33,6 +33,10 @@ impl<T: Line> CBSPointList<T> {
         self.lst.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.lst.is_empty()
+    }
+
     pub fn get(&self, index: usize) -> Option<Handle<CBSPoint<T>>> {
         self.lst.get(index).cloned()
     }
@@ -145,7 +149,6 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal_single_bs1point(&mut self, seg: &Handle<CSeg<T>>, bi_list: &[Handle<T>]) {
-        return;
         let is_buy = seg.borrow().is_down();
         let bsp_conf = self.config.get_bs_config(is_buy);
         let zs_cnt = if bsp_conf.bsp1_only_multibi_zs {
@@ -153,7 +156,7 @@ impl<T: Line> CBSPointList<T> {
         } else {
             seg.borrow().zs_lst.len()
         };
-        let is_target_bsp = bsp_conf.min_zs_cnt <= 0 || zs_cnt >= bsp_conf.min_zs_cnt as usize;
+        let is_target_bsp = bsp_conf.min_zs_cnt == 0 || zs_cnt >= bsp_conf.min_zs_cnt;
         if !seg.borrow().zs_lst.is_empty()
             && !seg.borrow().zs_lst.last().unwrap().borrow().is_one_bi_zs()
             && ((seg
@@ -240,12 +243,9 @@ impl<T: Line> CBSPointList<T> {
         bi_list: &[Handle<T>],
         mut is_target_bsp: bool,
     ) {
-        return;
         let bsp_conf = self.config.get_bs_config(is_buy);
         let last_bi = &seg.borrow().end_bi;
-        let pre_bi = &bi_list
-            .get(last_bi.borrow().line_idx() as usize - 2)
-            .unwrap();
+        let pre_bi = &bi_list.get(last_bi.borrow().line_idx() - 2).unwrap();
         if last_bi.borrow().line_seg_idx() != pre_bi.borrow().line_seg_idx() {
             return;
         }
@@ -355,7 +355,7 @@ impl<T: Line> CBSPointList<T> {
                     .unwrap()
                     .borrow()
                     .line_idx()
-                    + 1) as usize,
+                    + 1),
             )
             .unwrap();
         if bsp2_bi.borrow().line_get_parent_seg().is_none() {
@@ -539,7 +539,7 @@ impl<T: Line> CBSPointList<T> {
                     .unwrap()
                     .borrow()
                     .line_idx()
-                    + 1) as usize,
+                    + 1),
             )
             .unwrap();
         if bsp3_bi.borrow().line_get_parent_seg().is_none() {
@@ -627,7 +627,7 @@ impl<T: Line> CBSPointList<T> {
         let end_bi_idx = cal_bsp3_bi_end_idx(next_seg);
         for bsp3_bi in bi_list
             .iter()
-            .skip((bsp1_bi.borrow().line_idx() + 2) as usize)
+            .skip((bsp1_bi.borrow().line_idx() + 2))
             .step_by(2)
         {
             if bsp3_bi.borrow().line_idx() > end_bi_idx {

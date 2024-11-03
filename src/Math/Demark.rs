@@ -48,12 +48,12 @@ pub enum DemarkType {
 #[derive(Clone)]
 pub struct DemarkIndex {
     dir: BiDir,
-    idx: i32,
+    idx: usize,
     demark_type: DemarkType,
     series: Handle<CDemarkSetup>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CDemarkIndex {
     data: Vec<DemarkIndex>,
 }
@@ -67,7 +67,7 @@ impl CDemarkIndex {
         &mut self,
         dir: BiDir,
         demark_type: DemarkType,
-        idx: i32,
+        idx: usize,
         series: Handle<CDemarkSetup>,
     ) {
         self.data.push(DemarkIndex {
@@ -101,7 +101,7 @@ impl CDemarkIndex {
 pub struct CDemarkCountdown {
     dir: BiDir,
     kl_list: VecDeque<CKL>,
-    idx: i32,
+    idx: usize,
     tdst_peak: f64,
     finish: bool,
 }
@@ -122,7 +122,7 @@ impl CDemarkCountdown {
             return false;
         }
         self.kl_list.push_back(kl);
-        if self.kl_list.len() <= CDemarkEngine::COUNTDOWN_BIAS as usize {
+        if self.kl_list.len() <= CDemarkEngine::COUNTDOWN_BIAS {
             return false;
         }
         if self.idx == CDemarkEngine::MAX_COUNTDOWN {
@@ -136,7 +136,7 @@ impl CDemarkCountdown {
             return false;
         }
         let last = self.kl_list.back().unwrap();
-        let compare = self.kl_list[self.kl_list.len() - 1 - CDemarkEngine::COUNTDOWN_BIAS as usize];
+        let compare = self.kl_list[self.kl_list.len() - 1 - CDemarkEngine::COUNTDOWN_BIAS];
         if (self.dir == BiDir::Down
             && last.close < compare.v(CDemarkEngine::COUNTDOWN_CMP2CLOSE, self.dir))
             || (self.dir == BiDir::Up
@@ -155,14 +155,14 @@ pub struct CDemarkSetup {
     pre_kl: CKL,
     countdown: Option<CDemarkCountdown>,
     setup_finished: bool,
-    idx: i32,
+    idx: usize,
     tdst_peak: Option<f64>,
     last_demark_index: CDemarkIndex,
 }
 
 impl CDemarkSetup {
     fn new(dir: BiDir, kl_list: &[CKL], pre_kl: CKL) -> Self {
-        assert_eq!(kl_list.len(), CDemarkEngine::SETUP_BIAS as usize);
+        assert_eq!(kl_list.len(), CDemarkEngine::SETUP_BIAS);
         CDemarkSetup {
             dir,
             kl_list: VecDeque::from(kl_list.to_vec()),
@@ -180,7 +180,7 @@ impl CDemarkSetup {
         if !self.setup_finished {
             self.kl_list.push_back(kl);
             let last = self.kl_list.back().unwrap();
-            let compare = self.kl_list[self.kl_list.len() - 1 - CDemarkEngine::SETUP_BIAS as usize];
+            let compare = self.kl_list[self.kl_list.len() - 1 - CDemarkEngine::SETUP_BIAS];
             if (self.dir == BiDir::Down
                 && last.close < compare.v(CDemarkEngine::SETUP_CMP2CLOSE, self.dir))
                 || (self.dir == BiDir::Up
@@ -227,15 +227,15 @@ impl CDemarkSetup {
     fn cal_tdst_peak(&mut self) -> f64 {
         assert_eq!(
             self.kl_list.len(),
-            (CDemarkEngine::SETUP_BIAS + CDemarkEngine::DEMARK_LEN) as usize
+            (CDemarkEngine::SETUP_BIAS + CDemarkEngine::DEMARK_LEN)
         );
         let arr: Vec<_> = self
             .kl_list
             .iter()
-            .skip(CDemarkEngine::SETUP_BIAS as usize)
-            .take(CDemarkEngine::DEMARK_LEN as usize)
+            .skip(CDemarkEngine::SETUP_BIAS)
+            .take(CDemarkEngine::DEMARK_LEN)
             .collect();
-        assert_eq!(arr.len(), CDemarkEngine::DEMARK_LEN as usize);
+        assert_eq!(arr.len(), CDemarkEngine::DEMARK_LEN);
         let res = if self.dir == BiDir::Down {
             let mut res = arr
                 .iter()
@@ -276,10 +276,10 @@ pub struct CDemarkEngine {
 }
 
 impl CDemarkEngine {
-    const DEMARK_LEN: i32 = 9;
-    const SETUP_BIAS: i32 = 4;
-    const COUNTDOWN_BIAS: i32 = 2;
-    const MAX_COUNTDOWN: i32 = 13;
+    const DEMARK_LEN: usize = 9;
+    const SETUP_BIAS: usize = 4;
+    const COUNTDOWN_BIAS: usize = 2;
+    const MAX_COUNTDOWN: usize = 13;
     const TIAOKONG_ST: bool = true;
     const SETUP_CMP2CLOSE: bool = true;
     const COUNTDOWN_CMP2CLOSE: bool = true;
@@ -293,12 +293,12 @@ impl CDemarkEngine {
 
     pub fn update(&mut self, idx: usize, close: f64, high: f64, low: f64) -> CDemarkIndex {
         self.kl_lst.push(CKL::new(idx, close, high, low));
-        if self.kl_lst.len() <= (Self::SETUP_BIAS + 1) as usize {
+        if self.kl_lst.len() <= (Self::SETUP_BIAS + 1) {
             return CDemarkIndex::new();
         }
 
         let last = self.kl_lst.last().unwrap();
-        let compare = self.kl_lst[self.kl_lst.len() - 1 - Self::SETUP_BIAS as usize];
+        let compare = self.kl_lst[self.kl_lst.len() - 1 - Self::SETUP_BIAS];
         if last.close < compare.close {
             if !self
                 .series
@@ -307,9 +307,8 @@ impl CDemarkEngine {
             {
                 let new_series = Rc::new(RefCell::new(CDemarkSetup::new(
                     BiDir::Down,
-                    &self.kl_lst
-                        [self.kl_lst.len() - Self::SETUP_BIAS as usize - 1..self.kl_lst.len() - 1],
-                    self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS as usize - 2],
+                    &self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS - 1..self.kl_lst.len() - 1],
+                    self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS - 2],
                 )));
                 self.series.push(new_series);
             }
@@ -327,9 +326,8 @@ impl CDemarkEngine {
             {
                 let new_series = Rc::new(RefCell::new(CDemarkSetup::new(
                     BiDir::Up,
-                    &self.kl_lst
-                        [self.kl_lst.len() - Self::SETUP_BIAS as usize - 1..self.kl_lst.len() - 1],
-                    self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS as usize - 2],
+                    &self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS - 1..self.kl_lst.len() - 1],
+                    self.kl_lst[self.kl_lst.len() - Self::SETUP_BIAS - 2],
                 )));
                 self.series.push(new_series);
             }

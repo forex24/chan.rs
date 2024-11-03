@@ -21,26 +21,34 @@ use crate::{
 use super::KLine::CKLine;
 
 pub struct CKLineUnit {
+    // 基本属性
+    pub idx: usize,
     pub kl_type: Option<String>,
     pub time: CTime,
     pub close: f64,
     pub open: f64,
     pub high: f64,
     pub low: f64,
-    //pub trade_info: CTradeInfo,
-    pub demark: CDemarkIndex,
-    //pub sub_kl_list: Vec<Handle<CKLineUnit>>,
-    //pub sup_kl: Option<Handle<CKLineUnit>>,
-    pub klc: Option<Handle<CKLine>>,
-    pub trend: HashMap<TrendType, HashMap<usize, f64>>,
-    //pub limit_flag: i32,
+
+    // 链表
     pub pre: Option<Handle<CKLineUnit>>,
     pub next: Option<Handle<CKLineUnit>>,
-    pub idx: usize,
-    pub macd: Option<CMACDItem>,
-    pub boll: Option<BOLLMetric>,
-    pub rsi: Option<f64>,
-    pub kdj: Option<KDJ>,
+
+    // 上下文属性
+    pub sub_kl_list: Vec<Handle<CKLineUnit>>,
+    pub sup_kl: Option<Handle<CKLineUnit>>,
+    pub klc: Option<Handle<CKLine>>,
+
+    // FIXME: 用更好的模式来处理指标问题
+    // 指标
+    pub trend: HashMap<TrendType, HashMap<usize, f64>>, // CTrendModel
+    //pub limit_flag: i32,
+    //pub trade_info: CTradeInfo,
+    pub demark: CDemarkIndex,     // CDemarkEngine的CDemarkIndex
+    pub macd: Option<CMACDItem>,  // CMACD
+    pub boll: Option<BOLLMetric>, // BollModel的BOLL_Metric
+    pub rsi: Option<f64>,         // RSI
+    pub kdj: Option<KDJ>,         // KDJ
 }
 
 impl CKLineUnit {
@@ -61,8 +69,8 @@ impl CKLineUnit {
             low,   //: kl_dict[&DataField::FieldLow],
             //trade_info: CTradeInfo::new(kl_dict),
             demark: CDemarkIndex::new(),
-            //sub_kl_list: Vec::new(),
-            //sup_kl: None,
+            sub_kl_list: Vec::new(),
+            sup_kl: None,
             klc: None,
             trend: HashMap::new(),
             //limit_flag: 0,
@@ -113,7 +121,7 @@ impl CKLineUnit {
         Ok(())
     }
 
-    /*pub fn add_children(&mut self, child: Handle<CKLineUnit>) {
+    pub fn add_children(&mut self, child: Handle<CKLineUnit>) {
         self.sub_kl_list.push(child);
     }
 
@@ -123,7 +131,7 @@ impl CKLineUnit {
 
     pub fn get_children(&self) -> impl Iterator<Item = &Handle<CKLineUnit>> {
         self.sub_kl_list.iter()
-    }*/
+    }
 
     pub fn low(&self) -> f64 {
         self.low
@@ -142,7 +150,7 @@ impl CKLineUnit {
             {
                 self.trend
                     .entry(trend_model.trend_type)
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .insert(trend_model.t, trend_model.add(self.close));
             } else if let Some(boll_model) = metric_model.as_any_mut().downcast_mut::<BollModel>() {
                 self.boll = Some(boll_model.add(self.close));
@@ -157,14 +165,16 @@ impl CKLineUnit {
               //}
         }
     }
-    /*
+
     pub fn get_parent_klc(&self) -> Option<Handle<CKLine>> {
+        assert!(self.sup_kl.is_some());
         self.sup_kl
             .as_ref()
             .and_then(|sup_kl| sup_kl.borrow().klc.clone())
     }
 
     pub fn include_sub_lv_time(&self, sub_lv_t: &str) -> bool {
+        // FIXME: 这里要优化，不要用字符串比较
         if self.time.to_string() == sub_lv_t {
             return true;
         }
@@ -175,11 +185,13 @@ impl CKLineUnit {
             }
         }
         false
-    }*/
+    }
 
-    pub fn set_pre_klu(self_: Handle<CKLineUnit>, pre_klu: Handle<CKLineUnit>) {
-        pre_klu.borrow_mut().next = Some(self_.clone());
-        self_.borrow_mut().pre = Some(pre_klu);
+    pub fn set_pre_klu(self_: Handle<CKLineUnit>, pre_klu: Option<Handle<CKLineUnit>>) {
+        if let Some(pre_klu) = pre_klu {
+            pre_klu.borrow_mut().next = Some(self_.clone());
+            self_.borrow_mut().pre = Some(pre_klu);
+        }
     }
 
     pub fn set_klc(&mut self, klc: Handle<CKLine>) {
@@ -199,6 +211,7 @@ impl CKLineUnit {
     }
 }
 
+// FIXME: 所有的都需要添加Display
 //`impl std::fmt::Display for CKLineUnit {
 //`    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 //`        write!(

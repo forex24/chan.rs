@@ -191,7 +191,7 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn get_klu_cnt(&self) -> usize {
-        (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1) as usize
+        (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1)
     }
 
     pub fn cal_macd_metric(
