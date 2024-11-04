@@ -136,7 +136,7 @@ impl<T: Line> CZSList<T> {
                         .as_ref()
                         .unwrap()
                         .borrow()
-                        .seg_line_dir()
+                        .dir
                 {
                     &lst[1..]
                 } else {

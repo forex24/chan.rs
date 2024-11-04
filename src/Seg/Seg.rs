@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::rc::Weak;
+use std::collections::VecDeque;
+use std::rc::{Rc, Weak};
 
 use crate::BuySellPoint::BS_Point::CBSPoint;
 use crate::Common::types::Handle;
@@ -18,7 +19,7 @@ pub struct CSeg<T> {
     pub end_bi: Handle<T>,
     pub is_sure: bool,
     pub dir: BiDir,
-    pub zs_lst: Vec<Handle<CZS<T>>>,
+    pub zs_lst: VecDeque<Handle<CZS<T>>>,
     pub eigen_fx: Option<CEigenFX<T>>,
     pub seg_idx: Option<usize>,
     pub parent_seg: Option<Weak<RefCell<CSeg<Self>>>>,
@@ -61,7 +62,7 @@ impl<T: Line> CSeg<T> {
             end_bi,
             is_sure,
             dir,
-            zs_lst: Vec::new(),
+            zs_lst: VecDeque::new(),
             eigen_fx: None,
             seg_idx: None,
             parent_seg: None,
@@ -122,10 +123,11 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn add_zs(&mut self, zs: Handle<CZS<T>>) {
-        self.zs_lst.insert(0, zs);
+        self.zs_lst.push_front(zs);
     }
 
     pub fn cal_klu_slope(&self) -> f64 {
+        assert!(self.end_bi.borrow().line_idx() >= self.start_bi.borrow().line_idx());
         let end_val = self.get_end_val();
         let begin_val = self.get_begin_val();
         let end_idx = self.get_end_klu().borrow().idx;
@@ -191,7 +193,7 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn get_klu_cnt(&self) -> usize {
-        (self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1)
+        self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1
     }
 
     pub fn cal_macd_metric(
@@ -213,6 +215,7 @@ impl<T: Line> CSeg<T> {
         }
     }
 
+    // 计算MACD斜率
     pub fn cal_macd_slope(&self) -> f64 {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
@@ -230,6 +233,7 @@ impl<T: Line> CSeg<T> {
         }
     }
 
+    // 计算MACD强度
     pub fn cal_macd_amp(&self) -> f64 {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
@@ -243,12 +247,16 @@ impl<T: Line> CSeg<T> {
         }
     }
 
-    pub fn update_bi_list(&mut self, bi_lst: &[Handle<T>], idx1: usize, idx2: usize) {
+    pub fn update_bi_list(
+        &mut self,
+        bi_lst: &[Handle<T>],
+        idx1: usize,
+        idx2: usize,
+        parent: Handle<CSeg<T>>,
+    ) {
         for bi_idx in idx1..=idx2 {
             let bi = bi_lst.get(bi_idx).unwrap().clone();
-            // TODO:
-            //bi.borrow_mut()
-            //    .set_parent_seg(Some(Rc::new(RefCell::new(self.clone()))));
+            bi.borrow_mut().line_set_parent_seg(Some(parent.clone()));
             self.bi_list.push(bi);
         }
 

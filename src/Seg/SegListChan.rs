@@ -516,7 +516,7 @@ impl<T: Line> CSegListChan<T> {
 
         new_seg
             .borrow_mut()
-            .update_bi_list(bi_lst, bi1_idx, end_bi_idx);
+            .update_bi_list(bi_lst, bi1_idx, end_bi_idx, Rc::clone(&new_seg));
         self.lst.push(new_seg);
 
         Ok(())

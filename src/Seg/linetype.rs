@@ -32,8 +32,8 @@ pub trait Line: Sized {
     //fn get_pre(&self) -> Option<Handle<Self>>;
     //fn get_next(&self) -> Option<Handle<Self>>;
 
-    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>>;
-    fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>);
+    fn line_get_parent_seg(&self) -> Option<Handle<CSeg<Self>>>;
+    fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<CSeg<Self>>>);
 
     fn line_seg_idx(&self) -> Option<usize>;
     fn line_set_seg_idx(&mut self, idx: usize);

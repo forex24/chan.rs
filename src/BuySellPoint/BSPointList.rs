@@ -159,11 +159,11 @@ impl<T: Line> CBSPointList<T> {
         };
         let is_target_bsp = bsp_conf.min_zs_cnt == 0 || zs_cnt >= bsp_conf.min_zs_cnt;
         if !seg.borrow().zs_lst.is_empty()
-            && !seg.borrow().zs_lst.last().unwrap().borrow().is_one_bi_zs()
+            && !seg.borrow().zs_lst.back().unwrap().borrow().is_one_bi_zs()
             && ((seg
                 .borrow()
                 .zs_lst
-                .last()
+                .back()
                 .unwrap()
                 .borrow()
                 .bi_out
@@ -171,7 +171,7 @@ impl<T: Line> CBSPointList<T> {
                 && seg
                     .borrow()
                     .zs_lst
-                    .last()
+                    .back()
                     .unwrap()
                     .borrow()
                     .bi_out
@@ -183,7 +183,7 @@ impl<T: Line> CBSPointList<T> {
                 || seg
                     .borrow()
                     .zs_lst
-                    .last()
+                    .back()
                     .unwrap()
                     .borrow()
                     .bi_lst
@@ -196,7 +196,7 @@ impl<T: Line> CBSPointList<T> {
                 - seg
                     .borrow()
                     .zs_lst
-                    .last()
+                    .back()
                     .unwrap()
                     .borrow()
                     .get_bi_in()
@@ -213,7 +213,7 @@ impl<T: Line> CBSPointList<T> {
     fn treat_bsp1(&mut self, seg: &Handle<CSeg<T>>, is_buy: bool, mut is_target_bsp: bool) {
         let bsp_conf = self.config.get_bs_config(is_buy);
         let seg_ref = seg.borrow();
-        let last_zs = seg_ref.zs_lst.last().unwrap();
+        let last_zs = seg_ref.zs_lst.back().unwrap();
         let last_zs_ref = last_zs.borrow();
         let (break_peak, _) = last_zs_ref.out_bi_is_peak(seg.borrow().end_bi.borrow().line_idx());
         if bsp_conf.bs1_peak && !break_peak {
@@ -788,7 +788,7 @@ impl<T: Line> CBSPointList<T> {
             .as_ref()
             .unwrap()
             .borrow()
-            .seg_line_idx()
+            .idx
             != next_seg.borrow().idx
             && bsp3_bi
                 .borrow()
@@ -796,7 +796,8 @@ impl<T: Line> CBSPointList<T> {
                 .as_ref()
                 .unwrap()
                 .borrow()
-                .seg_line_get_bi_list_len()
+                .bi_list
+                .len()
                 >= 3
         {
             return;
