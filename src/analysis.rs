@@ -253,6 +253,7 @@ mod test {
     use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
 
     use super::Analyzer;
+    use indicatif::{ProgressBar, ProgressStyle};
     use parquet::file::reader::FileReader;
     use parquet::file::serialized_reader::SerializedFileReader;
 
@@ -341,35 +342,35 @@ mod test {
         let reader = SerializedFileReader::new(file)?;
         let total_rows = reader.get_row_iter(None)?.count();
 
+        // Create progress bar
+        let pb = ProgressBar::new(total_rows as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+                .unwrap()
+                .progress_chars("##-"),
+        );
+
         // Create a new reader since the previous one was consumed
         let file = File::open("/opt/data/raw_data/audusd.parquet")?;
         let reader = SerializedFileReader::new(file)?;
         let mut iter = reader.get_row_iter(None)?;
 
-        let mut processed_rows = 0;
         while let Some(row) = iter.next() {
             let row = row?;
             let timestamp = row.get_string(0)?;
-            let time = CTime::from_datetime_str(&timestamp)?;
             let open = row.get_double(1)?;
             let high = row.get_double(2)?;
             let low = row.get_double(3)?;
             let close = row.get_double(4)?;
-            //let time = CTime::from_timestamp_millis(timestamp);
+            let time = CTime::from_datetime_str(&timestamp)?;
             let klu = CKLineUnit::new(time, open, high, low, close, false)?;
             analyzer.add_single_klu(klu)?;
 
-            processed_rows += 1;
-            if processed_rows % 10000 == 0 {
-                println!(
-                    "Progress: {:.2}% ({}/{})",
-                    (processed_rows as f64 / total_rows as f64) * 100.0,
-                    processed_rows,
-                    total_rows
-                );
-            }
+            pb.inc(1);
         }
 
+        pb.finish_with_message("Done!");
         println!("Total KLines: {}", analyzer.klc_list.len());
         println!("耗时: {:?}", start.elapsed());
 
