@@ -260,6 +260,7 @@ impl<T: Line> CSeg<T> {
             self.bi_list.push(bi);
         }
 
+        // TODO:
         //if self.bi_list.len() >= 3 {
         //    self.support_trend_line = Some(CTrendLine::new(&self.bi_list, TrendLineSide::Inside));
         //    self.resistance_trend_line =
