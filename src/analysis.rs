@@ -1,4 +1,3 @@
-
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
@@ -26,7 +25,7 @@ use crate::KLine::KLine_Unit::MetricModel;
 pub struct Analyzer {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub klc_list:CKLineList,
+    pub klc_list: CKLineList,
     pub bi_list: CBiList,
     pub seg_list: CSegListChan<CBi>,
     pub segseg_list: CSegListChan<CSeg<CBi>>,
@@ -46,7 +45,7 @@ impl Analyzer {
         let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
 
         Analyzer {
-            kl_type:kl_type.clone(),
+            kl_type: kl_type.clone(),
             config: conf.clone(),
             klc_list: CKLineList::new(&kl_type, &conf),
             bi_list: CBiList::new(CBiConfig::default()),
@@ -70,7 +69,7 @@ impl Analyzer {
         //}
         let start_time = Instant::now();
         assert!(!self.bi_list.is_empty());
-        let _= cal_seg(&mut self.bi_list, &mut self.seg_list);
+        let _ = cal_seg(&mut self.bi_list, &mut self.seg_list);
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
@@ -98,7 +97,8 @@ impl Analyzer {
         klu.set_metric(&mut self.metric_model_lst);
         let klu = Rc::new(RefCell::new(klu));
         if self.klc_list.is_empty() {
-            self.klc_list.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
+            self.klc_list
+                .push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
         } else {
             let dir = CKLine::try_add(self.klc_list.last().as_ref().unwrap(), &klu)?;
             if dir != KLineDir::Combine {
@@ -106,7 +106,11 @@ impl Analyzer {
                 self.klc_list.push(new_kline.clone());
                 if self.klc_list.len() >= 3 {
                     let len = self.klc_list.len();
-                    CKLine::update_fx(&self.klc_list[len - 2], &self.klc_list[len - 3], &self.klc_list[len - 1]);
+                    CKLine::update_fx(
+                        &self.klc_list[len - 2],
+                        &self.klc_list[len - 3],
+                        &self.klc_list[len - 1],
+                    );
                 }
                 if self.bi_list.update_bi(
                     Rc::clone(&self.klc_list[self.klc_list.len() - 2]),
@@ -211,19 +215,21 @@ pub fn update_zs_in_seg<T: Line>(
             assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1 > 0);
 
             assert!(!bi_list.is_empty());
-            zs.borrow_mut().set_bi_in(
-                bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1].clone(),
-            );
+
+            let bi_in =
+                bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1].clone();
+            zs.borrow_mut().set_bi_in(bi_in);
+
             if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
-                zs.borrow_mut().set_bi_out(
-                    bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() + 1].clone(),
-                );
+                let bi_out =
+                    bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() + 1].clone();
+
+                zs.borrow_mut().set_bi_out(bi_out);
             }
-            zs.borrow_mut().set_bi_lst(
-                &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
-                    ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
-                    .to_vec(),
-            );
+            let lst = &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
+                ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
+                .to_vec();
+            zs.borrow_mut().set_bi_lst(lst);
         }
 
         if sure_seg_cnt > 2 && !seg.ele_inside_is_sure {
@@ -238,6 +244,8 @@ mod test {
     use std::time::Instant;
 
     use chrono::{Duration, NaiveDateTime};
+    use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+    use parquet::record::RowAccessor;
     use rand::Rng;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -245,6 +253,9 @@ mod test {
     use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
 
     use super::Analyzer;
+    use parquet::file::reader::FileReader;
+    use parquet::file::serialized_reader::SerializedFileReader;
+
     /*
     #[test]
     fn test_insert_large_data() {
@@ -285,39 +296,83 @@ mod test {
         println!("耗时: {:?}", end); // 30s
     }*/
 
-    #[test]
-    fn test_load_audusd() -> Result<(), Box<dyn std::error::Error>> {
-        // 记录开始时间
-        let start = Instant::now();
-        let _total_data = 10_000_000;
-        let mut list = Analyzer::new("test".to_string(), CChanConfig::default());
-        let file = File::open("/opt/data/raw_data/audusd.csv")?;
-        let reader = BufReader::new(file);
+    /*#[test]
+      fn test_load_audusd() -> Result<(), Box<dyn std::error::Error>> {
+            // 记录开始时间
+            let start = Instant::now();
+            let _total_data = 10_000_000;
+            let mut list = Analyzer::new("test".to_string(), CChanConfig::default());
+            let file = File::open("/opt/data/raw_data/audusd.csv")?;
+            let reader = BufReader::new(file);
 
-        for line in reader.lines().skip(1) {
-            // skip header
-            let line = line?;
-            let fields: Vec<&str> = line.split(',').collect();
+            for line in reader.lines().skip(1) {
+                // skip header
+                let line = line?;
+                let fields: Vec<&str> = line.split(',').collect();
 
-            if fields.len() < 6 {
-                continue;
+                if fields.len() < 6 {
+                    continue;
+                }
+
+                let time = CTime::from_datetime_str(&fields[0])?;
+                let open = fields[1].parse::<f64>()?;
+                let high = fields[2].parse::<f64>()?;
+                let low = fields[3].parse::<f64>()?;
+                let close = fields[4].parse::<f64>()?;
+
+                let klu = CKLineUnit::new(time, open, high, low, close, false)?;
+                list.add_single_klu(klu)?;
             }
 
-            let time = CTime::from_datetime_str(&fields[0])?;
-            let open = fields[1].parse::<f64>()?;
-            let high = fields[2].parse::<f64>()?;
-            let low = fields[3].parse::<f64>()?;
-            let close = fields[4].parse::<f64>()?;
+            println!("Total KLines: {}", list.klc_list.len());
+            // 记录结束时间
+            let end = start.elapsed();
+            // 打印执行时间
+            println!("耗时: {:?}", end); // 30s
+            Ok(())
+        }
+    */
+    #[test]
+    fn test_load_audusd_parquet() -> Result<(), Box<dyn std::error::Error>> {
+        let start = Instant::now();
+        let mut analyzer = Analyzer::new("test".to_string(), CChanConfig::default());
 
+        let file = File::open("/opt/data/raw_data/audusd.parquet")?;
+        let reader = SerializedFileReader::new(file)?;
+        let total_rows = reader.get_row_iter(None)?.count();
+
+        // Create a new reader since the previous one was consumed
+        let file = File::open("/opt/data/raw_data/audusd.parquet")?;
+        let reader = SerializedFileReader::new(file)?;
+        let mut iter = reader.get_row_iter(None)?;
+
+        let mut processed_rows = 0;
+        while let Some(row) = iter.next() {
+            let row = row?;
+            let timestamp = row.get_string(0)?;
+            let time = CTime::from_datetime_str(&timestamp)?;
+            let open = row.get_double(1)?;
+            let high = row.get_double(2)?;
+            let low = row.get_double(3)?;
+            let close = row.get_double(4)?;
+            //let time = CTime::from_timestamp_millis(timestamp);
             let klu = CKLineUnit::new(time, open, high, low, close, false)?;
-            list.add_single_klu(klu)?;
+            analyzer.add_single_klu(klu)?;
+
+            processed_rows += 1;
+            if processed_rows % 10000 == 0 {
+                println!(
+                    "Progress: {:.2}% ({}/{})",
+                    (processed_rows as f64 / total_rows as f64) * 100.0,
+                    processed_rows,
+                    total_rows
+                );
+            }
         }
 
-        println!("Total KLines: {}", list.klc_list.len());
-        // 记录结束时间
-        let end = start.elapsed();
-        // 打印执行时间
-        println!("耗时: {:?}", end); // 30s
+        println!("Total KLines: {}", analyzer.klc_list.len());
+        println!("耗时: {:?}", start.elapsed());
+
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 // File: chan/src/Common/CTime.rs
 
-use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 use chrono::Datelike;
+use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 use std::cmp::Ordering;
 use std::fmt;
 #[derive(Clone, Debug, Copy)]
@@ -102,6 +102,11 @@ impl CTime {
             true,
             DateTime::<Utc>::from_utc(naive, Utc).timestamp() as f64,
         ))
+    }
+
+    pub fn from_timestamp_millis(timestamp_ms: i64) -> Self {
+        let naive = NaiveDateTime::from_timestamp_millis(timestamp_ms).expect("Invalid timestamp");
+        Self::from_naive_date_time(naive, true, timestamp_ms as f64)
     }
 }
 
