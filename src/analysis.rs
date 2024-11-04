@@ -8,6 +8,7 @@ use crate::Common::types::Handle;
 use crate::Common::CEnum::{KLineDir, SegType};
 use crate::Common::ChanException::CChanException;
 use crate::KLine::KLine::CKLine;
+use crate::KLine::KLine_List::CKLineList;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
@@ -22,10 +23,10 @@ use std::time::Instant;
 
 use crate::KLine::KLine_Unit::MetricModel;
 
-pub struct CKLineList {
+pub struct Analyzer {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub lst: Vec<Handle<CKLine>>,
+    pub klc_list:CKLineList,
     pub bi_list: CBiList,
     pub seg_list: CSegListChan<CBi>,
     pub segseg_list: CSegListChan<CSeg<CBi>>,
@@ -39,15 +40,15 @@ pub struct CKLineList {
     pub seg_bs_point_history: Vec<HashMap<String, String>>,
 }
 
-impl CKLineList {
+impl Analyzer {
     pub fn new(kl_type: String, conf: CChanConfig) -> Self {
         let seg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Bi);
         let segseg_list = CSegListChan::new(conf.seg_conf.clone(), SegType::Seg);
 
-        CKLineList {
-            kl_type,
+        Analyzer {
+            kl_type:kl_type.clone(),
             config: conf.clone(),
-            lst: Vec::new(),
+            klc_list: CKLineList::new(&kl_type, &conf),
             bi_list: CBiList::new(CBiConfig::default()),
             seg_list,
             segseg_list,
@@ -65,11 +66,11 @@ impl CKLineList {
     pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
         //if !self.step_calculation {
         //    self.bi_list
-        //        .try_add_virtual_bi(self.lst.last().unwrap().clone(), false);
+        //        .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), false);
         //}
         let start_time = Instant::now();
         assert!(!self.bi_list.is_empty());
-        cal_seg(&mut self.bi_list, &mut self.seg_list);
+        let _= cal_seg(&mut self.bi_list, &mut self.seg_list);
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
@@ -96,20 +97,20 @@ impl CKLineList {
     pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Result<(), CChanException> {
         klu.set_metric(&mut self.metric_model_lst);
         let klu = Rc::new(RefCell::new(klu));
-        if self.lst.is_empty() {
-            self.lst.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
+        if self.klc_list.is_empty() {
+            self.klc_list.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
         } else {
-            let dir = CKLine::try_add(self.lst.last().as_ref().unwrap(), &klu)?;
+            let dir = CKLine::try_add(self.klc_list.last().as_ref().unwrap(), &klu)?;
             if dir != KLineDir::Combine {
-                let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len(), dir);
-                self.lst.push(new_kline.clone());
-                if self.lst.len() >= 3 {
-                    let len = self.lst.len();
-                    CKLine::update_fx(&self.lst[len - 2], &self.lst[len - 3], &self.lst[len - 1]);
+                let new_kline = CKLine::new(Rc::clone(&klu), self.klc_list.len(), dir);
+                self.klc_list.push(new_kline.clone());
+                if self.klc_list.len() >= 3 {
+                    let len = self.klc_list.len();
+                    CKLine::update_fx(&self.klc_list[len - 2], &self.klc_list[len - 3], &self.klc_list[len - 1]);
                 }
                 if self.bi_list.update_bi(
-                    Rc::clone(&self.lst[self.lst.len() - 2]),
-                    Rc::clone(&self.lst[self.lst.len() - 1]),
+                    Rc::clone(&self.klc_list[self.klc_list.len() - 2]),
+                    Rc::clone(&self.klc_list[self.klc_list.len() - 1]),
                     true, //self.step_calculation,
                 ) && self.step_calculation
                 {
@@ -118,7 +119,7 @@ impl CKLineList {
             } else if self.step_calculation
                 && self
                     .bi_list
-                    .try_add_virtual_bi(self.lst.last().unwrap().clone(), true)
+                    .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), true)
             {
                 self.cal_seg_and_zs()?;
             }
@@ -127,7 +128,7 @@ impl CKLineList {
     }
 
     //pub fn klu_iter(&self, klc_begin_idx: usize) -> impl Iterator<Item = &Handle<CKLineUnit>> {
-    //    self.lst[klc_begin_idx..]
+    //    self.klc_list[klc_begin_idx..]
     //        .iter()
     //        .flat_map(|klc| klc.borrow().lst.iter())
     //}
@@ -243,7 +244,7 @@ mod test {
 
     use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
 
-    use super::CKLineList;
+    use super::Analyzer;
     /*
     #[test]
     fn test_insert_large_data() {
@@ -288,8 +289,8 @@ mod test {
     fn test_load_audusd() -> Result<(), Box<dyn std::error::Error>> {
         // 记录开始时间
         let start = Instant::now();
-        let total_data = 10_000_000;
-        let mut list = CKLineList::new("test".to_string(), CChanConfig::default());
+        let _total_data = 10_000_000;
+        let mut list = Analyzer::new("test".to_string(), CChanConfig::default());
         let file = File::open("/opt/data/raw_data/audusd.csv")?;
         let reader = BufReader::new(file);
 
@@ -312,7 +313,7 @@ mod test {
             list.add_single_klu(klu)?;
         }
 
-        println!("Total KLines: {}", list.lst.len());
+        println!("Total KLines: {}", list.klc_list.len());
         // 记录结束时间
         let end = start.elapsed();
         // 打印执行时间
