@@ -1,5 +1,4 @@
 use crate::BuySellPoint::BSPointConfig::CPointConfig;
-//use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
 use crate::Common::types::Handle;
 use crate::Common::CEnum::ZsCombineMode;
@@ -288,23 +287,23 @@ impl<T: Line> CZS<T> {
     }
 }
 
-//impl<T: Line> std::fmt::Display for CZS<T> {
-//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//        let main_str = format!(
-//            "{}->{}",
-//            self.begin_bi.as_ref().map_or(0, |bi| bi.idx()),
-//            self.end_bi.as_ref().map_or(0, |bi| bi.idx())
-//        );
-//        let sub_str: String = self
-//            .sub_zs_lst
-//            .iter()
-//            .map(|sub_zs| sub_zs.borrow().to_string())
-//            .collect::<Vec<_>>()
-//            .join(",");
-//        if !sub_str.is_empty() {
-//            write!(f, "{}({})", main_str, sub_str)
-//        } else {
-//            write!(f, "{}", main_str)
-//        }
-//    }
-//}
+impl<T: Line> std::fmt::Display for CZS<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let main_str = format!(
+            "{}->{}",
+            self.begin_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx()),
+            self.end_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx())
+        );
+        let sub_str: String = self
+            .sub_zs_lst
+            .iter()
+            .map(|sub_zs| sub_zs.borrow().to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        if !sub_str.is_empty() {
+            write!(f, "{}({})", main_str, sub_str)
+        } else {
+            write!(f, "{}", main_str)
+        }
+    }
+}

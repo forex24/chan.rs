@@ -1,6 +1,6 @@
 use crate::BuySellPoint::BS_Point::CBSPoint;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{BiDir, BiType, DataField, FxType, MacdAlgo};
+use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;

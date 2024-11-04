@@ -32,6 +32,11 @@ impl CZSConfig {
 
 impl Default for CZSConfig {
     fn default() -> Self {
-        Self::new(None, None, None, None)
+        Self {
+            need_combine: false,
+            zs_combine_mode: ZsCombineMode::Zs,
+            one_bi_zs:false,
+            zs_algo: ZsAlgo::Normal
+        }
     }
 }

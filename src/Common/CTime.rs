@@ -1,7 +1,7 @@
 // File: chan/src/Common/CTime.rs
 
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
-use chrono::{Datelike, Duration};
+use chrono::Datelike;
 use std::cmp::Ordering;
 use std::fmt;
 #[derive(Clone, Debug, Copy)]

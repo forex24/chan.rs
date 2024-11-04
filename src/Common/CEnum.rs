@@ -1,11 +1,11 @@
 use strum_macros::{Display, EnumIter, EnumString};
 
-#[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DATA_SRC {
-    BAO_STOCK,
-    CCXT,
-    CSV,
-}
+//#[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
+//pub enum DATA_SRC {
+//    BAO_STOCK,
+//    CCXT,
+//    CSV,
+//}
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KlType {
@@ -63,7 +63,7 @@ pub enum BiType {
     TiaokongValue,
 }
 
-pub type BSP_MAIN_TYPE = String;
+//pub type BSP_MAIN_TYPE = String;
 
 #[derive(Debug, EnumString, EnumIter, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BspType {
@@ -75,15 +75,15 @@ pub enum BspType {
     T3B,
 }
 
-impl BspType {
-    pub fn main_type(&self) -> BSP_MAIN_TYPE {
-        match self {
-            BspType::T1 | BspType::T1P => "1".to_string(),
-            BspType::T2 | BspType::T2S => "2".to_string(),
-            BspType::T3A | BspType::T3B => "3".to_string(),
-        }
-    }
-}
+//impl BspType {
+//    pub fn main_type(&self) -> BSP_MAIN_TYPE {
+//        match self {
+//            BspType::T1 | BspType::T1P => "1".to_string(),
+//            BspType::T2 | BspType::T2S => "2".to_string(),
+//            BspType::T3A | BspType::T3B => "3".to_string(),
+//        }
+//    }
+//}
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AuType {

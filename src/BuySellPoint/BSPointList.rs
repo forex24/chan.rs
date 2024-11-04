@@ -1,7 +1,7 @@
-use crate::BuySellPoint::BSPointConfig::{CBSPointConfig, CPointConfig};
+use crate::BuySellPoint::BSPointConfig::CBSPointConfig;
 use crate::Common::func_util::has_overlap;
 use crate::Common::types::Handle;
-use crate::Common::CEnum::{BspType, MacdAlgo};
+use crate::Common::CEnum::BspType;
 use crate::Seg::linetype::{Line, SegLine};
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
@@ -768,14 +768,14 @@ impl<T: Line> CBSPointList<T> {
         }
         let bsp3_bi = bi_list
             .get(
-                (first_zs
+                first_zs
                     .borrow()
                     .bi_out
                     .as_ref()
                     .unwrap()
                     .borrow()
                     .line_idx()
-                    + 1),
+                    + 1,
             )
             .unwrap();
         if bsp3_bi.borrow().line_get_parent_seg().is_none() {
@@ -863,7 +863,7 @@ impl<T: Line> CBSPointList<T> {
         let end_bi_idx = cal_bsp3_bi_end_idx(next_seg);
         for bsp3_bi in bi_list
             .iter()
-            .skip((bsp1_bi.borrow().line_idx() + 2))
+            .skip(bsp1_bi.borrow().line_idx() + 2)
             .step_by(2)
         {
             if bsp3_bi.borrow().line_idx() > end_bi_idx {

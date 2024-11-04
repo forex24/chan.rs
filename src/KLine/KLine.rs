@@ -169,12 +169,6 @@ impl CKLine {
                             .min(self.next.as_ref().unwrap().borrow().low);
                         (item2_high, self_low)
                     }
-                    _ => {
-                        return Err(CChanException::new(
-                            "bi_fx_check config error!".to_string(),
-                            ErrCode::ConfigError,
-                        ))
-                    }
                 };
 
                 Ok(if method == FxCheckMethod::Totally {
@@ -243,12 +237,6 @@ impl CKLine {
                             .max(self.high)
                             .max(self.next.as_ref().unwrap().borrow().high);
                         (item2_low, cur_high)
-                    }
-                    _ => {
-                        return Err(CChanException::new(
-                            "bi_fx_check config error!".to_string(),
-                            ErrCode::ConfigError,
-                        ))
                     }
                 };
 

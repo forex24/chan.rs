@@ -8,3 +8,4 @@ pub mod KLine;
 pub mod Math;
 pub mod Seg;
 pub mod ZS;
+pub mod analysis;

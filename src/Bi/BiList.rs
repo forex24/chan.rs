@@ -35,6 +35,10 @@ impl CBiList {
         self.bi_list.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.bi_list.is_empty()
+    }
+
     pub fn get(&self, index: usize) -> Option<Handle<CBi>> {
         self.bi_list.get(index).cloned()
     }
@@ -264,7 +268,7 @@ impl CBiList {
         if !self.config.gap_as_kl {
             return span;
         }
-        if span >= 4 {
+        if span >= 4 {  // 加速计算
             return span;
         }
         let mut tmp_klc = Some(Rc::clone(last_end));

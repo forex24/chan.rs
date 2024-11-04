@@ -1,4 +1,4 @@
-//
+
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
-use super::KLine_Unit::MetricModel;
+use crate::KLine::KLine_Unit::MetricModel;
 
 pub struct CKLineList {
     pub kl_type: String,
@@ -69,7 +69,7 @@ impl CKLineList {
         //}
         let start_time = Instant::now();
         assert!(!self.bi_list.is_empty());
-        let _ = cal_seg(&mut self.bi_list, &mut self.seg_list);
+        cal_seg(&mut self.bi_list, &mut self.seg_list);
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
@@ -234,7 +234,16 @@ pub fn update_zs_in_seg<T: Line>(
 }
 
 mod test {
+    use std::time::Instant;
 
+    use chrono::{Duration, NaiveDateTime};
+    use rand::Rng;
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
+
+    use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
+
+    use super::CKLineList;
     /*
     #[test]
     fn test_insert_large_data() {
@@ -277,16 +286,9 @@ mod test {
 
     #[test]
     fn test_load_audusd() -> Result<(), Box<dyn std::error::Error>> {
-        use std::time::Instant;
-        use std::fs::File;
-        use std::io::{BufRead, BufReader};
-    
-        use crate::{ChanConfig::CChanConfig, Common::CTime::CTime, KLine::KLine_Unit::CKLineUnit};
-    
-        use super::CKLineList;
         // 记录开始时间
         let start = Instant::now();
-        let _total_data = 10_000_000;
+        let total_data = 10_000_000;
         let mut list = CKLineList::new("test".to_string(), CChanConfig::default());
         let file = File::open("/opt/data/raw_data/audusd.csv")?;
         let reader = BufReader::new(file);

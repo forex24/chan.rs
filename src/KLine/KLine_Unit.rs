@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     Common::{
         types::Handle,
-        CEnum::{DataField, TrendType},
+        CEnum::TrendType,
         CTime::CTime,
         ChanException::{CChanException, ErrCode},
         //TradeInfo::CTradeInfo,

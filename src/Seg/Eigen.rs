@@ -4,36 +4,36 @@ use std::rc::Rc;
 
 use crate::Common::types::Handle;
 use crate::Common::CEnum::{BiDir, EqualMode, FxType, KLineDir};
-use crate::Common::ChanException::{CChanException, ErrCode};
+use crate::Common::ChanException::CChanException;
 
 use super::linetype::Line;
 
 //#[derive(Debug, Clone)]
 pub struct CEigen<T> {
-    begin_klc: usize,
-    end_klc: usize,
+    //begin_klc: usize,
+    //end_klc: usize,
     pub high: f64,
     pub low: f64,
     pub lst: Vec<Handle<T>>,
     pub dir: KLineDir,
     pub fx: FxType,
-    pre: Option<Handle<Self>>,
-    next: Option<Handle<Self>>,
+    //pre: Option<Handle<Self>>,
+    //next: Option<Handle<Self>>,
     pub gap: bool,
 }
 
 impl<T: Line> CEigen<T> {
     pub fn new(bi: &Handle<T>, dir: KLineDir) -> Result<Self, CChanException> {
         Ok(Self {
-            begin_klc: bi.borrow().line_get_begin_klc().borrow().idx ,
-            end_klc: bi.borrow().line_get_end_klc().borrow().idx ,
+            //begin_klc: bi.borrow().line_get_begin_klc().borrow().idx ,
+            //end_klc: bi.borrow().line_get_end_klc().borrow().idx ,
             high: bi.borrow().line_high(),
             low: bi.borrow().line_low(),
             lst: vec![Rc::clone(&bi)],
             dir,
             fx: FxType::Unknown,
-            pre: None,
-            next: None,
+            //pre: None,
+            //next: None,
             gap: false,
         })
     }
@@ -106,7 +106,7 @@ impl<T: Line> CEigen<T> {
                 }
                 _ => unreachable!("KLINE_DIR = {:?} err!!! must be Up/Down", self.dir),
             }
-            self.end_klc = item.line_get_end_klc().borrow().idx ;
+            //self.end_klc = item.line_get_end_klc().borrow().idx ;
         }
         dir
     }
@@ -241,9 +241,9 @@ impl<T: Line> CEigen<T> {
         let bi_dir = self.lst[0].borrow().line_dir();
         if bi_dir == BiDir::Up {
             // 下降线段
-            (self.get_peak_klu(false).borrow().line_idx() - 1) 
+            self.get_peak_klu(false).borrow().line_idx() - 1 
         } else {
-            (self.get_peak_klu(true).borrow().line_idx() - 1) 
+            self.get_peak_klu(true).borrow().line_idx() - 1 
         }
     }
 }
