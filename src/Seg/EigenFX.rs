@@ -1,5 +1,5 @@
 // eigen_fx.rs
-
+// 已完备
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -166,6 +166,7 @@ impl<T: Line> CEigenFX<T> {
 
     pub fn add(&mut self, bi: Handle<T>) -> bool {
         assert!(bi.borrow().line_dir() != self.dir);
+
         self.lst.push(bi.clone());
 
         if self.ele[0].is_none() {
@@ -179,6 +180,7 @@ impl<T: Line> CEigenFX<T> {
         }
     }
 
+    // 已完备
     pub fn reset(&mut self) -> bool {
         let bi_tmp_list: Vec<_> = self.lst[1..].to_vec();
 
@@ -208,6 +210,7 @@ impl<T: Line> CEigenFX<T> {
         false
     }
 
+    // 已完备
     pub fn can_be_end(&mut self, bi_lst: &[Handle<T>]) -> Option<bool> {
         assert!(self.ele[1].is_some());
         let ele1_gap = self.ele[1].as_ref().unwrap().borrow().gap;
@@ -260,6 +263,7 @@ impl<T: Line> CEigenFX<T> {
         self.lst.clear();
     }
 
+    // 已完备
     pub fn actual_break(&mut self) -> bool {
         if !self.exclude_included {
             return true;
@@ -299,6 +303,7 @@ impl<T: Line> CEigenFX<T> {
         false
     }
 
+    // 已完备
     pub fn find_revert_fx(
         &mut self,
         bi_list: &[Handle<T>],
@@ -319,10 +324,11 @@ impl<T: Line> CEigenFX<T> {
                 }
 
                 loop {
-                    match eigen_fx.can_be_end(bi_list) {
+                    let _test = eigen_fx.can_be_end(bi_list);
+                    match _test {
                         Some(true) | None => {
                             self.last_evidence_bi = Some(Rc::clone(bi));
-                            return eigen_fx.can_be_end(bi_list);
+                            return _test;
                         }
                         Some(false) => {
                             if !eigen_fx.reset() {

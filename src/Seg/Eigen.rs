@@ -1,10 +1,9 @@
 // eigen.rs
-//use std::cell::RefCell;
+// 已完备
 use std::rc::Rc;
 
 use crate::Common::types::Handle;
 use crate::Common::CEnum::{BiDir, EqualMode, FxType, KLineDir};
-use crate::Common::ChanException::CChanException;
 
 use super::linetype::Line;
 
@@ -23,21 +22,22 @@ pub struct CEigen<T> {
 }
 
 impl<T: Line> CEigen<T> {
-    pub fn new(bi: &Handle<T>, dir: KLineDir) -> Result<Self, CChanException> {
-        Ok(Self {
+    pub fn new(bi: &Handle<T>, dir: KLineDir) -> Self {
+        Self {
             //begin_klc: bi.borrow().line_get_begin_klc().borrow().idx ,
             //end_klc: bi.borrow().line_get_end_klc().borrow().idx ,
             high: bi.borrow().line_high(),
             low: bi.borrow().line_low(),
-            lst: vec![Rc::clone(&bi)],
+            lst: vec![Rc::clone(bi)],
             dir,
             fx: FxType::Unknown,
             //pre: None,
             //next: None,
             gap: false,
-        })
+        }
     }
 
+    // 已完备
     pub fn test_combine(
         &self,
         item: &Handle<T>,
@@ -79,6 +79,7 @@ impl<T: Line> CEigen<T> {
         unreachable!()
     }
 
+    // 已完备
     pub fn try_add(
         &mut self,
         bi: &Handle<T>,
@@ -236,14 +237,14 @@ impl<T: Line> CEigen<T> {
     //    }
     //}
 
+    // 已完备
     pub fn get_peak_bi_idx(&self) -> usize {
         assert!(self.fx != FxType::Unknown);
         let bi_dir = self.lst[0].borrow().line_dir();
-        if bi_dir == BiDir::Up {
+        match bi_dir {
             // 下降线段
-            self.get_peak_klu(false).borrow().line_idx() - 1 
-        } else {
-            self.get_peak_klu(true).borrow().line_idx() - 1 
+            BiDir::Up => self.get_peak_klu(false).borrow().line_idx() - 1,
+            BiDir::Down => self.get_peak_klu(true).borrow().line_idx() - 1,
         }
     }
 }
