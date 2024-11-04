@@ -64,29 +64,30 @@ impl CKLineList {
     }
 
     pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
-        if !self.step_calculation {
-            self.bi_list
-                .try_add_virtual_bi(self.lst.last().unwrap().clone(), false);
-        }
+        //if !self.step_calculation {
+        //    self.bi_list
+        //        .try_add_virtual_bi(self.lst.last().unwrap().clone(), false);
+        //}
         let start_time = Instant::now();
+        assert!(!self.bi_list.is_empty());
         cal_seg(&mut self.bi_list, &mut self.seg_list);
         self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
         update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
 
-        cal_seg(&self.seg_list.lst, &mut self.segseg_list);
-        self.segzs_list
-            .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
-        update_zs_in_seg(
-            &self.seg_list.lst,
-            &mut self.segseg_list.lst,
-            &mut self.segzs_list,
-        )?;
+        //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
+        //self.segzs_list
+        //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
+        //update_zs_in_seg(
+        //    &self.seg_list.lst,
+        //    &mut self.segseg_list.lst,
+        //    &mut self.segzs_list,
+        //)?;
         let elapsed = start_time.elapsed();
         if elapsed.as_secs() > 1 {
             println!("cal_seg 耗时: {:?}", elapsed); // 打印耗时
         }
-        self.seg_bs_point_lst
-            .cal(&self.seg_list.lst, &self.segseg_list);
+        //self.seg_bs_point_lst
+        //    .cal(&self.seg_list.lst, &self.segseg_list);
         self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
         //self.record_current_bs_points();
 
