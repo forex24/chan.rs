@@ -11,10 +11,11 @@ use crate::Common::{
 
 use super::{linetype::Line, Eigen::CEigen};
 
+// 特征序列分型
 //#[derive(Debug, Clone)]
 pub struct CEigenFX<T> {
     pub lv: SegType,
-    pub dir: BiDir,
+    pub dir: BiDir, // 线段方向
     pub ele: [Option<Handle<CEigen<T>>>; 3],
     pub lst: Vec<Handle<T>>,
     pub exclude_included: bool,
@@ -42,9 +43,7 @@ impl<T: Line> CEigenFX<T> {
     }
 
     pub fn treat_first_ele(&mut self, bi: Handle<T>) -> bool {
-        self.ele[0] = Some(Rc::new(RefCell::new(
-            CEigen::new(&bi, self.kl_dir).unwrap(),
-        )));
+        self.ele[0] = Some(Rc::new(RefCell::new(CEigen::new(&bi, self.kl_dir))));
         false
     }
 
@@ -58,9 +57,7 @@ impl<T: Line> CEigenFX<T> {
                 .try_add(&bi, self.exclude_included, None);
 
         if combine_dir != KLineDir::Combine {
-            self.ele[1] = Some(Rc::new(RefCell::new(
-                CEigen::new(&bi, self.kl_dir).unwrap(),
-            )));
+            self.ele[1] = Some(Rc::new(RefCell::new(CEigen::new(&bi, self.kl_dir))));
             let ele1 = self.ele[1].as_ref().unwrap();
 
             if (self.is_up() && ele1.borrow().high < self.ele[0].as_ref().unwrap().borrow().high)
@@ -73,10 +70,12 @@ impl<T: Line> CEigenFX<T> {
         false
     }
 
+    // 已完备
     pub fn check_fx(&self, exclude_included: bool, allow_top_equal: Option<EqualMode>) -> FxType {
         let k1 = self.ele[0].as_ref().unwrap().borrow();
         let k2 = self.ele[1].as_ref().unwrap().borrow();
         let k3 = self.ele[2].as_ref().unwrap().borrow();
+
         if exclude_included {
             if k1.high < k2.high && k3.high <= k2.high && k3.low < k2.low {
                 if allow_top_equal == Some(EqualMode::TopEqual) || k3.high < k2.high {
@@ -113,6 +112,7 @@ impl<T: Line> CEigenFX<T> {
         self.ele[1].as_mut().unwrap().borrow_mut().gap = gap;
     }
 
+    // 已完备
     pub fn treat_third_ele(&mut self, bi: Handle<T>) -> bool {
         assert!(self.ele[0].is_some());
         assert!(self.ele[1].is_some());
@@ -129,19 +129,18 @@ impl<T: Line> CEigenFX<T> {
             None
         };
 
-        let combine_dir = self.ele[1].as_ref().unwrap().borrow_mut().try_add(
-            &bi,
-            self.exclude_included,
-            allow_top_equal,
-        );
+        let combine_dir =
+            self.ele[1]
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .try_add(&bi, false, allow_top_equal);
 
         if combine_dir == KLineDir::Combine {
             return false;
         }
 
-        self.ele[2] = Some(Rc::new(RefCell::new(
-            CEigen::new(&bi, combine_dir).unwrap(),
-        )));
+        self.ele[2] = Some(Rc::new(RefCell::new(CEigen::new(&bi, combine_dir))));
 
         if !self.actual_break() {
             return self.reset();
