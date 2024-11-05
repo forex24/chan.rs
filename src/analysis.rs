@@ -3,7 +3,7 @@ use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
 use crate::BuySellPoint::BSPointList::CBSPointList;
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::WeakHandle;
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{KLineDir, SegType};
 use crate::Common::ChanException::CChanException;
 use crate::KLine::KLine::CKLine;
@@ -139,7 +139,7 @@ impl Analyzer {
 }
 
 pub fn cal_seg<U: Line>(
-    bi_list: &[WeakHandle<U>],
+    bi_list: &[StrongHandle<U>],
     seg_list: &mut CSegListChan<U>,
 ) -> Result<(), CChanException> {
     seg_list.update(bi_list);
@@ -193,7 +193,7 @@ pub fn update_zs_in_seg<T: Line>(
 ) -> Result<(), CChanException> {
     let mut sure_seg_cnt = 0;
     for seg in seg_list.iter().rev() {
-        let mut seg = seg.borrow_mut();
+        let mut seg = seg.upgrade().unwrap().borrow_mut();
         if seg.ele_inside_is_sure {
             break;
         }
@@ -202,34 +202,124 @@ pub fn update_zs_in_seg<T: Line>(
         }
         seg.clear_zs_lst();
         for zs in zs_list.iter().rev() {
-            if zs.borrow().end.as_ref().unwrap().borrow().idx
+            if zs
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .end
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .idx
                 < seg.start_bi.borrow().line_get_begin_klu().borrow().idx
             {
                 break;
             }
-            if zs.borrow().is_inside(&seg) {
-                seg.add_zs(Rc::clone(zs));
+            if zs.upgrade().unwrap().borrow().is_inside(&seg) {
+                seg.add_zs(Rc::clone(&zs.upgrade().unwrap()));
             }
-            assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() > 0);
+            assert!(
+                zs.upgrade()
+                    .unwrap()
+                    .borrow()
+                    .begin_bi
+                    .as_ref()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    > 0
+            );
 
-            assert!(zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1 > 0);
+            assert!(
+                zs.upgrade()
+                    .unwrap()
+                    .borrow()
+                    .begin_bi
+                    .as_ref()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    - 1
+                    > 0
+            );
 
             assert!(!bi_list.is_empty());
 
-            let bi_in =
-                bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx() - 1].clone();
-            zs.borrow_mut().set_bi_in(bi_in);
+            let bi_in = bi_list[zs
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                - 1]
+            .clone();
+            zs.upgrade().unwrap().borrow_mut().set_bi_in(bi_in);
 
-            if zs.borrow_mut().end_bi.as_ref().unwrap().borrow().line_idx() + 1 < bi_list.len() {
-                let bi_out =
-                    bi_list[zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx() + 1].clone();
+            if zs
+                .upgrade()
+                .unwrap()
+                .borrow_mut()
+                .end_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                + 1
+                < bi_list.len()
+            {
+                let bi_out = bi_list[zs
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .end_bi
+                    .as_ref()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    + 1]
+                .clone();
 
-                zs.borrow_mut().set_bi_out(bi_out);
+                zs.upgrade().unwrap().borrow_mut().set_bi_out(bi_out);
             }
-            let lst = &bi_list[zs.borrow().begin_bi.as_ref().unwrap().borrow().line_idx()
-                ..=zs.borrow().end_bi.as_ref().unwrap().borrow().line_idx()]
+            let lst = &bi_list[zs
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                ..=zs
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .end_bi
+                    .as_ref()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()]
                 .to_vec();
-            zs.borrow_mut().set_bi_lst(lst);
+            zs.upgrade().unwrap().borrow_mut().set_bi_lst(lst);
         }
 
         if sure_seg_cnt > 2 && !seg.ele_inside_is_sure {

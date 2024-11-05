@@ -145,8 +145,6 @@ impl<T: Line> CZSList<T> {
                         .line_get_parent_seg()
                         .as_ref()
                         .unwrap()
-                        .upgrade()
-                        .unwrap()
                         .borrow()
                         .dir
                 {

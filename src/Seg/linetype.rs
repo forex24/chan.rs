@@ -32,7 +32,7 @@ pub trait Line: Sized {
     //fn get_pre(&self) -> Option<Handle<Self>>;
     //fn get_next(&self) -> Option<Handle<Self>>;
 
-    fn line_get_parent_seg(&self) -> Option<WeakHandle<CSeg<Self>>>;
+    fn line_get_parent_seg(&self) -> Option<Handle<CSeg<Self>>>;
     fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<CSeg<Self>>>);
 
     fn line_seg_idx(&self) -> Option<usize>;
@@ -106,11 +106,11 @@ impl Line for CBi {
     //}
 
     fn line_set_pre(&mut self, pre: Option<Handle<Self>>) {
-        self.pre = pre;
+        self.pre = pre.map(|rc| Rc::downgrade(&rc));
     }
 
     fn line_set_next(&mut self, next: Option<Handle<Self>>) {
-        self.next = next;
+        self.next = next.map(|rc| Rc::downgrade(&rc));
     }
 
     fn line_get_begin_klu(&self) -> Handle<CKLineUnit> {
@@ -122,15 +122,17 @@ impl Line for CBi {
     }
 
     fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
-        self.parent_seg = parent_seg;
+        self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
     }
 
     fn line_get_begin_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.begin_klc)
+        self.begin_klc
+            .upgrade()
+            .expect("Invalid begin_klc reference")
     }
 
     fn line_get_end_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.end_klc)
+        self.end_klc.upgrade().expect("Invalid end_klc reference")
     }
 
     fn line_is_sure(&self) -> bool {
@@ -138,15 +140,17 @@ impl Line for CBi {
     }
 
     fn line_next(&self) -> Option<Handle<Self>> {
-        self.next.as_ref().map(|x| Rc::clone(x))
+        self.next.as_ref().map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
 
     fn line_pre(&self) -> Option<Handle<Self>> {
-        self.pre.as_ref().map(|x| Rc::clone(x))
+        self.pre.as_ref().map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
 
-    fn line_get_parent_seg(&self) -> Option<WeakHandle<Self::Parent>> {
-        self.parent_seg.as_ref().map(|x| Rc::downgrade(x))
+    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
+        self.parent_seg
+            .as_ref()
+            .map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
 
     fn line_is_up(&self) -> bool {
@@ -173,7 +177,7 @@ impl Line for CBi {
     where
         Self: Sized,
     {
-        self.bsp = bsp.map(|b| Rc::clone(&b));
+        self.bsp = bsp.map(|rc| Rc::downgrade(&rc));
     }
 
     fn line_amp(&self) -> Option<f64> {
@@ -250,19 +254,29 @@ impl Line for CSeg<CBi> {
         self.get_end_klu()
     }
 
-    fn line_get_parent_seg(&self) -> Option<WeakHandle<Self::Parent>> {
-        self.parent_seg.clone()
+    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
+        self.parent_seg
+            .as_ref()
+            .map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
     fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
         self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
     }
 
     fn line_get_begin_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.start_bi.borrow().begin_klc)
+        self.start_bi
+            .borrow()
+            .begin_klc
+            .upgrade()
+            .expect("Invalid begin_klc reference")
     }
 
     fn line_get_end_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.end_bi.borrow().end_klc)
+        self.end_bi
+            .borrow()
+            .end_klc
+            .upgrade()
+            .expect("Invalid end_klc reference")
     }
 
     fn line_is_sure(&self) -> bool {
@@ -289,11 +303,8 @@ impl Line for CSeg<CBi> {
         self.cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn line_set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
-    where
-        Self: Sized,
-    {
-        self.bsp = bsp.map(|b| Rc::clone(&b));
+    fn line_set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>) {
+        self.bsp = bsp;
     }
 
     fn line_amp(&self) -> Option<f64> {

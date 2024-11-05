@@ -2,11 +2,10 @@ use crate::BuySellPoint::BSPointConfig::CBSPointConfig;
 use crate::Common::func_util::has_overlap;
 use crate::Common::types::{Handle, StrongHandle, WeakHandle};
 use crate::Common::CEnum::BspType;
-use crate::Seg::linetype::{Line, SegLine};
+use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
 use crate::ZS::ZS::CZS;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 
@@ -136,15 +135,9 @@ impl<T: Line> CBSPointList<T> {
         }
 
         if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
-            let bsp = Rc::new(RefCell::new(CBSPoint::new(
-                bi,
-                is_buy,
-                bs_type,
-                relate_bsp1,
-                feature_dict,
-            )));
+            let bsp = CBSPoint::new(bi.clone(), is_buy, bs_type, relate_bsp1, feature_dict);
             if is_target_bsp {
-                self.lst.push(bsp);
+                self.lst.push(Rc::clone(&bsp));
                 self.bsp_dict.insert(
                     bi.upgrade()
                         .unwrap()
@@ -255,7 +248,7 @@ impl<T: Line> CBSPointList<T> {
         ]);
         self.add_bs(
             BspType::T1,
-            Rc::clone(&seg.borrow().end_bi),
+            Rc::downgrade(&seg.borrow().end_bi),
             None,
             is_target_bsp,
             Some(feature_dict),
@@ -317,7 +310,7 @@ impl<T: Line> CBSPointList<T> {
         ]);
         self.add_bs(
             BspType::T1P,
-            Rc::clone(last_bi),
+            Rc::downgrade(last_bi),
             None,
             is_target_bsp,
             Some(feature_dict),
@@ -325,10 +318,22 @@ impl<T: Line> CBSPointList<T> {
     }
 
     fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
-        let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
+        let bsp1_bi_idx_dict: HashMap<usize, WeakHandle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
-            .map(|bsp| (bsp.borrow().bi.borrow().line_idx(), Rc::clone(bsp)))
+            .map(|bsp| {
+                (
+                    bsp.upgrade()
+                        .unwrap()
+                        .borrow()
+                        .bi
+                        .upgrade()
+                        .unwrap()
+                        .borrow()
+                        .line_idx(),
+                    bsp.clone(),
+                )
+            })
             .collect();
 
         for seg in seg_list.iter() {
@@ -347,7 +352,7 @@ impl<T: Line> CBSPointList<T> {
     fn treat_bsp2(
         &mut self,
         seg: &Handle<CSeg<T>>,
-        bsp1_bi_idx_dict: &HashMap<usize, Handle<CBSPoint<T>>>,
+        bsp1_bi_idx_dict: &HashMap<usize, WeakHandle<CBSPoint<T>>>,
         seg_list: &CSegListChan<T>,
         bi_list: &[Handle<T>],
     ) {
@@ -415,7 +420,7 @@ impl<T: Line> CBSPointList<T> {
 
             self.add_bs(
                 BspType::T2,
-                bsp2_bi.clone(),
+                Rc::downgrade(&bsp2_bi),
                 real_bsp1.clone(),
                 true,
                 Some(feature_dict),
@@ -442,7 +447,7 @@ impl<T: Line> CBSPointList<T> {
         bi_list: &[Handle<T>],
         bsp2_bi: &Handle<T>,
         break_bi: &Handle<T>,
-        real_bsp1: Option<Handle<CBSPoint<T>>>,
+        real_bsp1: Option<WeakHandle<CBSPoint<T>>>,
         is_buy: bool,
     ) {
         let mut bias = 2;
@@ -530,7 +535,7 @@ impl<T: Line> CBSPointList<T> {
 
             self.add_bs(
                 BspType::T2S,
-                bsp2s_bi.clone(),
+                Rc::downgrade(&bsp2s_bi),
                 real_bsp1.clone(),
                 true,
                 Some(feature_dict),
@@ -541,7 +546,7 @@ impl<T: Line> CBSPointList<T> {
     }
 
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[Handle<T>]) {
-        let bsp1_bi_idx_dict: HashMap<usize, Handle<CBSPoint<T>>> = self
+        let bsp1_bi_idx_dict: HashMap<usize, WeakHandle<CBSPoint<T>>> = self
             .bsp1_lst
             .iter()
             .map(|bsp| {
@@ -554,7 +559,7 @@ impl<T: Line> CBSPointList<T> {
                         .unwrap()
                         .borrow()
                         .line_idx(),
-                    Rc::clone(bsp),
+                    bsp.clone(),
                 )
             })
             .collect();
@@ -613,7 +618,7 @@ impl<T: Line> CBSPointList<T> {
                     next_seg,
                     is_buy,
                     bi_list,
-                    real_bsp1.clone(),
+                    real_bsp1.clone().map(|weak| weak.upgrade().unwrap()),
                     bsp1_bi_idx,
                     next_seg_idx,
                 );
@@ -625,7 +630,7 @@ impl<T: Line> CBSPointList<T> {
                 &bsp1_bi,
                 is_buy,
                 bi_list,
-                real_bsp1,
+                real_bsp1.map(|weak| weak.upgrade().unwrap()),
                 next_seg_idx,
             );
         }
@@ -691,8 +696,6 @@ impl<T: Line> CBSPointList<T> {
             .line_get_parent_seg()
             .as_ref()
             .unwrap()
-            .upgrade()
-            .unwrap()
             .borrow()
             .idx
             != next_seg.borrow().idx
@@ -700,8 +703,6 @@ impl<T: Line> CBSPointList<T> {
                 .borrow()
                 .line_get_parent_seg()
                 .as_ref()
-                .unwrap()
-                .upgrade()
                 .unwrap()
                 .borrow()
                 .bi_list
@@ -734,8 +735,8 @@ impl<T: Line> CBSPointList<T> {
         ]);
         self.add_bs(
             BspType::T3A,
-            Rc::clone(bsp3_bi),
-            real_bsp1,
+            Rc::downgrade(bsp3_bi),
+            real_bsp1.map(|rc| Rc::downgrade(&rc)),
             true,
             Some(feature_dict),
         );
@@ -807,8 +808,8 @@ impl<T: Line> CBSPointList<T> {
             ]);
             self.add_bs(
                 BspType::T3B,
-                Rc::clone(bsp3_bi),
-                real_bsp1.clone(),
+                Rc::downgrade(bsp3_bi),
+                real_bsp1.clone().map(|rc| Rc::downgrade(&rc)),
                 true,
                 Some(feature_dict),
             );
