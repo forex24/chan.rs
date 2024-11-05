@@ -1,6 +1,7 @@
+use crate::impl_handle;
 use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::ZsCombineMode;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -9,6 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CZS<T> {
+    handle: Handle<Self>,
     pub is_sure: bool,
     pub sub_zs_lst: Vec<Handle<CZS<T>>>,
     pub begin: Option<Handle<CKLineUnit>>,
@@ -26,11 +28,17 @@ pub struct CZS<T> {
 }
 
 impl<T: Line> CZS<T> {
-    pub fn new(lst: Option<Vec<Handle<T>>>, is_sure: bool) -> Self {
+    pub fn new(
+        boxed_vec: &Box<Vec<Self>>,
+        idx: usize,
+        lst: Option<Vec<Handle<T>>>,
+        is_sure: bool,
+    ) -> Self {
         // begin/end：永远指向 klu
         // low/high: 中枢的范围
         // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
-        let mut zs = CZS {
+        let mut zs = Self {
+            handle: Handle::new(boxed_vec, idx),
             is_sure,
             sub_zs_lst: Vec::new(),
             begin: None,
@@ -133,10 +141,9 @@ impl<T: Line> CZS<T> {
 
     pub fn do_combine(&mut self, zs2: &CZS<T>) {
         if self.sub_zs_lst.is_empty() {
-            self.sub_zs_lst
-                .push(Rc::new(RefCell::new(self.make_copy())));
+            self.sub_zs_lst.push(self.make_copy());
         }
-        self.sub_zs_lst.push(Rc::new(RefCell::new(zs2.make_copy())));
+        self.sub_zs_lst.push(zs2.make_copy());
 
         self.low = self.low.min(zs2.low);
         self.high = self.high.max(zs2.high);
@@ -291,7 +298,9 @@ impl<T: Line> std::fmt::Display for CZS<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let main_str = format!(
             "{}->{}",
-            self.begin_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx()),
+            self.begin_bi
+                .as_ref()
+                .map_or(0, |bi| bi.borrow().line_idx()),
             self.end_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx())
         );
         let sub_str: String = self
@@ -307,3 +316,5 @@ impl<T: Line> std::fmt::Display for CZS<T> {
         }
     }
 }
+
+impl_handle!(CZS<T>);

@@ -4,7 +4,7 @@ use crate::{
     Bi::Bi::CBi,
     BuySellPoint::BS_Point::CBSPoint,
     Common::{
-        types::Handle,
+        handle::Handle,
         CEnum::{BiDir, MacdAlgo},
         ChanException::CChanException,
     },

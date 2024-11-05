@@ -1,6 +1,6 @@
 use crate::BuySellPoint::BSPointConfig::CBSPointConfig;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::BspType;
 use crate::Seg::linetype::{Line, SegLine};
 use crate::Seg::Seg::CSeg;

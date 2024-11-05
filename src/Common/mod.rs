@@ -7,4 +7,4 @@ pub mod handle;
 
 pub mod types;
 #[macro_use]
-pub mod macros;
+pub mod slice_macro;

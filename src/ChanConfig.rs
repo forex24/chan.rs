@@ -7,9 +7,12 @@ use crate::{
         CEnum::TrendType,
         ChanException::{CChanException, ErrCode},
     },
-    KLine::KLine_Unit::MetricModel,
     Math::{
-        Demark::CDemarkEngine, TrendModel::CTrendModel, BOLL::BollModel, KDJ::KDJ, MACD::CMACD,
+        //Demark::CDemarkEngine, TrendModel::CTrendModel,
+        metric::MetricModel,
+        BOLL::BollModel,
+        KDJ::KDJ,
+        MACD::CMACD,
         RSI::RSI,
     },
     Seg::SegConfig::CSegConfig,
@@ -20,6 +23,9 @@ pub struct CChanConfig {
     pub bi_conf: CBiConfig,
     pub seg_conf: CSegConfig,
     pub zs_conf: CZSConfig,
+    pub bs_point_conf: CBSPointConfig,
+    pub seg_bs_point_conf: CBSPointConfig,
+
     pub trigger_step: bool,
     pub skip_step: usize,
     pub kl_data_check: bool,
@@ -38,13 +44,11 @@ pub struct CChanConfig {
     pub kdj_cycle: usize,
     pub demark_config: HashMap<String, bool>,
     pub boll_n: usize,
-    pub bs_point_conf: CBSPointConfig,
-    pub seg_bs_point_conf: CBSPointConfig,
 }
 
 impl CChanConfig {
-    pub fn get_metric_model(&self) -> Vec<Box<dyn MetricModel>> {
-        let mut res: Vec<Box<dyn MetricModel>> = Vec::new();
+    pub fn get_metric_model(&self) -> Vec<Box<MetricModel>> {
+        let mut res: Vec<Box<MetricModel>> = Vec::new();
 
         res.push(Box::new(CMACD::new(
             *self.macd_config.get("fast").unwrap_or(&12.0),

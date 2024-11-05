@@ -1,5 +1,5 @@
 use crate::Common::func_util::revert_bi_dir;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{BiDir, ZsAlgo};
 use crate::Seg::linetype::{Line, SegLine};
 use crate::Seg::Seg::CSeg;

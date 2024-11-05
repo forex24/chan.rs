@@ -1,15 +1,14 @@
+use crate::impl_handle;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::Handle;
+use crate::Common::handle::{AsHandle, Handle, Indexable};
 use crate::Common::CEnum::{FxCheckMethod, FxType, KLineDir};
 use crate::Common::CTime::CTime;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 // 合并后的K线
 pub struct CKLine {
-    pub idx: usize,
+    handle: Handle<Self>,
     pub kl_type: Option<String>,
     pub fx: FxType,
     pub time_begin: CTime,
@@ -24,33 +23,34 @@ pub struct CKLine {
 
 impl CKLine {
     pub fn new(
+        box_vec: &Box<Vec<Self>>,
         kl_unit: Handle<CKLineUnit>,
         idx: usize,
         dir: KLineDir, /*缺省值为KLINE_DIR.UP*/
-    ) -> Handle<Self> {
-        let kline = Rc::new(RefCell::new(CKLine {
-            idx,
-            kl_type: kl_unit.borrow().kl_type.clone(),
+    ) -> Self {
+        let kline = CKLine {
+            handle: Handle::new(box_vec, idx),
+            kl_type: kl_unit.kl_type.clone(),
             fx: FxType::Unknown,
-            time_begin: kl_unit.borrow().time,
-            time_end: kl_unit.borrow().time,
-            low: kl_unit.borrow().low,
-            high: kl_unit.borrow().high,
+            time_begin: kl_unit.time,
+            time_end: kl_unit.time,
+            low: kl_unit.low,
+            high: kl_unit.high,
             dir,
-            lst: vec![Rc::clone(&kl_unit)],
+            lst: vec![kl_unit],
             pre: None,
             next: None,
-        }));
+        };
 
-        kl_unit.borrow_mut().set_klc(Rc::clone(&kline));
+        kl_unit.as_mut().set_klc(kline.as_handle());
         kline
     }
 
     //pub fn get_sub_klc(&self) -> impl Iterator<Item = &Handle<CKLine>> + '_ {
     //    let mut last_klc = None;
     //    self.lst.iter().flat_map(move |klu| {
-    //        klu.borrow().get_children().filter_map(move |sub_klu| {
-    //            let sub_klc = sub_klu.borrow().get_klc();
+    //        klu.get_children().filter_map(move |sub_klu| {
+    //            let sub_klc = sub_klu.get_klc();
     //            if last_klc.as_ref() != Some(&sub_klc) {
     //                last_klc = Some(sub_klc.clone());
     //                Some(&sub_klc)
@@ -64,20 +64,17 @@ impl CKLine {
     pub fn get_klu_max_high(&self) -> f64 {
         self.lst
             .iter()
-            .map(|x| x.borrow().high)
+            .map(|x| x.high)
             .fold(f64::NEG_INFINITY, f64::max)
     }
 
     pub fn get_klu_min_low(&self) -> f64 {
-        self.lst
-            .iter()
-            .map(|x| x.borrow().low)
-            .fold(f64::INFINITY, f64::min)
+        self.lst.iter().map(|x| x.low).fold(f64::INFINITY, f64::min)
     }
 
     pub fn has_gap_with_next(&self) -> bool {
         if let Some(next) = &self.next {
-            let next = next.borrow();
+            let next = next;
             !has_overlap(
                 self.get_klu_min_low(),
                 self.get_klu_max_high(),
@@ -98,8 +95,8 @@ impl CKLine {
     ) -> Result<bool, CChanException> {
         if self.next.is_none()
             || self.pre.is_none()
-            || item2.borrow().pre.is_none()
-            || item2.borrow().idx <= self.idx
+            || item2.pre.is_none()
+            || item2.idx <= self.index()
         {
             return Err(CChanException::new(
                 "Invalid kline sequence".to_string(),
@@ -109,64 +106,47 @@ impl CKLine {
 
         match self.fx {
             FxType::Top => {
-                if !for_virtual && item2.borrow().fx != FxType::Bottom {
+                if !for_virtual && item2.fx != FxType::Bottom {
                     return Err(CChanException::new(
                         "Invalid fx sequence".to_string(),
                         ErrCode::BiErr,
                     ));
                 }
-                if for_virtual && item2.borrow().dir != KLineDir::Down {
+                if for_virtual && item2.dir != KLineDir::Down {
                     return Ok(false);
                 }
 
                 let (item2_high, self_low) = match method {
                     FxCheckMethod::Half => (
-                        item2
-                            .borrow()
-                            .pre
-                            .as_ref()
-                            .unwrap()
-                            .borrow()
-                            .high
-                            .max(item2.borrow().high),
-                        self.low.min(self.next.as_ref().unwrap().borrow().low),
+                        item2.pre.as_ref().unwrap().high.max(item2.high),
+                        self.low.min(self.next.as_ref().unwrap().low),
                     ),
-                    FxCheckMethod::Loss => (item2.borrow().high, self.low),
+                    FxCheckMethod::Loss => (item2.high, self.low),
                     FxCheckMethod::Strict | FxCheckMethod::Totally => {
                         let item2_high = if for_virtual {
-                            item2
-                                .borrow()
-                                .pre
-                                .as_ref()
-                                .unwrap()
-                                .borrow()
-                                .high
-                                .max(item2.borrow().high)
+                            item2.pre.as_ref().unwrap().high.max(item2.high)
                         } else {
-                            if item2.borrow().next.is_none() {
+                            if item2.next.is_none() {
                                 return Err(CChanException::new(
                                     "Invalid kline sequence".to_string(),
                                     ErrCode::BiErr,
                                 ));
                             }
                             item2
-                                .borrow()
                                 .pre
                                 .as_ref()
                                 .unwrap()
-                                .borrow()
                                 .high
-                                .max(item2.borrow().high)
-                                .max(item2.borrow().next.as_ref().unwrap().borrow().high)
+                                .max(item2.high)
+                                .max(item2.next.as_ref().unwrap().high)
                         };
                         let self_low = self
                             .pre
                             .as_ref()
                             .unwrap()
-                            .borrow()
                             .low
                             .min(self.low)
-                            .min(self.next.as_ref().unwrap().borrow().low);
+                            .min(self.next.as_ref().unwrap().low);
                         (item2_high, self_low)
                     }
                 };
@@ -174,68 +154,51 @@ impl CKLine {
                 Ok(if method == FxCheckMethod::Totally {
                     self.low > item2_high
                 } else {
-                    self.high > item2_high && item2.borrow().low < self_low
+                    self.high > item2_high && item2.low < self_low
                 })
             }
             FxType::Bottom => {
-                if !for_virtual && item2.borrow().fx != FxType::Top {
+                if !for_virtual && item2.fx != FxType::Top {
                     return Err(CChanException::new(
                         "Invalid fx sequence".to_string(),
                         ErrCode::BiErr,
                     ));
                 }
-                if for_virtual && item2.borrow().dir != KLineDir::Up {
+                if for_virtual && item2.dir != KLineDir::Up {
                     return Ok(false);
                 }
 
                 let (item2_low, cur_high) = match method {
                     FxCheckMethod::Half => (
-                        item2
-                            .borrow()
-                            .pre
-                            .as_ref()
-                            .unwrap()
-                            .borrow()
-                            .low
-                            .min(item2.borrow().low),
-                        self.high.max(self.next.as_ref().unwrap().borrow().high),
+                        item2.pre.as_ref().unwrap().low.min(item2.low),
+                        self.high.max(self.next.as_ref().unwrap().high),
                     ),
-                    FxCheckMethod::Loss => (item2.borrow().low, self.high),
+                    FxCheckMethod::Loss => (item2.low, self.high),
                     FxCheckMethod::Strict | FxCheckMethod::Totally => {
                         let item2_low = if for_virtual {
-                            item2
-                                .borrow()
-                                .pre
-                                .as_ref()
-                                .unwrap()
-                                .borrow()
-                                .low
-                                .min(item2.borrow().low)
+                            item2.pre.as_ref().unwrap().low.min(item2.low)
                         } else {
-                            if item2.borrow().next.is_none() {
+                            if item2.next.is_none() {
                                 return Err(CChanException::new(
                                     "Invalid kline sequence".to_string(),
                                     ErrCode::BiErr,
                                 ));
                             }
                             item2
-                                .borrow()
                                 .pre
                                 .as_ref()
                                 .unwrap()
-                                .borrow()
                                 .low
-                                .min(item2.borrow().low)
-                                .min(item2.borrow().next.as_ref().unwrap().borrow().low)
+                                .min(item2.low)
+                                .min(item2.next.as_ref().unwrap().low)
                         };
                         let cur_high = self
                             .pre
                             .as_ref()
                             .unwrap()
-                            .borrow()
                             .high
                             .max(self.high)
-                            .max(self.next.as_ref().unwrap().borrow().high);
+                            .max(self.next.as_ref().unwrap().high);
                         (item2_low, cur_high)
                     }
                 };
@@ -243,7 +206,7 @@ impl CKLine {
                 Ok(if method == FxCheckMethod::Totally {
                     self.high < item2_low
                 } else {
-                    self.low < item2_low && item2.borrow().high > cur_high
+                    self.low < item2_low && item2.high > cur_high
                 })
             }
             _ => Err(CChanException::new(
@@ -274,16 +237,16 @@ impl CKLine {
     }
 
     pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KLineDir {
-        if (self.high >= item.borrow().high && self.low <= item.borrow().low)
-            || (self.high <= item.borrow().high && self.low >= item.borrow().low)
+        if (self.high >= item.high && self.low <= item.low)
+            || (self.high <= item.high && self.low >= item.low)
         {
             return KLineDir::Combine;
         }
 
-        if self.high > item.borrow().high && self.low > item.borrow().low {
+        if self.high > item.high && self.low > item.low {
             return KLineDir::Down;
         }
-        if self.high < item.borrow().high && self.low < item.borrow().low {
+        if self.high < item.high && self.low < item.low {
             return KLineDir::Up;
         }
 
@@ -298,62 +261,40 @@ impl CKLine {
         self.fx = fx;
     }
 
-    pub fn try_add(
-        klc: &Handle<CKLine>,
-        unit_kl: &Handle<CKLineUnit>,
-    ) -> Result<KLineDir, CChanException> {
-        //let combine_item = CCombineItem::new(unit_kl.clone())?;
-        let dir = klc.borrow().test_combine(&unit_kl); //, exclude_included, allow_top_equal)?;
+    pub fn try_add(&mut self, unit_kl: Handle<CKLineUnit>) -> KLineDir {
+        let dir = self.test_combine(&unit_kl);
         if dir == KLineDir::Combine {
-            klc.borrow_mut().lst.push(Rc::clone(unit_kl));
-            //if let Ok(kline_unit) = unit_kl.try_borrow_mut()
-            //.unwrap()
-            //.downcast_mut::<CKLineUnit>()
-            //{
-            unit_kl.borrow_mut().set_klc(Rc::clone(klc));
-            //}
+            self.lst.push(unit_kl);
+            unit_kl.as_mut().set_klc(self.as_handle());
 
-            let dir_ = klc.borrow().dir;
+            let dir_ = self.dir;
             match dir_ {
                 KLineDir::Up => {
-                    if unit_kl.borrow().high != unit_kl.borrow().low
-                        || unit_kl.borrow().high != klc.borrow().high
-                    {
-                        let high_ = klc.borrow().high.max(unit_kl.borrow().high);
-                        let low_ = klc.borrow().low.max(unit_kl.borrow().low);
-                        klc.borrow_mut().high = high_;
-                        klc.borrow_mut().low = low_;
+                    if unit_kl.high != unit_kl.low || unit_kl.high != self.high {
+                        let high_ = self.high.max(unit_kl.high);
+                        let low_ = self.low.max(unit_kl.low);
+                        self.high = high_;
+                        self.low = low_;
                     }
                 }
                 KLineDir::Down => {
-                    if unit_kl.borrow().high != unit_kl.borrow().low
-                        || unit_kl.borrow().low != klc.borrow().low
-                    {
-                        let high_ = klc.borrow().high.min(unit_kl.borrow().high);
-                        let low_ = klc.borrow().low.min(unit_kl.borrow().low);
-                        klc.borrow_mut().high = high_;
-                        klc.borrow_mut().low = low_;
+                    if unit_kl.high != unit_kl.low || unit_kl.low != self.low {
+                        let high_ = self.high.min(unit_kl.high);
+                        let low_ = self.low.min(unit_kl.low);
+                        self.high = high_;
+                        self.low = low_;
                     }
                 }
                 _ => {
-                    return Err(CChanException::new(
-                        format!(
-                            "KlineDir = {:?} err!!! must be {:?}/{:?}",
-                            klc.borrow().dir,
-                            KLineDir::Up,
-                            KLineDir::Down
-                        ),
-                        ErrCode::CombinerErr,
-                    ))
+                    panic!("KlineDir {} err!!! must be Up/Down", dir);
                 }
             }
-            klc.borrow_mut().time_end = unit_kl.borrow().time;
-            //self.clean_cache();
+            self.time_end = unit_kl.time;
         }
-        Ok(dir)
+        dir
     }
 
-    pub fn get_peak_klu(&self, is_high: bool) -> Option<Handle<CKLineUnit>> {
+    pub fn get_peak_klu(&self, is_high: bool) -> Option<&Handle<CKLineUnit>> {
         if is_high {
             self.get_high_peak_klu()
         } else {
@@ -361,15 +302,15 @@ impl CKLine {
         }
     }
 
-    pub fn get_high_peak_klu(&self) -> Option<Handle<CKLineUnit>> {
+    pub fn get_high_peak_klu(&self) -> Option<&Handle<CKLineUnit>> {
         //if let Some(cached) = self.memoize_cache.get("high_peak") {
         //    return Ok(cached.clone());
         //}
         for kl in self.lst.iter().rev() {
-            if kl.borrow().high == self.high {
+            if kl.high == self.high {
                 //self.memoize_cache
                 //    .insert("high_peak".to_string(), kl.clone());
-                return Some(Rc::clone(kl));
+                return Some(kl);
             }
         }
         None
@@ -379,15 +320,15 @@ impl CKLine {
         //))
     }
 
-    pub fn get_low_peak_klu(&self) -> Option<Handle<CKLineUnit>> {
+    pub fn get_low_peak_klu(&self) -> Option<&Handle<CKLineUnit>> {
         //if let Some(cached) = self.memoize_cache.get("low_peak") {
         //    return Ok(cached.clone());
         //}
         for kl in self.lst.iter().rev() {
-            if kl.borrow().low == self.low {
+            if kl.low == self.low {
                 //self.memoize_cache
                 //    .insert("low_peak".to_string(), kl.clone());
-                return Some(Rc::clone(kl));
+                return Some(kl);
             }
         }
         None
@@ -398,21 +339,21 @@ impl CKLine {
     }
 
     pub fn update_fx(cur: &Handle<CKLine>, pre: &Handle<CKLine>, next: &Handle<CKLine>) {
-        cur.borrow_mut().set_next(next.clone());
-        cur.borrow_mut().set_pre(pre.clone());
-        next.borrow_mut().set_pre(cur.clone());
+        cur.as_mut().set_next(next.clone());
+        cur.as_mut().set_pre(pre.clone());
+        next.as_mut().set_pre(cur.clone());
 
-        let pre = pre.borrow();
-        let next = next.borrow();
-        let mut cur = cur.borrow_mut();
+        let pre = pre;
+        let next = next;
+        let cur = cur;
         if pre.high < cur.high && next.high < cur.high && pre.low < cur.low && next.low < cur.low {
-            cur.fx = FxType::Top;
+            cur.as_mut().fx = FxType::Top;
         } else if pre.high > cur.high
             && next.high > cur.high
             && pre.low > cur.low
             && next.low > cur.low
         {
-            cur.fx = FxType::Bottom;
+            cur.as_mut().fx = FxType::Bottom;
         }
         //self.clean_cache();
     }
@@ -438,7 +379,7 @@ impl std::fmt::Display for CKLine {
         write!(
             f,
             "{}th{}:{}~{}({}|{}) low={} high={}",
-            self.idx,
+            self.index(),
             fx_token,
             self.time_begin,
             self.time_end,
@@ -453,7 +394,7 @@ impl std::fmt::Display for CKLine {
 // Add these implementations after the CKLine struct definition
 impl PartialEq for CKLine {
     fn eq(&self, other: &Self) -> bool {
-        self.idx == other.idx
+        self.index() == other.index()
     }
 }
 
@@ -461,12 +402,14 @@ impl Eq for CKLine {}
 
 impl PartialOrd for CKLine {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.idx.partial_cmp(&other.idx)
+        self.index().partial_cmp(&other.index())
     }
 }
 
 impl Ord for CKLine {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.idx.cmp(&other.idx)
+        self.index().cmp(&other.index())
     }
 }
+
+impl_handle!(CKLine);

@@ -1,5 +1,5 @@
 use crate::Bi::Bi::CBi;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;

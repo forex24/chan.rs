@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BiDir {

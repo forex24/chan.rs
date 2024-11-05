@@ -1,6 +1,6 @@
 use crate::ChanModel::Features::CFeatures;
 use crate::ChanModel::Features::FeatureInput;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;

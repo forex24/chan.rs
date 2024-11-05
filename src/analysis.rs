@@ -3,12 +3,13 @@ use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
 use crate::BuySellPoint::BSPointList::CBSPointList;
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{KLineDir, SegType};
 use crate::Common::ChanException::CChanException;
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_List::CKLineList;
 use crate::KLine::KLine_Unit::CKLineUnit;
+use crate::Math::metric::MetricModel;
 use crate::Seg::linetype::Line;
 use crate::Seg::Seg::CSeg;
 use crate::Seg::SegListChan::CSegListChan;
@@ -19,8 +20,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
-
-use crate::KLine::KLine_Unit::MetricModel;
 
 pub struct Analyzer {
     pub kl_type: String,
@@ -33,7 +32,7 @@ pub struct Analyzer {
     pub segzs_list: CZSList<CSeg<CBi>>,
     pub bs_point_lst: CBSPointList<CBi>,
     pub seg_bs_point_lst: CBSPointList<CSeg<CBi>>,
-    pub metric_model_lst: Vec<Box<dyn MetricModel>>,
+    pub metric_model_lst: Vec<Box<MetricModel>>,
     pub step_calculation: bool,
     pub bs_point_history: Vec<HashMap<String, String>>,
     pub seg_bs_point_history: Vec<HashMap<String, String>>,

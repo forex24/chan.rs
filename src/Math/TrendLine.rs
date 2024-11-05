@@ -1,5 +1,5 @@
 use crate::Bi::Bi::CBi;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{BiDir, TrendLineSide};
 use std::f64;
 

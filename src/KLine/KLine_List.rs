@@ -1,33 +1,73 @@
 //
+use super::KLine_Unit::CKLineUnit;
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::Handle;
-use crate::Common::CEnum::KLineDir;
-use crate::Common::ChanException::CChanException;
+use crate::Common::handle::Handle;
+use crate::Common::CEnum::{FxType, KLineDir};
 use crate::KLine::KLine::CKLine;
-use crate::KLine::KLine_Unit::CKLineUnit;
-
-use std::cell::RefCell;
-
-use std::rc::Rc;
-use super::KLine_Unit::MetricModel;
-
-
+use crate::Math::metric::MetricModel;
 
 pub struct CKLineList {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub lst: Vec<Handle<CKLine>>,
-    pub metric_model_lst: Vec<Box<dyn MetricModel>>,
+    #[allow(clippy::box_collection)]
+    pub lst: Box<Vec<CKLine>>,
+    pub metric_model_lst: Vec<MetricModel>,
 }
 
 impl CKLineList {
     pub fn new(kl_type: &str, conf: &CChanConfig) -> Self {
         Self {
-            kl_type:kl_type.to_string(),
+            kl_type: kl_type.to_string(),
             config: conf.clone(),
-            lst: Vec::new(),
+            lst: Box::new(Vec::with_capacity(102400)),
             metric_model_lst: conf.get_metric_model(),
         }
+    }
+
+    pub fn update_candle(&mut self, klu: Handle<CKLineUnit>) -> bool {
+        klu.as_mut().set_metric(&mut self.metric_model_lst);
+        if self.lst.len() == 0 {
+            let candle = CKLine::new(&self.lst, klu, 0, KLineDir::Up);
+            self.lst.push(candle);
+        } else {
+            let _dir = self.lst.last_mut().unwrap().try_add(klu);
+
+            if _dir != KLineDir::Combine {
+                let candle = CKLine::new(&self.lst, klu, self.lst.len(), _dir);
+                self.lst.push(candle);
+
+                if self.lst.len() >= 3 {
+                    let index = self.lst.len() - 2;
+                    self.lst[index].fx = self.check_fx();
+                }
+
+                return true;
+            }
+        }
+        false
+    }
+
+    fn check_fx(&mut self) -> FxType {
+        let len = self.lst.len();
+        let _cur = &self.lst[len - 2];
+        let _pre = &self.lst[len - 3];
+        let _next = &self.lst[len - 1];
+        if _pre.high < _cur.high
+            && _next.high < _cur.high
+            && _pre.low < _cur.low
+            && _next.low < _cur.low
+        {
+            return FxType::Top;
+        }
+
+        if _pre.high > _cur.high
+            && _next.high > _cur.high
+            && _pre.low > _cur.low
+            && _next.low > _cur.low
+        {
+            return FxType::Bottom;
+        }
+        FxType::Unknown
     }
 
     /*pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Result<(), CChanException> {
@@ -70,9 +110,8 @@ impl CKLineList {
     //}
 }
 
-
 impl std::ops::Deref for CKLineList {
-    type Target = Vec<Handle<CKLine>>;
+    type Target = Box<Vec<CKLine>>;
 
     fn deref(&self) -> &Self::Target {
         &self.lst

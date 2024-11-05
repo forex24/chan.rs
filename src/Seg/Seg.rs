@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{BiDir, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -14,7 +14,7 @@ use super::EigenFX::CEigenFX;
 
 //#[derive(Debug, Clone)]
 pub struct CSeg<T> {
-    pub idx: usize,
+    handle: Handle<Self>,
     pub start_bi: Handle<T>,
     pub end_bi: Handle<T>,
     pub is_sure: bool,
@@ -34,7 +34,9 @@ pub struct CSeg<T> {
 }
 
 impl<T: Line> CSeg<T> {
+    #[allow(clippy::borrowed_box)]
     pub fn new(
+        boxed_vec: &Box<Vec<Self>>,
         idx: usize,
         start_bi: Handle<T>,
         end_bi: Handle<T>,
@@ -57,7 +59,7 @@ impl<T: Line> CSeg<T> {
 
         let dir = seg_dir.unwrap_or_else(|| end_bi.borrow().line_dir());
         let seg = Self {
-            idx,
+            handle: Handle::new(boxed_vec, idx),
             start_bi,
             end_bi,
             is_sure,
@@ -247,16 +249,10 @@ impl<T: Line> CSeg<T> {
         }
     }
 
-    pub fn update_bi_list(
-        &mut self,
-        bi_lst: &[Handle<T>],
-        idx1: usize,
-        idx2: usize,
-        parent: Handle<CSeg<T>>,
-    ) {
+    pub fn update_bi_list(&mut self, bi_lst: &[Handle<T>], idx1: usize, idx2: usize) {
         for bi_idx in idx1..=idx2 {
             let bi = bi_lst.get(bi_idx).unwrap().clone();
-            bi.borrow_mut().line_set_parent_seg(Some(parent.clone()));
+            bi.borrow_mut().line_set_parent_seg(Some(self.clone()));
             self.bi_list.push(bi);
         }
 

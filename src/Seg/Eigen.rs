@@ -2,7 +2,7 @@
 // 已完备
 use std::rc::Rc;
 
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{BiDir, EqualMode, FxType, KLineDir};
 
 use super::linetype::Line;

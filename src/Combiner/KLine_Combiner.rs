@@ -1,5 +1,5 @@
 use crate::Combiner::Combine_Item::CCombineItem;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{FxType, KlineDir};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;

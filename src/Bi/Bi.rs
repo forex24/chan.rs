@@ -1,17 +1,17 @@
+use crate::impl_handle;
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::Handle;
+use crate::Common::handle::Handle;
 use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
-use std::rc::Rc;
 
 pub struct CBi {
+    handle: Handle<Self>,
     pub begin_klc: Handle<CKLine>,
     pub end_klc: Handle<CKLine>,
     pub dir: BiDir,
-    pub idx: usize,
     pub bi_type: BiType,
     pub is_sure: bool,
     pub sure_end: Vec<Handle<CKLine>>,
@@ -25,16 +25,17 @@ pub struct CBi {
 
 impl CBi {
     pub fn new(
+        boxed_vec: &Box<Vec<Self>>,
         begin_klc: Handle<CKLine>,
         end_klc: Handle<CKLine>,
         idx: usize,
         is_sure: bool,
     ) -> Self {
         let mut bi = CBi {
-            begin_klc: Rc::clone(&begin_klc),
-            end_klc: Rc::clone(&end_klc),
+            handle: Handle::new(boxed_vec, idx),
+            begin_klc,
+            end_klc,
             dir: BiDir::Up, // 临时值，将在set方法中更新
-            idx,
             bi_type: BiType::Strict,
             is_sure,
             sure_end: Vec::new(),
@@ -54,11 +55,11 @@ impl CBi {
     }
 
     pub fn begin_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.begin_klc)
+        self.begin_klc
     }
 
     pub fn end_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.end_klc)
+        self.end_klc
     }
 
     pub fn dir(&self) -> BiDir {
@@ -66,7 +67,7 @@ impl CBi {
     }
 
     pub fn idx(&self) -> usize {
-        self.idx
+        self.handle.idx
     }
 
     pub fn bi_type(&self) -> BiType {
@@ -89,35 +90,26 @@ impl CBi {
         self.seg_idx = Some(idx);
     }
 
-    pub fn to_string(&self) -> String {
-        format!(
-            "{}|{} ~ {}",
-            self.dir,
-            self.begin_klc.borrow(),
-            self.end_klc.borrow()
-        )
-    }
-
     pub fn check(&self) -> Result<(), CChanException> {
         if self.is_down() {
-            if self.begin_klc.borrow().high <= self.end_klc.borrow().low {
+            if self.begin_klc.high <= self.end_klc.low {
                 return Err(CChanException::new(
                     format!(
                         "{}:{}~{} 笔的方向和收尾位置不一致!",
-                        self.idx,
-                        self.begin_klc.borrow().lst[0].borrow().time,
-                        self.end_klc.borrow().lst.last().unwrap().borrow().time
+                        self.idx(),
+                        self.begin_klc.lst[0].time,
+                        self.end_klc.lst.last().unwrap().time
                     ),
                     ErrCode::BiErr,
                 ));
             }
-        } else if self.begin_klc.borrow().low >= self.end_klc.borrow().high {
+        } else if self.begin_klc.low >= self.end_klc.high {
             return Err(CChanException::new(
                 format!(
                     "{}:{}~{} 笔的方向和收尾位置不一致!",
-                    self.idx,
-                    self.begin_klc.borrow().lst[0].borrow().time,
-                    self.end_klc.borrow().lst.last().unwrap().borrow().time
+                    self.idx(),
+                    self.begin_klc.lst[0].time,
+                    self.end_klc.lst.last().unwrap().time
                 ),
                 ErrCode::BiErr,
             ));
@@ -130,9 +122,9 @@ impl CBi {
         begin_klc: Handle<CKLine>,
         end_klc: Handle<CKLine>,
     ) -> Result<(), CChanException> {
-        self.begin_klc = Rc::clone(&begin_klc);
-        self.end_klc = Rc::clone(&end_klc);
-        self.dir = match begin_klc.borrow().fx {
+        self.begin_klc = begin_klc;
+        self.end_klc = end_klc;
+        self.dir = match begin_klc.fx {
             FxType::Bottom => BiDir::Up,
             FxType::Top => BiDir::Down,
             _ => {
@@ -149,33 +141,33 @@ impl CBi {
 
     pub fn get_begin_val(&self) -> f64 {
         if self.is_up() {
-            self.begin_klc.borrow().low
+            self.begin_klc.low
         } else {
-            self.begin_klc.borrow().high
+            self.begin_klc.high
         }
     }
 
     pub fn get_end_val(&self) -> f64 {
         if self.is_up() {
-            self.end_klc.borrow().high
+            self.end_klc.high
         } else {
-            self.end_klc.borrow().low
+            self.end_klc.low
         }
     }
 
     pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
         if self.is_up() {
-            self.begin_klc.borrow().get_peak_klu(false).unwrap()
+            self.begin_klc.get_peak_klu(false).unwrap()
         } else {
-            self.begin_klc.borrow().get_peak_klu(true).unwrap()
+            self.begin_klc.get_peak_klu(true).unwrap()
         }
     }
 
     pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
         if self.is_up() {
-            self.end_klc.borrow().get_peak_klu(true).unwrap()
+            self.end_klc.get_peak_klu(true).unwrap()
         } else {
-            self.end_klc.borrow().get_peak_klu(false).unwrap()
+            self.end_klc.get_peak_klu(false).unwrap()
         }
     }
 
@@ -184,46 +176,34 @@ impl CBi {
     }
 
     pub fn get_klu_cnt(&self) -> usize {
-        self.get_end_klu().borrow().idx - self.get_begin_klu().borrow().idx + 1
+        self.get_end_klu().idx - self.get_begin_klu().idx + 1
     }
 
     pub fn get_klc_cnt(&self) -> usize {
         assert_eq!(
-            self.end_klc.borrow().idx,
-            self.get_end_klu()
-                .borrow()
-                .klc
-                .as_ref()
-                .unwrap()
-                .borrow()
-                .idx
+            self.end_klc.idx,
+            self.get_end_klu().klc.as_ref().unwrap().idx
         );
         assert_eq!(
-            self.begin_klc.borrow().idx,
-            self.get_begin_klu()
-                .borrow()
-                .klc
-                .as_ref()
-                .unwrap()
-                .borrow()
-                .idx
+            self.begin_klc.idx,
+            self.get_begin_klu().klc.as_ref().unwrap().idx
         );
-        self.end_klc.borrow().idx - self.begin_klc.borrow().idx + 1
+        self.end_klc.idx - self.begin_klc.idx + 1
     }
 
     pub fn high(&self) -> f64 {
         if self.is_up() {
-            self.end_klc.borrow().high
+            self.end_klc.high
         } else {
-            self.begin_klc.borrow().high
+            self.begin_klc.high
         }
     }
 
     pub fn low(&self) -> f64 {
         if self.is_up() {
-            self.begin_klc.borrow().low
+            self.begin_klc.low
         } else {
-            self.end_klc.borrow().low
+            self.end_klc.low
         }
     }
 
@@ -240,7 +220,7 @@ impl CBi {
     }
 
     pub fn update_virtual_end(&mut self, new_klc: Handle<CKLine>) {
-        self.append_sure_end(Rc::clone(&self.end_klc));
+        self.append_sure_end(self.end_klc);
         self.update_new_end(new_klc);
         self.is_sure = false;
     }
@@ -292,8 +272,8 @@ impl CBi {
     pub fn cal_rsi(&self) -> Result<f64, CChanException> {
         let mut rsi_lst: Vec<f64> = Vec::new();
         for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                if let Some(rsi) = klu.borrow().rsi {
+            for klu in klc.lst.iter() {
+                if let Some(rsi) = klu.rsi {
                     rsi_lst.push(rsi);
                 }
             }
@@ -312,8 +292,8 @@ impl CBi {
     pub fn cal_macd_area(&self) -> Result<f64, CChanException> {
         let mut s = 1e-7;
         for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                s += klu.borrow().macd.as_ref().unwrap().macd.abs();
+            for klu in klc.lst.iter() {
+                s += klu.macd.as_ref().unwrap().macd.abs();
             }
         }
         Ok(s)
@@ -322,8 +302,8 @@ impl CBi {
     pub fn cal_macd_peak(&self) -> Result<f64, CChanException> {
         let mut peak = 1e-7;
         for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                let macd_val = klu.borrow().macd.as_ref().unwrap().macd;
+            for klu in klc.lst.iter() {
+                let macd_val = klu.macd.as_ref().unwrap().macd;
                 if macd_val.abs() > peak {
                     if self.is_down() && macd_val < 0.0 {
                         peak = macd_val.abs();
@@ -347,14 +327,14 @@ impl CBi {
     pub fn cal_macd_half_obverse(&self) -> Result<f64, CChanException> {
         let mut s = 1e-7;
         let begin_klu = self.get_begin_klu();
-        let peak_macd = begin_klu.borrow().macd.as_ref().unwrap().macd;
+        let peak_macd = begin_klu.macd.as_ref().unwrap().macd;
         for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                if klu.borrow().idx < begin_klu.borrow().idx {
+            for klu in klc.lst.iter() {
+                if klu.idx < begin_klu.idx {
                     continue;
                 }
-                if klu.borrow().macd.as_ref().unwrap().macd * peak_macd > 0.0 {
-                    s += klu.borrow().macd.as_ref().unwrap().macd.abs();
+                if klu.macd.as_ref().unwrap().macd * peak_macd > 0.0 {
+                    s += klu.macd.as_ref().unwrap().macd.abs();
                 } else {
                     return Ok(s);
                 }
@@ -366,14 +346,14 @@ impl CBi {
     pub fn cal_macd_half_reverse(&self) -> Result<f64, CChanException> {
         let mut s = 1e-7;
         let begin_klu = self.get_end_klu();
-        let peak_macd = begin_klu.borrow().macd.as_ref().unwrap().macd;
+        let peak_macd = begin_klu.macd.as_ref().unwrap().macd;
         for klc in self.klc_lst_re() {
-            for klu in klc.borrow().lst.iter().rev() {
-                if klu.borrow().idx > begin_klu.borrow().idx {
+            for klu in klc.lst.iter().rev() {
+                if klu.idx > begin_klu.idx {
                     continue;
                 }
-                if klu.borrow().macd.as_ref().unwrap().macd * peak_macd > 0.0 {
-                    s += klu.borrow().macd.as_ref().unwrap().macd.abs();
+                if klu.macd.as_ref().unwrap().macd * peak_macd > 0.0 {
+                    s += klu.macd.as_ref().unwrap().macd.abs();
                 } else {
                     return Ok(s);
                 }
@@ -386,8 +366,8 @@ impl CBi {
         let mut max = f64::NEG_INFINITY;
         let mut min = f64::INFINITY;
         for klc in self.klc_lst() {
-            for klu in klc.borrow().lst.iter() {
-                let macd = klu.borrow().macd.as_ref().unwrap().macd;
+            for klu in klc.lst.iter() {
+                let macd = klu.macd.as_ref().unwrap().macd;
                 if macd > max {
                     max = macd;
                 }
@@ -403,13 +383,13 @@ impl CBi {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
         if self.is_up() {
-            Ok((end_klu.borrow().high - begin_klu.borrow().low)
-                / end_klu.borrow().high
-                / (end_klu.borrow().idx - begin_klu.borrow().idx + 1) as f64)
+            Ok((end_klu.high - begin_klu.low)
+                / end_klu.high
+                / (end_klu.idx - begin_klu.idx + 1) as f64)
         } else {
-            Ok((begin_klu.borrow().high - end_klu.borrow().low)
-                / begin_klu.borrow().high
-                / (end_klu.borrow().idx - begin_klu.borrow().idx + 1) as f64)
+            Ok((begin_klu.high - end_klu.low)
+                / begin_klu.high
+                / (end_klu.idx - begin_klu.idx + 1) as f64)
         }
     }
 
@@ -417,9 +397,9 @@ impl CBi {
         let begin_klu = self.get_begin_klu();
         let end_klu = self.get_end_klu();
         if self.is_down() {
-            Ok((begin_klu.borrow().high - end_klu.borrow().low) / begin_klu.borrow().high)
+            Ok((begin_klu.high - end_klu.low) / begin_klu.high)
         } else {
-            Ok((end_klu.borrow().high - begin_klu.borrow().low) / begin_klu.borrow().low)
+            Ok((end_klu.high - begin_klu.low) / begin_klu.low)
         }
     }
 
@@ -431,8 +411,8 @@ impl CBi {
     //    let mut s = 0.0;
     //    let mut count = 0;
     //    for klc in self.klc_lst() {
-    //        for klu in klc.borrow().lst.iter() {
-    //            if let Some(metric_res) = klu.borrow().trade_info.metric.get(&metric.to_string()) {
+    //        for klu in klc.lst.iter() {
+    //            if let Some(metric_res) = klu.trade_info.metric.get(&metric.to_string()) {
     //                s += metric_res;
     //                count += 1;
     //            } else {
@@ -450,15 +430,15 @@ impl CBi {
     // Helper methods for iterating over KLines
     fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcIterator {
-            current: Some(Rc::clone(&self.begin_klc)),
-            end_idx: self.end_klc.borrow().idx,
+            current: Some(self.begin_klc),
+            end_idx: self.end_klc.idx,
         }
     }
 
     fn klc_lst_re(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcReverseIterator {
-            current: Some(Rc::clone(&self.end_klc)),
-            begin_idx: self.begin_klc.borrow().idx,
+            current: Some(self.end_klc),
+            begin_idx: self.begin_klc.idx,
         }
     }
 }
@@ -473,9 +453,9 @@ impl Iterator for KlcIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.borrow().idx;
+        let current_idx = current.idx;
         if current_idx <= self.end_idx {
-            self.current = current.borrow().next.clone();
+            self.current = current.next.clone();
             Some(current)
         } else {
             None
@@ -493,12 +473,14 @@ impl Iterator for KlcReverseIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.borrow().idx;
+        let current_idx = current.idx;
         if current_idx >= self.begin_idx {
-            self.current = current.borrow().pre.clone();
+            self.current = current.pre.clone();
             Some(current)
         } else {
             None
         }
     }
 }
+
+impl_handle!(CBi);

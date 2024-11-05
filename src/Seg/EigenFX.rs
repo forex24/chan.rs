@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::Common::{
     func_util::revert_bi_dir,
-    types::Handle,
+    handle::Handle,
     CEnum::{BiDir, EqualMode, FxType, KLineDir, SegType},
 };
 

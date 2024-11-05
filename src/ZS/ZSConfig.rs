@@ -8,7 +8,7 @@ pub struct CZSConfig {
     pub zs_algo: ZsAlgo,
 }
 
-impl CZSConfig {
+/*impl CZSConfig {
     pub fn new(
         need_combine: Option<bool>,
         zs_combine_mode: Option<String>,
@@ -28,15 +28,15 @@ impl CZSConfig {
                 .unwrap_or(ZsAlgo::Normal),
         }
     }
-}
+}*/
 
 impl Default for CZSConfig {
     fn default() -> Self {
         Self {
-            need_combine: false,
+            need_combine: true,
             zs_combine_mode: ZsCombineMode::Zs,
-            one_bi_zs:false,
-            zs_algo: ZsAlgo::Normal
+            one_bi_zs: false,
+            zs_algo: ZsAlgo::Normal,
         }
     }
 }

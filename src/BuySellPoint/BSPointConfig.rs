@@ -1,6 +1,4 @@
 use crate::Common::CEnum::{BspType, MacdAlgo};
-use std::collections::HashMap;
-use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone)]
 pub struct CBSPointConfig {
@@ -9,12 +7,12 @@ pub struct CBSPointConfig {
 }
 
 impl CBSPointConfig {
-    pub fn new(args: HashMap<String, String>) -> Self {
-        CBSPointConfig {
-            b_conf: CPointConfig::new(&args),
-            s_conf: CPointConfig::new(&args),
-        }
-    }
+    //pub fn new(args: HashMap<String, String>) -> Self {
+    //    CBSPointConfig {
+    //        b_conf: CPointConfig::new(&args),
+    //        s_conf: CPointConfig::new(&args),
+    //    }
+    //}
 
     pub fn get_bs_config(&self, is_buy: bool) -> &CPointConfig {
         if is_buy {
@@ -36,23 +34,22 @@ impl Default for CBSPointConfig {
 
 #[derive(Debug, Clone)]
 pub struct CPointConfig {
-    pub divergence_rate: f64,
-    pub min_zs_cnt: usize,
-    pub bsp1_only_multibi_zs: bool,
-    pub max_bs2_rate: f64,
-    pub macd_algo: MacdAlgo,
-    pub bs1_peak: bool,
-    pub tmp_target_types: Vec<String>,
-    pub target_types: Vec<BspType>,
-    pub bsp2_follow_1: bool,
-    pub bsp3_follow_1: bool,
-    pub bsp3_peak: bool,
-    pub bsp2s_follow_2: bool,
-    pub max_bsp2s_lv: Option<usize>,
-    pub strict_bsp3: bool,
+    pub divergence_rate: f64,        // 1类买卖点背驰比例
+    pub min_zs_cnt: usize,           // 1类买卖点至少要经历几个中枢，默认为 1
+    pub bsp1_only_multibi_zs: bool, // min_zs_cnt 计算的中枢至少 3 笔（少于 3 笔是因为开启了 one_bi_zs 参数），默认为 True
+    pub max_bs2_rate: f64,          // 2类买卖点那一笔回撤最大比例，默认为 0.618
+    pub macd_algo: MacdAlgo,        // MACD指标算法
+    pub bs1_peak: bool,             // 1类买卖点位置是否必须是整个中枢最低点，默认为 True
+    pub target_types: Vec<BspType>, // 关注的买卖点类型
+    pub bsp2_follow_1: bool, // 2类买卖点是否必须跟在1类买卖点后面（用于小转大时1类买卖点因为背驰度不足没生成），默认为 True
+    pub bsp3_follow_1: bool, // 3类买卖点是否必须跟在1类买卖点后面（用于小转大时1类买卖点因为背驰度不足没生成），默认为 True
+    pub bsp3_peak: bool,     // 3类买卖点突破笔是不是必须突破中枢里面最高/最低的，默认为 False
+    pub bsp2s_follow_2: bool, // 类2买卖点是否必须跟在2类买卖点后面（2类买卖点可能由于不满足 max_bs2_rate 最大回测比例条件没生成），默认为 False
+    pub max_bsp2s_lv: Option<usize>, // 类2买卖点最大层级（距离2类买卖点的笔的距离/2），默认为None，不做限制
+    pub strict_bsp3: bool,           // 3类买卖点对应的中枢必须紧挨着1类买卖点，默认为 False
 }
 
-impl CPointConfig {
+/*impl CPointConfig {
     pub fn new(args: &HashMap<String, String>) -> Self {
         let mut config = CPointConfig {
             divergence_rate: args["divergence_rate"].parse().unwrap(),
@@ -61,10 +58,10 @@ impl CPointConfig {
             max_bs2_rate: args["max_bs2_rate"].parse().unwrap(),
             macd_algo: MacdAlgo::Area, // Temporary value, will be set later
             bs1_peak: args["bs1_peak"].parse().unwrap(),
-            tmp_target_types: args["bs_type"]
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .collect(),
+            //tmp_target_types: args["bs_type"]
+            //    .split(',')
+            //    .map(|s| s.trim().to_string())
+            //    .collect(),
             target_types: Vec::new(),
             bsp2_follow_1: args["bsp2_follow_1"].parse().unwrap(),
             bsp3_follow_1: args["bsp3_follow_1"].parse().unwrap(),
@@ -128,25 +125,31 @@ impl CPointConfig {
             }
         }
     }
-}
+}*/
 
 impl Default for CPointConfig {
     fn default() -> Self {
-        CPointConfig {
-            divergence_rate: 0.0,         // 默认值
-            min_zs_cnt: 0,                // 默认值
-            bsp1_only_multibi_zs: false,  // 默认值
-            max_bs2_rate: 1.0,            // 默认值，假设最大值为1.0
-            macd_algo: MacdAlgo::Area,    // 默认值，假设选择 Area
-            bs1_peak: false,              // 默认值
-            tmp_target_types: Vec::new(), // 默认值
-            target_types: Vec::new(),     // 默认值
-            bsp2_follow_1: false,         // 默认值
-            bsp3_follow_1: false,         // 默认值
-            bsp3_peak: false,             // 默认值
-            bsp2s_follow_2: false,        // 默认值
-            max_bsp2s_lv: None,           // 默认值
-            strict_bsp3: false,           // 默认值
+        Self {
+            divergence_rate: f64::INFINITY,
+            min_zs_cnt: 0,
+            bsp1_only_multibi_zs: true,
+            max_bs2_rate: 0.9999,
+            macd_algo: MacdAlgo::Slope,
+            bs1_peak: false,
+            target_types: vec![
+                BspType::T1,
+                BspType::T2,
+                BspType::T3A,
+                BspType::T1P,
+                BspType::T2S,
+                BspType::T3B,
+            ],
+            bsp2_follow_1: false,
+            bsp3_follow_1: false,
+            bsp3_peak: false,
+            bsp2s_follow_2: false,
+            max_bsp2s_lv: None, // 代表无限制
+            strict_bsp3: false,
         }
     }
 }

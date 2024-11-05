@@ -3,7 +3,4 @@ pub mod EigenFX;
 pub mod Seg;
 pub mod SegConfig;
 pub mod SegListChan;
-//pub mod SegListComm;
 pub mod linetype;
-//pub mod types;
-//pub mod kline_combiner;
