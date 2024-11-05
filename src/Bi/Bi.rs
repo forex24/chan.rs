@@ -1,38 +1,41 @@
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::Handle;
+use crate::Common::types::{Handle, StrongHandle, WeakHandle};
 use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
-use std::rc::Rc;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 pub struct CBi {
-    pub begin_klc: Handle<CKLine>,
-    pub end_klc: Handle<CKLine>,
+    pub begin_klc: WeakHandle<CKLine>,
+    pub end_klc: WeakHandle<CKLine>,
     pub dir: BiDir,
     pub idx: usize,
     pub bi_type: BiType,
     pub is_sure: bool,
-    pub sure_end: Vec<Handle<CKLine>>,
+    pub sure_end: Vec<WeakHandle<CKLine>>,
     pub seg_idx: Option<usize>,
-    pub parent_seg: Option<Handle<CSeg<CBi>>>,
-    pub bsp: Option<Handle<CBSPoint<CBi>>>,
-    pub next: Option<Handle<Self>>,
-    pub pre: Option<Handle<Self>>,
+    pub parent_seg: Option<WeakHandle<CSeg<CBi>>>,
+    pub bsp: Option<WeakHandle<CBSPoint<CBi>>>,
+    pub next: Option<WeakHandle<Self>>,
+    pub pre: Option<WeakHandle<Self>>,
     //pub memoize_cache: RefCell<HashMap<String, f64>>,
 }
 
 impl CBi {
     pub fn new(
-        begin_klc: Handle<CKLine>,
-        end_klc: Handle<CKLine>,
+        begin_klc: WeakHandle<CKLine>,
+        end_klc: WeakHandle<CKLine>,
         idx: usize,
         is_sure: bool,
     ) -> Self {
         let mut bi = CBi {
-            begin_klc: Rc::clone(&begin_klc),
-            end_klc: Rc::clone(&end_klc),
+            begin_klc: Weak::clone(&begin_klc),
+            end_klc: Weak::clone(&end_klc),
             dir: BiDir::Up, // 临时值，将在set方法中更新
             idx,
             bi_type: BiType::Strict,
@@ -53,12 +56,12 @@ impl CBi {
         //self.memoize_cache.borrow_mut().clear();
     }
 
-    pub fn begin_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.begin_klc)
+    pub fn begin_klc(&self) -> WeakHandle<CKLine> {
+        Weak::clone(&self.begin_klc)
     }
 
-    pub fn end_klc(&self) -> Handle<CKLine> {
-        Rc::clone(&self.end_klc)
+    pub fn end_klc(&self) -> WeakHandle<CKLine> {
+        Weak::clone(&self.end_klc)
     }
 
     pub fn dir(&self) -> BiDir {
@@ -77,7 +80,7 @@ impl CBi {
         self.is_sure
     }
 
-    pub fn sure_end(&self) -> &Vec<Handle<CKLine>> {
+    pub fn sure_end(&self) -> &Vec<WeakHandle<CKLine>> {
         &self.sure_end
     }
 
@@ -93,31 +96,65 @@ impl CBi {
         format!(
             "{}|{} ~ {}",
             self.dir,
-            self.begin_klc.borrow(),
-            self.end_klc.borrow()
+            self.begin_klc.upgrade().unwrap().borrow().lst[0]
+                .borrow()
+                .time,
+            self.end_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .lst
+                .last()
+                .unwrap()
+                .borrow()
+                .time
         )
     }
 
     pub fn check(&self) -> Result<(), CChanException> {
         if self.is_down() {
-            if self.begin_klc.borrow().high <= self.end_klc.borrow().low {
+            if self.begin_klc.upgrade().unwrap().borrow().high
+                <= self.end_klc.upgrade().unwrap().borrow().low
+            {
                 return Err(CChanException::new(
                     format!(
                         "{}:{}~{} 笔的方向和收尾位置不一致!",
                         self.idx,
-                        self.begin_klc.borrow().lst[0].borrow().time,
-                        self.end_klc.borrow().lst.last().unwrap().borrow().time
+                        self.begin_klc.upgrade().unwrap().borrow().lst[0]
+                            .borrow()
+                            .time,
+                        self.end_klc
+                            .upgrade()
+                            .unwrap()
+                            .borrow()
+                            .lst
+                            .last()
+                            .unwrap()
+                            .borrow()
+                            .time
                     ),
                     ErrCode::BiErr,
                 ));
             }
-        } else if self.begin_klc.borrow().low >= self.end_klc.borrow().high {
+        } else if self.begin_klc.upgrade().unwrap().borrow().low
+            >= self.end_klc.upgrade().unwrap().borrow().high
+        {
             return Err(CChanException::new(
                 format!(
                     "{}:{}~{} 笔的方向和收尾位置不一致!",
                     self.idx,
-                    self.begin_klc.borrow().lst[0].borrow().time,
-                    self.end_klc.borrow().lst.last().unwrap().borrow().time
+                    self.begin_klc.upgrade().unwrap().borrow().lst[0]
+                        .borrow()
+                        .time,
+                    self.end_klc
+                        .upgrade()
+                        .unwrap()
+                        .borrow()
+                        .lst
+                        .last()
+                        .unwrap()
+                        .borrow()
+                        .time
                 ),
                 ErrCode::BiErr,
             ));
@@ -127,12 +164,12 @@ impl CBi {
 
     pub fn set(
         &mut self,
-        begin_klc: Handle<CKLine>,
-        end_klc: Handle<CKLine>,
+        begin_klc: WeakHandle<CKLine>,
+        end_klc: WeakHandle<CKLine>,
     ) -> Result<(), CChanException> {
-        self.begin_klc = Rc::clone(&begin_klc);
-        self.end_klc = Rc::clone(&end_klc);
-        self.dir = match begin_klc.borrow().fx {
+        self.begin_klc = Weak::clone(&begin_klc);
+        self.end_klc = Weak::clone(&end_klc);
+        self.dir = match begin_klc.upgrade().unwrap().borrow().fx {
             FxType::Bottom => BiDir::Up,
             FxType::Top => BiDir::Down,
             _ => {
@@ -149,33 +186,53 @@ impl CBi {
 
     pub fn get_begin_val(&self) -> f64 {
         if self.is_up() {
-            self.begin_klc.borrow().low
+            self.begin_klc.upgrade().unwrap().borrow().low
         } else {
-            self.begin_klc.borrow().high
+            self.begin_klc.upgrade().unwrap().borrow().high
         }
     }
 
     pub fn get_end_val(&self) -> f64 {
         if self.is_up() {
-            self.end_klc.borrow().high
+            self.end_klc.upgrade().unwrap().borrow().high
         } else {
-            self.end_klc.borrow().low
+            self.end_klc.upgrade().unwrap().borrow().low
         }
     }
 
-    pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
+    pub fn get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
         if self.is_up() {
-            self.begin_klc.borrow().get_peak_klu(false).unwrap()
+            self.begin_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_peak_klu(false)
+                .unwrap()
         } else {
-            self.begin_klc.borrow().get_peak_klu(true).unwrap()
+            self.begin_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_peak_klu(true)
+                .unwrap()
         }
     }
 
-    pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
+    pub fn get_end_klu(&self) -> StrongHandle<CKLineUnit> {
         if self.is_up() {
-            self.end_klc.borrow().get_peak_klu(true).unwrap()
+            self.end_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_peak_klu(true)
+                .unwrap()
         } else {
-            self.end_klc.borrow().get_peak_klu(false).unwrap()
+            self.end_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_peak_klu(false)
+                .unwrap()
         }
     }
 
@@ -189,41 +246,47 @@ impl CBi {
 
     pub fn get_klc_cnt(&self) -> usize {
         assert_eq!(
-            self.end_klc.borrow().idx,
+            self.end_klc.upgrade().unwrap().borrow().idx,
             self.get_end_klu()
                 .borrow()
                 .klc
                 .as_ref()
                 .unwrap()
+                .upgrade()
+                .unwrap()
                 .borrow()
                 .idx
         );
         assert_eq!(
-            self.begin_klc.borrow().idx,
+            self.begin_klc.upgrade().unwrap().borrow().idx,
             self.get_begin_klu()
                 .borrow()
                 .klc
                 .as_ref()
                 .unwrap()
+                .upgrade()
+                .unwrap()
                 .borrow()
                 .idx
         );
-        self.end_klc.borrow().idx - self.begin_klc.borrow().idx + 1
+        self.end_klc.upgrade().unwrap().borrow().idx
+            - self.begin_klc.upgrade().unwrap().borrow().idx
+            + 1
     }
 
     pub fn high(&self) -> f64 {
         if self.is_up() {
-            self.end_klc.borrow().high
+            self.end_klc.upgrade().unwrap().borrow().high
         } else {
-            self.begin_klc.borrow().high
+            self.begin_klc.upgrade().unwrap().borrow().high
         }
     }
 
     pub fn low(&self) -> f64 {
         if self.is_up() {
-            self.begin_klc.borrow().low
+            self.begin_klc.upgrade().unwrap().borrow().low
         } else {
-            self.end_klc.borrow().low
+            self.end_klc.upgrade().unwrap().borrow().low
         }
     }
 
@@ -240,7 +303,7 @@ impl CBi {
     }
 
     pub fn update_virtual_end(&mut self, new_klc: Handle<CKLine>) {
-        self.append_sure_end(Rc::clone(&self.end_klc));
+        self.append_sure_end(self.end_klc.upgrade().unwrap());
         self.update_new_end(new_klc);
         self.is_sure = false;
     }
@@ -252,11 +315,11 @@ impl CBi {
     }
 
     pub fn append_sure_end(&mut self, klc: Handle<CKLine>) {
-        self.sure_end.push(klc);
+        self.sure_end.push(Weak::clone(&self.end_klc));
     }
 
     pub fn update_new_end(&mut self, new_klc: Handle<CKLine>) {
-        self.end_klc = new_klc;
+        self.end_klc = Rc::downgrade(&new_klc);
         self.check().unwrap();
         self.clean_cache();
     }
@@ -450,21 +513,21 @@ impl CBi {
     // Helper methods for iterating over KLines
     fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcIterator {
-            current: Some(Rc::clone(&self.begin_klc)),
-            end_idx: self.end_klc.borrow().idx,
+            current: Some(Weak::clone(&self.begin_klc)),
+            end_idx: self.end_klc.upgrade().unwrap().borrow().idx,
         }
     }
 
     fn klc_lst_re(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcReverseIterator {
-            current: Some(Rc::clone(&self.end_klc)),
-            begin_idx: self.begin_klc.borrow().idx,
+            current: Some(Weak::clone(&self.end_klc)),
+            begin_idx: self.begin_klc.upgrade().unwrap().borrow().idx,
         }
     }
 }
 
 struct KlcIterator {
-    current: Option<Handle<CKLine>>,
+    current: Option<WeakHandle<CKLine>>,
     end_idx: usize,
 }
 
@@ -473,10 +536,11 @@ impl Iterator for KlcIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.borrow().idx;
+        let current_strong = current.upgrade()?;
+        let current_idx = current_strong.borrow().idx;
         if current_idx <= self.end_idx {
-            self.current = current.borrow().next.clone();
-            Some(current)
+            self.current = current_strong.borrow().next.clone();
+            Some(current_strong)
         } else {
             None
         }
@@ -484,7 +548,7 @@ impl Iterator for KlcIterator {
 }
 
 struct KlcReverseIterator {
-    current: Option<Handle<CKLine>>,
+    current: Option<WeakHandle<CKLine>>,
     begin_idx: usize,
 }
 
@@ -493,10 +557,11 @@ impl Iterator for KlcReverseIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.borrow().idx;
+        let current_strong = current.upgrade()?;
+        let current_idx = current_strong.borrow().idx;
         if current_idx >= self.begin_idx {
-            self.current = current.borrow().pre.clone();
-            Some(current)
+            self.current = current_strong.borrow().pre.clone();
+            Some(current_strong)
         } else {
             None
         }

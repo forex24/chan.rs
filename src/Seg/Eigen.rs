@@ -1,8 +1,11 @@
 // eigen.rs
 // 已完备
 use std::rc::Rc;
+use std::rc::Weak;
 
 use crate::Common::types::Handle;
+use crate::Common::types::StrongHandle;
+use crate::Common::types::WeakHandle;
 use crate::Common::CEnum::{BiDir, EqualMode, FxType, KLineDir};
 
 use super::linetype::Line;
@@ -13,7 +16,7 @@ pub struct CEigen<T> {
     //end_klc: usize,
     pub high: f64,
     pub low: f64,
-    pub lst: Vec<Handle<T>>,
+    pub lst: Vec<WeakHandle<T>>,
     pub dir: KLineDir,
     pub fx: FxType,
     //pre: Option<Handle<Self>>,
@@ -22,13 +25,13 @@ pub struct CEigen<T> {
 }
 
 impl<T: Line> CEigen<T> {
-    pub fn new(bi: &Handle<T>, dir: KLineDir) -> Self {
+    pub fn new(bi: &WeakHandle<T>, dir: KLineDir) -> Self {
         Self {
             //begin_klc: bi.borrow().line_get_begin_klc().borrow().idx ,
             //end_klc: bi.borrow().line_get_end_klc().borrow().idx ,
-            high: bi.borrow().line_high(),
-            low: bi.borrow().line_low(),
-            lst: vec![Rc::clone(bi)],
+            high: bi.upgrade().unwrap().borrow().line_high(),
+            low: bi.upgrade().unwrap().borrow().line_low(),
+            lst: vec![Rc::downgrade(&bi.upgrade().unwrap())],
             dir,
             fx: FxType::Unknown,
             //pre: None,
@@ -40,10 +43,11 @@ impl<T: Line> CEigen<T> {
     // 已完备
     pub fn test_combine(
         &self,
-        item: &Handle<T>,
+        item: &WeakHandle<T>,
         exclude_included: bool,
         allow_top_equal: Option<EqualMode>,
     ) -> KLineDir {
+        let item = item.upgrade().unwrap();
         if self.high >= item.borrow().line_high() && self.low <= item.borrow().line_low() {
             return KLineDir::Combine;
         }
@@ -82,27 +86,29 @@ impl<T: Line> CEigen<T> {
     // 已完备
     pub fn try_add(
         &mut self,
-        bi: &Handle<T>,
+        bi: &WeakHandle<T>,
         exclude_included: bool,
         allow_top_equal: Option<EqualMode>,
     ) -> KLineDir {
-        let dir = self.test_combine(&bi, exclude_included, allow_top_equal);
+        let dir = self.test_combine(bi, exclude_included, allow_top_equal);
+        let bi_strong = bi.upgrade().unwrap();
+        let high = bi_strong.borrow().line_high();
+        let low = bi_strong.borrow().line_low();
 
-        let item = bi.borrow();
         if dir == KLineDir::Combine {
-            self.lst.push(Rc::clone(bi));
+            self.lst.push(Rc::downgrade(&bi_strong));
 
             match self.dir {
                 KLineDir::Up => {
-                    if item.line_high() != item.line_low() || item.line_high() != self.high {
-                        self.high = self.high.max(item.line_high());
-                        self.low = self.low.max(item.line_low());
+                    if high != low || high != self.high {
+                        self.high = self.high.max(high);
+                        self.low = self.low.max(low);
                     }
                 }
                 KLineDir::Down => {
-                    if item.line_high() != item.line_low() || item.line_low() != self.low {
-                        self.high = self.high.min(item.line_high());
-                        self.low = self.low.min(item.line_low());
+                    if high != low || low != self.low {
+                        self.high = self.high.min(high);
+                        self.low = self.low.min(low);
                     }
                 }
                 _ => unreachable!("KLINE_DIR = {:?} err!!! must be Up/Down", self.dir),
@@ -134,7 +140,7 @@ impl<T: Line> CEigen<T> {
     //    self.end_klc = item.get_end_klc().borrow().idx ;
     //}
 
-    pub fn get_peak_klu(&self, is_high: bool) -> Handle<T> {
+    pub fn get_peak_klu(&self, is_high: bool) -> WeakHandle<T> {
         if is_high {
             self.get_high_peak_klu()
         } else {
@@ -142,19 +148,19 @@ impl<T: Line> CEigen<T> {
         }
     }
 
-    pub fn get_high_peak_klu(&self) -> Handle<T> {
+    pub fn get_high_peak_klu(&self) -> WeakHandle<T> {
         for kl in self.lst.iter().rev() {
-            if kl.borrow().line_high() == self.high {
-                return Rc::clone(kl);
+            if kl.upgrade().unwrap().borrow().line_high() == self.high {
+                return Rc::downgrade(&kl.upgrade().unwrap());
             }
         }
         unreachable!("can't find peak high...")
     }
 
-    pub fn get_low_peak_klu(&self) -> Handle<T> {
+    pub fn get_low_peak_klu(&self) -> WeakHandle<T> {
         for kl in self.lst.iter().rev() {
-            if kl.borrow().line_low() == self.low {
-                return Rc::clone(kl);
+            if kl.upgrade().unwrap().borrow().line_low() == self.low {
+                return Rc::downgrade(&kl.upgrade().unwrap());
             }
         }
         unreachable!("can't find peak low...")
@@ -240,11 +246,25 @@ impl<T: Line> CEigen<T> {
     // 已完备
     pub fn get_peak_bi_idx(&self) -> usize {
         assert!(self.fx != FxType::Unknown);
-        let bi_dir = self.lst[0].borrow().line_dir();
+        let bi_dir = self.lst[0].upgrade().unwrap().borrow().line_dir();
         match bi_dir {
             // 下降线段
-            BiDir::Up => self.get_peak_klu(false).borrow().line_idx() - 1,
-            BiDir::Down => self.get_peak_klu(true).borrow().line_idx() - 1,
+            BiDir::Up => {
+                self.get_peak_klu(false)
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    - 1
+            }
+            BiDir::Down => {
+                self.get_peak_klu(true)
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
+                    - 1
+            }
         }
     }
 }
@@ -254,8 +274,14 @@ impl<T: Line> std::fmt::Display for CEigen<T> {
         write!(
             f,
             "{}~{} gap={} fx={:?}",
-            self.lst[0].borrow().line_idx(),
-            self.lst.last().unwrap().borrow().line_idx(),
+            self.lst[0].upgrade().unwrap().borrow().line_idx(),
+            self.lst
+                .last()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx(),
             self.gap,
             self.fx
         )

@@ -1,16 +1,16 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
-use crate::Common::types::Handle;
+use crate::Common::types::{Handle, StrongHandle, WeakHandle};
 use crate::Common::CEnum::{FxType, KLineDir};
 use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CBiList {
-    pub bi_list: Vec<Handle<CBi>>,
-    pub last_end: Option<Handle<CKLine>>,
+    pub bi_list: Vec<StrongHandle<CBi>>,
+    pub last_end: Option<WeakHandle<CKLine>>,
     pub config: CBiConfig,
-    pub free_klc_lst: Vec<Handle<CKLine>>,
+    pub free_klc_lst: Vec<WeakHandle<CKLine>>,
 }
 
 impl CBiList {
@@ -39,54 +39,70 @@ impl CBiList {
         self.bi_list.is_empty()
     }
 
-    pub fn get(&self, index: usize) -> Option<Handle<CBi>> {
+    pub fn get(&self, index: usize) -> Option<StrongHandle<CBi>> {
         self.bi_list.get(index).cloned()
     }
 
-    pub fn try_create_first_bi(&mut self, klc: Handle<CKLine>) -> bool {
+    pub fn try_create_first_bi(&mut self, klc: WeakHandle<CKLine>) -> bool {
         for exist_free_klc in &self.free_klc_lst {
-            if exist_free_klc.borrow().fx == klc.borrow().fx {
+            if exist_free_klc.upgrade().unwrap().borrow().fx == klc.upgrade().unwrap().borrow().fx {
                 continue;
             }
-            if self.can_make_bi(Rc::clone(&klc), Rc::clone(exist_free_klc), false) {
-                self.add_new_bi(Rc::clone(exist_free_klc), Rc::clone(&klc), true);
-                self.last_end = Some(Rc::clone(&klc));
+            if self.can_make_bi(
+                exist_free_klc.upgrade().unwrap(),
+                klc.upgrade().unwrap(),
+                false,
+            ) {
+                self.add_new_bi(
+                    exist_free_klc.upgrade().unwrap(),
+                    klc.upgrade().unwrap(),
+                    true,
+                );
+                self.last_end = Some(klc.clone());
                 return true;
             }
         }
-        self.free_klc_lst.push(Rc::clone(&klc));
+        self.free_klc_lst.push(klc.clone());
         self.last_end = Some(klc);
         false
     }
 
     pub fn update_bi(
         &mut self,
-        klc: Handle<CKLine>,
-        last_klc: Handle<CKLine>,
+        klc: WeakHandle<CKLine>,
+        last_klc: WeakHandle<CKLine>,
         cal_virtual: bool,
     ) -> bool {
-        let flag1 = self.update_bi_sure(Rc::clone(&klc));
+        let flag1 = self.update_bi_sure(klc.clone());
         if cal_virtual {
-            let flag2 = self.try_add_virtual_bi(Rc::clone(&last_klc), false);
+            let flag2 = self.try_add_virtual_bi(last_klc.clone(), false);
             flag1 || flag2
         } else {
             flag1
         }
     }
 
-    pub fn can_update_peak(&self, klc: &Handle<CKLine>) -> bool {
+    pub fn can_update_peak(&self, klc: &WeakHandle<CKLine>) -> bool {
         if self.config.bi_allow_sub_peak || self.bi_list.len() < 2 {
             return false;
         }
         let last_bi = self.bi_list.last().unwrap();
         let second_last_bi = &self.bi_list[self.bi_list.len() - 2];
-        if last_bi.borrow().is_down() && klc.borrow().high < last_bi.borrow().get_begin_val() {
+        if last_bi.borrow().is_down()
+            && klc.upgrade().unwrap().borrow().high < last_bi.borrow().get_begin_val()
+        {
             return false;
         }
-        if last_bi.borrow().is_up() && klc.borrow().low > last_bi.borrow().get_begin_val() {
+        if last_bi.borrow().is_up()
+            && klc.upgrade().unwrap().borrow().low > last_bi.borrow().get_begin_val()
+        {
             return false;
         }
-        if !end_is_peak(&second_last_bi.borrow().begin_klc(), klc) {
+        let strong_klc = klc.upgrade().unwrap();
+        if !end_is_peak(
+            &second_last_bi.borrow().begin_klc().upgrade().unwrap(),
+            &strong_klc,
+        ) {
             return false;
         }
         if last_bi.borrow().is_down()
@@ -102,12 +118,12 @@ impl CBiList {
         true
     }
 
-    pub fn update_peak(&mut self, klc: Handle<CKLine>, for_virtual: bool) -> bool {
+    pub fn update_peak(&mut self, klc: WeakHandle<CKLine>, for_virtual: bool) -> bool {
         if !self.can_update_peak(&klc) {
             return false;
         }
         let tmp_last_bi = self.bi_list.pop().unwrap();
-        if !self.try_update_end(Rc::clone(&klc), for_virtual) {
+        if !self.try_update_end(klc.upgrade().unwrap(), for_virtual) {
             self.bi_list.push(tmp_last_bi);
             false
         } else {
@@ -116,36 +132,45 @@ impl CBiList {
                     .last_mut()
                     .unwrap()
                     .borrow_mut()
-                    .append_sure_end(tmp_last_bi.borrow().end_klc());
+                    .append_sure_end(tmp_last_bi.borrow().end_klc().upgrade().unwrap().clone());
             }
             true
         }
     }
 
-    pub fn update_bi_sure(&mut self, klc: Handle<CKLine>) -> bool {
+    pub fn update_bi_sure(&mut self, klc: WeakHandle<CKLine>) -> bool {
         let tmp_end = self.get_last_klu_of_last_bi();
         self.delete_virtual_bi();
-        if klc.borrow().fx == FxType::Unknown {
+        if klc.upgrade().unwrap().borrow().fx == FxType::Unknown {
             return tmp_end != self.get_last_klu_of_last_bi();
         }
         if self.last_end.is_none() || self.bi_list.is_empty() {
-            return self.try_create_first_bi(klc);
+            return self.try_create_first_bi(klc.clone());
         }
-        if klc.borrow().fx == self.last_end.as_ref().unwrap().borrow().fx {
-            return self.try_update_end(klc, false);
+        if klc.upgrade().unwrap().borrow().fx
+            == self
+                .last_end
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .fx
+        {
+            return self.try_update_end(klc.upgrade().unwrap(), false);
         } else if self.can_make_bi(
-            Rc::clone(&klc),
-            Rc::clone(self.last_end.as_ref().unwrap()),
+            klc.upgrade().unwrap(),
+            self.last_end.as_ref().unwrap().upgrade().unwrap(),
             false,
         ) {
             self.add_new_bi(
-                Rc::clone(self.last_end.as_ref().unwrap()),
-                Rc::clone(&klc),
+                self.last_end.as_ref().unwrap().upgrade().unwrap(),
+                klc.upgrade().unwrap(),
                 true,
             );
-            self.last_end = Some(klc);
+            self.last_end = Some(klc.clone());
             return true;
-        } else if self.update_peak(klc, false) {
+        } else if self.update_peak(klc.clone(), false) {
             return true;
         }
         tmp_end != self.get_last_klu_of_last_bi()
@@ -159,23 +184,52 @@ impl CBiList {
                     .last_mut()
                     .unwrap()
                     .borrow_mut()
-                    .restore_from_virtual_end(Rc::clone(&sure_end_list[0]));
-                self.last_end = Some(Rc::clone(&self.bi_list.last().unwrap().borrow().end_klc()));
+                    .restore_from_virtual_end(sure_end_list[0].upgrade().unwrap());
+                self.last_end = Some(Rc::downgrade(
+                    &self
+                        .bi_list
+                        .last()
+                        .unwrap()
+                        .borrow()
+                        .end_klc()
+                        .upgrade()
+                        .unwrap()
+                        .clone(),
+                ));
                 for sure_end in sure_end_list.iter().skip(1) {
                     self.add_new_bi(
-                        Rc::clone(self.last_end.as_ref().unwrap()),
-                        Rc::clone(sure_end),
+                        self.last_end.as_ref().unwrap().upgrade().unwrap(),
+                        sure_end.upgrade().unwrap(),
                         true,
                     );
-                    self.last_end =
-                        Some(Rc::clone(&self.bi_list.last().unwrap().borrow().end_klc()));
+                    self.last_end = Some(Rc::downgrade(
+                        &self
+                            .bi_list
+                            .last()
+                            .unwrap()
+                            .borrow()
+                            .end_klc()
+                            .upgrade()
+                            .unwrap()
+                            .clone(),
+                    ));
                 }
             } else {
                 self.bi_list.pop();
             }
         }
         self.last_end = if !self.bi_list.is_empty() {
-            Some(Rc::clone(&self.bi_list.last().unwrap().borrow().end_klc()))
+            Some(Rc::downgrade(
+                &self
+                    .bi_list
+                    .last()
+                    .unwrap()
+                    .borrow()
+                    .end_klc()
+                    .upgrade()
+                    .unwrap()
+                    .clone(),
+            ))
         } else {
             None
         };
@@ -184,78 +238,132 @@ impl CBiList {
         }
     }
 
-    pub fn try_add_virtual_bi(&mut self, klc: Handle<CKLine>, need_del_end: bool) -> bool {
+    pub fn try_add_virtual_bi(&mut self, klc: WeakHandle<CKLine>, need_del_end: bool) -> bool {
         if need_del_end {
             self.delete_virtual_bi();
         }
         if self.bi_list.is_empty() {
             return false;
         }
-        if klc.borrow().idx == self.bi_list.last().unwrap().borrow().end_klc().borrow().idx {
+        if klc.upgrade().unwrap().borrow().idx
+            == self
+                .bi_list
+                .last()
+                .unwrap()
+                .borrow()
+                .end_klc()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .idx
+        {
             return false;
         }
         let last_bi = self.bi_list.last().unwrap();
         if (last_bi.borrow().is_up()
-            && klc.borrow().high >= last_bi.borrow().end_klc().borrow().high)
+            && klc.upgrade().unwrap().borrow().high
+                >= last_bi.borrow().end_klc().upgrade().unwrap().borrow().high)
             || (last_bi.borrow().is_down()
-                && klc.borrow().low <= last_bi.borrow().end_klc().borrow().low)
+                && klc.upgrade().unwrap().borrow().low
+                    <= last_bi.borrow().end_klc().upgrade().unwrap().borrow().low)
         {
-            last_bi.borrow_mut().update_virtual_end(Rc::clone(&klc));
+            last_bi
+                .borrow_mut()
+                .update_virtual_end(klc.upgrade().unwrap());
             return true;
         }
-        let mut tmp_klc = Some(Rc::clone(&klc));
+        let mut tmp_klc = Some(klc.upgrade().unwrap());
         while let Some(k) = tmp_klc {
-            if k.borrow().idx <= self.bi_list.last().unwrap().borrow().end_klc().borrow().idx {
+            if k.borrow().idx
+                <= self
+                    .bi_list
+                    .last()
+                    .unwrap()
+                    .borrow()
+                    .end_klc()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .idx
+            {
                 break;
             }
             if self.can_make_bi(
-                Rc::clone(&k),
-                Rc::clone(&self.bi_list.last().unwrap().borrow().end_klc()),
+                k.clone(),
+                self.bi_list
+                    .last()
+                    .unwrap()
+                    .borrow()
+                    .end_klc()
+                    .upgrade()
+                    .unwrap(),
                 true,
             ) {
                 self.add_new_bi(
-                    Rc::clone(self.last_end.as_ref().unwrap()),
-                    Rc::clone(&k),
+                    self.last_end.as_ref().unwrap().upgrade().unwrap(),
+                    k.clone(),
                     false,
                 );
                 return true;
-            } else if self.update_peak(Rc::clone(&k), true) {
+            } else if self.update_peak(Rc::downgrade(&k), true) {
                 return true;
             }
-            tmp_klc = k.borrow().pre.clone();
+            tmp_klc = k.borrow().pre.clone().and_then(|weak| weak.upgrade());
         }
         false
     }
 
-    pub fn add_new_bi(&mut self, pre_klc: Handle<CKLine>, cur_klc: Handle<CKLine>, is_sure: bool) {
+    pub fn add_new_bi(
+        &mut self,
+        pre_klc: StrongHandle<CKLine>,
+        cur_klc: StrongHandle<CKLine>,
+        is_sure: bool,
+    ) {
         let new_bi = Rc::new(RefCell::new(CBi::new(
-            pre_klc,
-            cur_klc,
+            Rc::downgrade(&pre_klc),
+            Rc::downgrade(&cur_klc),
             self.bi_list.len(),
             is_sure,
         )));
         if !self.bi_list.is_empty() {
             let last_bi = self.bi_list.last_mut().unwrap();
-            last_bi.borrow_mut().next = Some(Rc::clone(&new_bi));
-            new_bi.borrow_mut().pre = Some(Rc::clone(last_bi));
+            last_bi.borrow_mut().next = Some(Rc::downgrade(&new_bi));
+            new_bi.borrow_mut().pre = Some(Rc::downgrade(last_bi));
         }
         self.bi_list.push(new_bi);
     }
 
-    pub fn satisfy_bi_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> bool {
+    pub fn satisfy_bi_span(
+        &self,
+        klc: &StrongHandle<CKLine>,
+        last_end: &StrongHandle<CKLine>,
+    ) -> bool {
         let bi_span = self.get_klc_span(klc, last_end);
         if self.config.is_strict {
             return bi_span >= 4;
         }
         let mut uint_kl_cnt = 0;
-        let mut tmp_klc = last_end.borrow().next.clone();
+        let mut tmp_klc = last_end
+            .borrow()
+            .next
+            .clone()
+            .and_then(|weak| weak.upgrade());
         while let Some(k) = tmp_klc {
             uint_kl_cnt += k.borrow().lst.len();
             if k.borrow().next.is_none() {
                 return false;
             }
-            if k.borrow().next.as_ref().unwrap().borrow().idx < klc.borrow().idx {
-                tmp_klc = k.borrow().next.clone();
+            if k.borrow()
+                .next
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .idx
+                < klc.borrow().idx
+            {
+                tmp_klc = k.borrow().next.clone().and_then(|weak| weak.upgrade());
             } else {
                 break;
             }
@@ -263,12 +371,17 @@ impl CBiList {
         bi_span >= 3 && uint_kl_cnt >= 3
     }
 
-    pub fn get_klc_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> usize {
+    pub fn get_klc_span(
+        &self,
+        klc: &StrongHandle<CKLine>,
+        last_end: &StrongHandle<CKLine>,
+    ) -> usize {
         let mut span = klc.borrow().idx - last_end.borrow().idx;
         if !self.config.gap_as_kl {
             return span;
         }
-        if span >= 4 {  // 加速计算
+        if span >= 4 {
+            // 加速计算
             return span;
         }
         let mut tmp_klc = Some(Rc::clone(last_end));
@@ -279,15 +392,15 @@ impl CBiList {
             if k.borrow().has_gap_with_next() {
                 span += 1;
             }
-            tmp_klc = k.borrow().next.clone();
+            tmp_klc = k.borrow().next.clone().and_then(|weak| weak.upgrade());
         }
         span
     }
 
     pub fn can_make_bi(
         &self,
-        klc: Handle<CKLine>,
-        last_end: Handle<CKLine>,
+        klc: StrongHandle<CKLine>,
+        last_end: StrongHandle<CKLine>,
         for_virtual: bool,
     ) -> bool {
         let satisfy_span = if self.config.bi_algo == "fx" {
@@ -311,19 +424,19 @@ impl CBiList {
         true
     }
 
-    pub fn try_update_end(&mut self, klc: Handle<CKLine>, for_virtual: bool) -> bool {
+    pub fn try_update_end(&mut self, klc: StrongHandle<CKLine>, for_virtual: bool) -> bool {
         if self.bi_list.is_empty() {
             return false;
         }
         let last_bi = self.bi_list.last().unwrap();
-        let check_top = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
+        let check_top = |k: &StrongHandle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KLineDir::Up
             } else {
                 k.borrow().fx == FxType::Top
             }
         };
-        let check_bottom = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
+        let check_bottom = |k: &StrongHandle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KLineDir::Down
             } else {
@@ -342,7 +455,7 @@ impl CBiList {
             } else {
                 last_bi.borrow_mut().update_new_end(Rc::clone(&klc));
             }
-            self.last_end = Some(Rc::clone(&klc));
+            self.last_end = Some(Rc::downgrade(&klc));
             true
         } else {
             false
@@ -356,7 +469,7 @@ impl CBiList {
     }
 }
 
-fn end_is_peak(last_end: &Handle<CKLine>, cur_end: &Handle<CKLine>) -> bool {
+fn end_is_peak(last_end: &StrongHandle<CKLine>, cur_end: &StrongHandle<CKLine>) -> bool {
     match last_end.borrow().fx {
         FxType::Bottom => {
             let cmp_thred = cur_end.borrow().high;
@@ -390,7 +503,7 @@ fn end_is_peak(last_end: &Handle<CKLine>, cur_end: &Handle<CKLine>) -> bool {
 }
 
 impl std::ops::Deref for CBiList {
-    type Target = Vec<Handle<CBi>>;
+    type Target = Vec<StrongHandle<CBi>>;
 
     fn deref(&self) -> &Self::Target {
         &self.bi_list

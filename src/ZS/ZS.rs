@@ -1,6 +1,6 @@
 use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::Handle;
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::ZsCombineMode;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -10,23 +10,23 @@ use std::rc::Rc;
 
 pub struct CZS<T> {
     pub is_sure: bool,
-    pub sub_zs_lst: Vec<Handle<CZS<T>>>,
-    pub begin: Option<Handle<CKLineUnit>>,
-    pub begin_bi: Option<Handle<T>>,
+    pub sub_zs_lst: Vec<StrongHandle<CZS<T>>>,
+    pub begin: Option<WeakHandle<CKLineUnit>>,
+    pub begin_bi: Option<WeakHandle<T>>,
     pub low: f64,
     pub high: f64,
     pub mid: f64,
-    pub end: Option<Handle<CKLineUnit>>,
-    pub end_bi: Option<Handle<T>>,
+    pub end: Option<WeakHandle<CKLineUnit>>,
+    pub end_bi: Option<WeakHandle<T>>,
     pub peak_high: f64,
     pub peak_low: f64,
-    pub bi_in: Option<Handle<T>>,
-    pub bi_out: Option<Handle<T>>,
-    pub bi_lst: Vec<Handle<T>>,
+    pub bi_in: Option<WeakHandle<T>>,
+    pub bi_out: Option<WeakHandle<T>>,
+    pub bi_lst: Vec<WeakHandle<T>>,
 }
 
 impl<T: Line> CZS<T> {
-    pub fn new(lst: Option<Vec<Handle<T>>>, is_sure: bool) -> Self {
+    pub fn new(lst: Option<Vec<StrongHandle<T>>>, is_sure: bool) -> Self {
         // begin/end：永远指向 klu
         // low/high: 中枢的范围
         // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
@@ -49,8 +49,8 @@ impl<T: Line> CZS<T> {
 
         if let Some(lst) = lst {
             if !lst.is_empty() {
-                zs.begin = Some(lst[0].borrow().line_get_begin_klu());
-                zs.begin_bi = Some(lst[0].clone());
+                zs.begin = Some(Rc::downgrade(&lst[0].borrow().line_get_begin_klu()));
+                zs.begin_bi = Some(Rc::downgrade(&lst[0]));
                 zs.update_zs_range(&lst);
                 for item in lst {
                     zs.update_zs_end(&item);
@@ -62,7 +62,7 @@ impl<T: Line> CZS<T> {
 
     //pub fn clean_cache(&mut self) {}
 
-    pub fn update_zs_range(&mut self, lst: &[Handle<T>]) {
+    pub fn update_zs_range(&mut self, lst: &[StrongHandle<T>]) {
         self.low = lst
             .iter()
             .map(|bi| bi.borrow().line_low())
@@ -78,16 +78,20 @@ impl<T: Line> CZS<T> {
     }
 
     pub fn is_one_bi_zs(&self) -> bool {
-        self.end_bi.as_ref().map_or(false, |end_bi| {
-            self.begin_bi.as_ref().map_or(false, |begin_bi| {
-                begin_bi.borrow().line_idx() == end_bi.borrow().line_idx()
+        self.end_bi
+            .as_ref()
+            .and_then(|end_bi| {
+                self.begin_bi.as_ref().map(|begin_bi| {
+                    begin_bi.upgrade().unwrap().borrow().line_idx()
+                        == end_bi.upgrade().unwrap().borrow().line_idx()
+                })
             })
-        })
+            .unwrap_or(false)
     }
 
-    pub fn update_zs_end(&mut self, item: &Handle<T>) {
-        self.end = Some(item.borrow().line_get_end_klu());
-        self.end_bi = Some(item.clone());
+    pub fn update_zs_end(&mut self, item: &StrongHandle<T>) {
+        self.end = Some(Rc::downgrade(&item.borrow().line_get_end_klu()));
+        self.end_bi = Some(Rc::downgrade(item));
         if item.borrow().line_low() < self.peak_low {
             self.peak_low = item.borrow().line_low();
         }
@@ -101,8 +105,22 @@ impl<T: Line> CZS<T> {
         if zs2.is_one_bi_zs() {
             return false;
         }
-        if self.begin_bi.as_ref().unwrap().borrow().line_seg_idx()
-            != zs2.begin_bi.as_ref().unwrap().borrow().line_seg_idx()
+        if self
+            .begin_bi
+            .as_ref()
+            .unwrap()
+            .upgrade()
+            .unwrap()
+            .borrow()
+            .line_seg_idx()
+            != zs2
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_seg_idx()
         {
             return false;
         }
@@ -148,18 +166,21 @@ impl<T: Line> CZS<T> {
         //self.clean_cache();
     }
 
-    pub fn try_add_to_end(&mut self, item: &Handle<T>) -> bool {
+    pub fn try_add_to_end(&mut self, item: &StrongHandle<T>) -> bool {
         if !self.in_range(item) {
             return false;
         }
         if self.is_one_bi_zs() {
-            self.update_zs_range(&[self.begin_bi.as_ref().unwrap().clone(), item.clone()]);
+            self.update_zs_range(&[
+                self.begin_bi.as_ref().unwrap().upgrade().unwrap().clone(),
+                item.clone(),
+            ]);
         }
         self.update_zs_end(item);
         true
     }
 
-    pub fn in_range(&self, item: &Handle<T>) -> bool {
+    pub fn in_range(&self, item: &StrongHandle<T>) -> bool {
         has_overlap(
             self.low,
             self.high,
@@ -170,14 +191,30 @@ impl<T: Line> CZS<T> {
     }
 
     pub fn is_inside(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.borrow().line_idx() <= self.begin_bi.as_ref().unwrap().borrow().line_idx()
-            && self.begin_bi.as_ref().unwrap().borrow().line_idx() <= seg.end_bi.borrow().line_idx()
+        seg.start_bi.borrow().line_idx()
+            <= self
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+            && self
+                .begin_bi
+                .as_ref()
+                .unwrap()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                <= seg.end_bi.borrow().line_idx()
     }
 
     pub fn is_divergence(
         &self,
         config: &CPointConfig,
-        out_bi: Option<Handle<T>>,
+        out_bi: Option<StrongHandle<T>>,
     ) -> (bool, Option<f64>) {
         let out_bi = out_bi.as_ref().map(|x| Rc::clone(&x));
         if !self.end_bi_break(out_bi.clone()) {
@@ -230,8 +267,8 @@ impl<T: Line> CZS<T> {
         copy
     }
 
-    pub fn end_bi_break(&self, end_bi: Option<Handle<T>>) -> bool {
-        let end_bi = end_bi.unwrap_or_else(|| Rc::clone(self.get_bi_out()));
+    pub fn end_bi_break(&self, end_bi: Option<StrongHandle<T>>) -> bool {
+        let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
         let end_bi = end_bi.borrow();
         (end_bi.line_is_down() && end_bi.line_low() < self.low)
             || (end_bi.line_is_up() && end_bi.line_high() > self.high)
@@ -242,20 +279,22 @@ impl<T: Line> CZS<T> {
         if self.bi_out.is_none() {
             return (false, None);
         }
-        let bi_out = self.bi_out.as_ref().unwrap().borrow();
+        let bi_out = self.bi_out.as_ref().unwrap().upgrade().unwrap();
+        let bi_out_ref = bi_out.borrow();
         let mut peak_rate = f64::INFINITY;
         for bi in &self.bi_lst {
-            let bi_ref = bi.borrow();
+            let bi_strong = bi.upgrade().unwrap();
+            let bi_ref = bi_strong.borrow();
             if bi_ref.line_idx() > end_bi_idx {
                 break;
             }
-            if (bi_out.line_is_down() && bi_ref.line_low() < bi_out.line_low())
-                || (bi_out.line_is_up() && bi_ref.line_high() > bi_out.line_high())
+            if (bi_out_ref.line_is_down() && bi_ref.line_low() < bi_out_ref.line_low())
+                || (bi_out_ref.line_is_up() && bi_ref.line_high() > bi_out_ref.line_high())
             {
                 return (false, None);
             }
-            let r = (bi_ref.line_get_end_val() - bi_out.line_get_end_val()).abs()
-                / bi_out.line_get_end_val();
+            let r = (bi_ref.line_get_end_val() - bi_out_ref.line_get_end_val()).abs()
+                / bi_out_ref.line_get_end_val();
             if r < peak_rate {
                 peak_rate = r;
             }
@@ -263,27 +302,34 @@ impl<T: Line> CZS<T> {
         (true, Some(peak_rate))
     }
 
-    pub fn get_bi_in(&self) -> &Handle<T> {
-        self.bi_in.as_ref().expect("bi_in is None")
+    pub fn get_bi_in(&self) -> StrongHandle<T> {
+        self.bi_in
+            .as_ref()
+            .expect("bi_in is None")
+            .upgrade()
+            .expect("bi_in was dropped")
     }
 
-    pub fn get_bi_out(&self) -> &Handle<T> {
-        self.bi_out.as_ref().expect("bi_out is None")
+    pub fn get_bi_out(&self) -> StrongHandle<T> {
+        self.bi_out
+            .as_ref()
+            .expect("bi_out is None")
+            .upgrade()
+            .expect("bi_out was dropped")
     }
 
-    pub fn set_bi_in(&mut self, bi: Handle<T>) {
-        self.bi_in = Some(bi);
+    pub fn set_bi_in(&mut self, bi: StrongHandle<T>) {
+        self.bi_in = Some(Rc::downgrade(&bi));
         //self.clean_cache();
     }
 
-    pub fn set_bi_out(&mut self, bi: Handle<T>) {
-        self.bi_out = Some(bi);
+    pub fn set_bi_out(&mut self, bi: StrongHandle<T>) {
+        self.bi_out = Some(Rc::downgrade(&bi));
         //self.clean_cache();
     }
 
-    pub fn set_bi_lst(&mut self, bi_lst: &[Handle<T>]) {
-        self.bi_lst = bi_lst.to_vec();
-        //self.clean_cache();
+    pub fn set_bi_lst(&mut self, bi_lst: &[StrongHandle<T>]) {
+        self.bi_lst = bi_lst.iter().map(|x| Rc::downgrade(x)).collect();
     }
 }
 
@@ -291,8 +337,12 @@ impl<T: Line> std::fmt::Display for CZS<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let main_str = format!(
             "{}->{}",
-            self.begin_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx()),
-            self.end_bi.as_ref().map_or(0, |bi| bi.borrow().line_idx())
+            self.begin_bi
+                .as_ref()
+                .map_or(0, |bi| bi.upgrade().unwrap().borrow().line_idx()),
+            self.end_bi
+                .as_ref()
+                .map_or(0, |bi| bi.upgrade().unwrap().borrow().line_idx())
         );
         let sub_str: String = self
             .sub_zs_lst

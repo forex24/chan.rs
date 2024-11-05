@@ -1,6 +1,6 @@
 use crate::ChanModel::Features::CFeatures;
 use crate::ChanModel::Features::FeatureInput;
-use crate::Common::types::Handle;
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -9,25 +9,25 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct CBSPoint<T> {
-    pub bi: Handle<T>,
-    pub klu: Handle<CKLineUnit>,
+    pub bi: WeakHandle<T>,
+    pub klu: WeakHandle<CKLineUnit>,
     pub is_buy: bool,
     pub bsp_type: Vec<BspType>,
-    pub relate_bsp1: Option<Handle<CBSPoint<T>>>,
+    pub relate_bsp1: Option<WeakHandle<CBSPoint<T>>>,
     pub features: CFeatures,
     pub is_segbsp: bool,
 }
 
 impl<T: Line> CBSPoint<T> {
     pub fn new(
-        bi: Handle<T>,
+        bi: WeakHandle<T>,
         is_buy: bool,
         bs_type: BspType,
-        relate_bsp1: Option<Handle<CBSPoint<T>>>,
+        relate_bsp1: Option<WeakHandle<CBSPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
-    ) -> Handle<Self> {
-        let klu = bi.borrow().line_get_end_klu();
-        let bi_clone = Rc::clone(&bi);
+    ) -> StrongHandle<Self> {
+        let klu = Rc::downgrade(&bi.upgrade().unwrap().borrow().line_get_end_klu());
+        let bi_clone = bi.clone();
 
         let features = match feature_dict {
             Some(dict) => {
@@ -50,7 +50,11 @@ impl<T: Line> CBSPoint<T> {
             is_segbsp: false,
         }));
 
-        bi_clone.borrow_mut().line_set_bsp(Some(Rc::clone(&bsp)));
+        bi_clone
+            .upgrade()
+            .unwrap()
+            .borrow_mut()
+            .line_set_bsp(Some(bsp.clone()));
 
         bsp.borrow_mut().init_common_feature();
 
@@ -72,15 +76,33 @@ impl<T: Line> CBSPoint<T> {
     pub fn add_another_bsp_prop(
         &mut self,
         bs_type: BspType,
-        relate_bsp1: Option<Handle<CBSPoint<T>>>,
+        relate_bsp1: Option<WeakHandle<CBSPoint<T>>>,
     ) {
         self.add_type(bs_type);
         if self.relate_bsp1.is_none() {
             self.relate_bsp1 = relate_bsp1;
         } else if let Some(new_relate_bsp1) = relate_bsp1 {
             assert_eq!(
-                self.relate_bsp1.as_ref().unwrap().borrow().klu.borrow().idx,
-                new_relate_bsp1.borrow().klu.borrow().idx
+                self.relate_bsp1
+                    .as_ref()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .klu
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .idx,
+                new_relate_bsp1
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .klu
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .idx
             );
         }
     }
@@ -90,7 +112,7 @@ impl<T: Line> CBSPoint<T> {
     }
 
     fn init_common_feature(&mut self) {
-        let amp = self.bi.borrow().line_amp();
+        let amp = self.bi.upgrade().unwrap().borrow().line_amp();
 
         self.add_feat(("bsp_bi_amp", amp));
     }

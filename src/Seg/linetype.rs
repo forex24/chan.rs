@@ -4,7 +4,7 @@ use crate::{
     Bi::Bi::CBi,
     BuySellPoint::BS_Point::CBSPoint,
     Common::{
-        types::Handle,
+        types::{Handle, WeakHandle},
         CEnum::{BiDir, MacdAlgo},
         ChanException::CChanException,
     },
@@ -32,7 +32,7 @@ pub trait Line: Sized {
     //fn get_pre(&self) -> Option<Handle<Self>>;
     //fn get_next(&self) -> Option<Handle<Self>>;
 
-    fn line_get_parent_seg(&self) -> Option<Handle<CSeg<Self>>>;
+    fn line_get_parent_seg(&self) -> Option<WeakHandle<CSeg<Self>>>;
     fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<CSeg<Self>>>);
 
     fn line_seg_idx(&self) -> Option<usize>;
@@ -145,8 +145,8 @@ impl Line for CBi {
         self.pre.as_ref().map(|x| Rc::clone(x))
     }
 
-    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
-        self.parent_seg.as_ref().map(|x| Rc::clone(x))
+    fn line_get_parent_seg(&self) -> Option<WeakHandle<Self::Parent>> {
+        self.parent_seg.as_ref().map(|x| Rc::downgrade(x))
     }
 
     fn line_is_up(&self) -> bool {
@@ -250,8 +250,8 @@ impl Line for CSeg<CBi> {
         self.get_end_klu()
     }
 
-    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
-        self.parent_seg.as_ref().and_then(|weak| weak.upgrade())
+    fn line_get_parent_seg(&self) -> Option<WeakHandle<Self::Parent>> {
+        self.parent_seg.clone()
     }
     fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
         self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
