@@ -28,6 +28,7 @@ pub fn revert_bi_dir(dir: &BiDir) -> BiDir {
     }
 }
 
+// TODO:分成两个方法并inline
 pub fn has_overlap(l1: f64, h1: f64, l2: f64, h2: f64, equal: bool) -> bool {
     if equal {
         h2 >= l1 && h1 >= l2
