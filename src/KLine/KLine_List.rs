@@ -46,40 +46,11 @@ impl CKLineList {
         }
         Some(dir)
     }
-    /*pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Result<(), CChanException> {
-        klu.set_metric(&mut self.metric_model_lst);
-        let klu = Rc::new(RefCell::new(klu));
-        if self.lst.is_empty() {
-            self.lst.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
-        } else {
-            let dir = CKLine::try_add(self.lst.last().as_ref().unwrap(), &klu)?;
-            if dir != KLineDir::Combine {
-                let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len(), dir);
-                self.lst.push(new_kline.clone());
-                if self.lst.len() >= 3 {
-                    let len = self.lst.len();
-                    CKLine::update_fx(&self.lst[len - 2], &self.lst[len - 3], &self.lst[len - 1]);
-                }
-                if self.bi_list.update_bi(
-                    Rc::clone(&self.lst[self.lst.len() - 2]),
-                    Rc::clone(&self.lst[self.lst.len() - 1]),
-                    true, //self.step_calculation,
-                ) && self.step_calculation
-                {
-                    self.cal_seg_and_zs()?;
-                }
-            } else if self.step_calculation
-                && self
-                    .bi_list
-                    .try_add_virtual_bi(self.lst.last().unwrap().clone(), true)
-            {
-                self.cal_seg_and_zs()?;
-            }
-        }
-        Ok(())
-    }*/
 
-    //pub fn klu_iter(&self, klc_begin_idx: usize) -> impl Iterator<Item = &Handle<CKLineUnit>> {
+    //pub fn klu_iter<'a>(
+    //    &'a self,
+    //    klc_begin_idx: usize,
+    //) -> impl Iterator<Item = &'a StrongHandle<CKLineUnit>> {
     //    self.lst[klc_begin_idx..]
     //        .iter()
     //        .flat_map(|klc| klc.borrow().lst.iter())
