@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     Common::{
-        types::Handle,
+        types::WeakHandle,
         CEnum::TrendType,
         CTime::CTime,
         ChanException::{CChanException, ErrCode},
@@ -31,13 +31,13 @@ pub struct CKLineUnit {
     pub low: f64,
 
     // 链表
-    pub pre: Option<Handle<CKLineUnit>>,
-    pub next: Option<Handle<CKLineUnit>>,
+    pub pre: Option<WeakHandle<CKLineUnit>>,
+    pub next: Option<WeakHandle<CKLineUnit>>,
 
     // 上下文属性
-    pub sub_kl_list: Vec<Handle<CKLineUnit>>,
-    pub sup_kl: Option<Handle<CKLineUnit>>,
-    pub klc: Option<Handle<CKLine>>,
+    pub sub_kl_list: Vec<WeakHandle<CKLineUnit>>,
+    pub sup_kl: Option<WeakHandle<CKLineUnit>>,
+    pub klc: Option<WeakHandle<CKLine>>,
 
     // FIXME: 用更好的模式来处理指标问题
     // 指标
@@ -121,15 +121,15 @@ impl CKLineUnit {
         Ok(())
     }
 
-    pub fn add_children(&mut self, child: Handle<CKLineUnit>) {
+    pub fn add_children(&mut self, child: WeakHandle<CKLineUnit>) {
         self.sub_kl_list.push(child);
     }
 
-    pub fn set_parent(&mut self, parent: Handle<CKLineUnit>) {
+    pub fn set_parent(&mut self, parent: WeakHandle<CKLineUnit>) {
         self.sup_kl = Some(parent);
     }
 
-    pub fn get_children(&self) -> impl Iterator<Item = &Handle<CKLineUnit>> {
+    pub fn get_children(&self) -> impl Iterator<Item = &WeakHandle<CKLineUnit>> {
         self.sub_kl_list.iter()
     }
 
@@ -166,39 +166,46 @@ impl CKLineUnit {
         }
     }
 
-    pub fn get_parent_klc(&self) -> Option<Handle<CKLine>> {
+    pub fn get_parent_klc(&self) -> Option<WeakHandle<CKLine>> {
         assert!(self.sup_kl.is_some());
-        self.sup_kl
-            .as_ref()
-            .and_then(|sup_kl| sup_kl.borrow().klc.clone())
+        self.sup_kl.as_ref().and_then(|sup_kl| {
+            sup_kl
+                .upgrade()
+                .and_then(|sup_kl| sup_kl.borrow().klc.clone())
+        })
     }
 
     pub fn include_sub_lv_time(&self, sub_lv_t: &str) -> bool {
-        // FIXME: 这里要优化，不要用字符串比较
         if self.time.to_string() == sub_lv_t {
             return true;
         }
         for sub_klu in &self.sub_kl_list {
-            let sub_klu = sub_klu.borrow();
-            if sub_klu.time.to_string() == sub_lv_t || sub_klu.include_sub_lv_time(sub_lv_t) {
-                return true;
+            if let Some(sub_klu) = sub_klu.upgrade() {
+                let sub_klu = sub_klu.borrow();
+                if sub_klu.time.to_string() == sub_lv_t || sub_klu.include_sub_lv_time(sub_lv_t) {
+                    return true;
+                }
             }
         }
         false
     }
 
-    pub fn set_pre_klu(self_: Handle<CKLineUnit>, pre_klu: Option<Handle<CKLineUnit>>) {
+    pub fn set_pre_klu(self_: WeakHandle<CKLineUnit>, pre_klu: Option<WeakHandle<CKLineUnit>>) {
         if let Some(pre_klu) = pre_klu {
-            pre_klu.borrow_mut().next = Some(self_.clone());
-            self_.borrow_mut().pre = Some(pre_klu);
+            if let Some(pre_klu_strong) = pre_klu.upgrade() {
+                pre_klu_strong.borrow_mut().next = Some(self_.clone());
+                if let Some(self_strong) = self_.upgrade() {
+                    self_strong.borrow_mut().pre = Some(pre_klu);
+                }
+            }
         }
     }
 
-    pub fn set_klc(&mut self, klc: Handle<CKLine>) {
+    pub fn set_klc(&mut self, klc: WeakHandle<CKLine>) {
         self.klc = Some(klc);
     }
 
-    pub fn get_klc(&self) -> Option<Handle<CKLine>> {
+    pub fn get_klc(&self) -> Option<WeakHandle<CKLine>> {
         self.klc.clone()
     }
 

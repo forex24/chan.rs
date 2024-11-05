@@ -3,7 +3,7 @@ use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
 use crate::BuySellPoint::BSPointList::CBSPointList;
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::Handle;
+use crate::Common::types::WeakHandle;
 use crate::Common::CEnum::{KLineDir, SegType};
 use crate::Common::ChanException::CChanException;
 use crate::KLine::KLine::CKLine;
@@ -139,7 +139,7 @@ impl Analyzer {
 }
 
 pub fn cal_seg<U: Line>(
-    bi_list: &[Handle<U>],
+    bi_list: &[WeakHandle<U>],
     seg_list: &mut CSegListChan<U>,
 ) -> Result<(), CChanException> {
     seg_list.update(bi_list);
@@ -187,9 +187,9 @@ pub fn cal_seg<U: Line>(
 }
 
 pub fn update_zs_in_seg<T: Line>(
-    bi_list: &[Handle<T>],
-    seg_list: &mut [Handle<CSeg<T>>], //CSegListChan<CBi>,
-    zs_list: &mut [Handle<CZS<T>>],   //CZSList,
+    bi_list: &[WeakHandle<T>],
+    seg_list: &mut [WeakHandle<CSeg<T>>], //CSegListChan<CBi>,
+    zs_list: &mut [WeakHandle<CZS<T>>],   //CZSList,
 ) -> Result<(), CChanException> {
     let mut sure_seg_cnt = 0;
     for seg in seg_list.iter().rev() {

@@ -1,29 +1,20 @@
 //
-use crate::ChanConfig::CChanConfig;
-use crate::Common::types::Handle;
-use crate::Common::CEnum::KLineDir;
-use crate::Common::ChanException::CChanException;
-use crate::KLine::KLine::CKLine;
-use crate::KLine::KLine_Unit::CKLineUnit;
-
-use std::cell::RefCell;
-
-use std::rc::Rc;
 use super::KLine_Unit::MetricModel;
-
-
+use crate::ChanConfig::CChanConfig;
+use crate::Common::types::{Handle, StrongHandle};
+use crate::KLine::KLine::CKLine;
 
 pub struct CKLineList {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub lst: Vec<Handle<CKLine>>,
+    pub lst: Vec<StrongHandle<CKLine>>,
     pub metric_model_lst: Vec<Box<dyn MetricModel>>,
 }
 
 impl CKLineList {
     pub fn new(kl_type: &str, conf: &CChanConfig) -> Self {
         Self {
-            kl_type:kl_type.to_string(),
+            kl_type: kl_type.to_string(),
             config: conf.clone(),
             lst: Vec::new(),
             metric_model_lst: conf.get_metric_model(),
@@ -70,9 +61,8 @@ impl CKLineList {
     //}
 }
 
-
 impl std::ops::Deref for CKLineList {
-    type Target = Vec<Handle<CKLine>>;
+    type Target = Vec<StrongHandle<CKLine>>;
 
     fn deref(&self) -> &Self::Target {
         &self.lst

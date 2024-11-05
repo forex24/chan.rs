@@ -1,5 +1,5 @@
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::Handle;
+use crate::Common::types::{Handle, StrongHandle, WeakHandle};
 use crate::Common::CEnum::{FxCheckMethod, FxType, KLineDir};
 use crate::Common::CTime::CTime;
 use crate::Common::ChanException::{CChanException, ErrCode};
@@ -17,33 +17,35 @@ pub struct CKLine {
     pub low: f64,
     pub high: f64,
     pub dir: KLineDir,
-    pub lst: Vec<Handle<CKLineUnit>>,
-    pub pre: Option<Handle<CKLine>>,
-    pub next: Option<Handle<CKLine>>,
+    pub lst: Vec<StrongHandle<CKLineUnit>>,
+    pub pre: Option<WeakHandle<CKLine>>,
+    pub next: Option<WeakHandle<CKLine>>,
 }
 
 impl CKLine {
     pub fn new(
-        kl_unit: Handle<CKLineUnit>,
+        kl_unit: WeakHandle<CKLineUnit>,
         idx: usize,
         dir: KLineDir, /*缺省值为KLINE_DIR.UP*/
     ) -> Handle<Self> {
-        let kline = Rc::new(RefCell::new(CKLine {
-            idx,
-            kl_type: kl_unit.borrow().kl_type.clone(),
-            fx: FxType::Unknown,
-            time_begin: kl_unit.borrow().time,
-            time_end: kl_unit.borrow().time,
-            low: kl_unit.borrow().low,
-            high: kl_unit.borrow().high,
-            dir,
-            lst: vec![Rc::clone(&kl_unit)],
-            pre: None,
-            next: None,
-        }));
-
-        kl_unit.borrow_mut().set_klc(Rc::clone(&kline));
-        kline
+        if let Some(kl_unit_strong) = kl_unit.upgrade() {
+            let kline = Rc::new(RefCell::new(CKLine {
+                idx,
+                kl_type: kl_unit_strong.borrow().kl_type.clone(),
+                fx: FxType::Unknown,
+                time_begin: kl_unit_strong.borrow().time,
+                time_end: kl_unit_strong.borrow().time,
+                low: kl_unit_strong.borrow().low,
+                high: kl_unit_strong.borrow().high,
+                dir,
+                lst: vec![Rc::clone(&kl_unit_strong)],
+                pre: None,
+                next: None,
+            }));
+            kline
+        } else {
+            panic!("Invalid kl_unit reference in CKLine::new")
+        }
     }
 
     //pub fn get_sub_klc(&self) -> impl Iterator<Item = &Handle<CKLine>> + '_ {
@@ -77,14 +79,18 @@ impl CKLine {
 
     pub fn has_gap_with_next(&self) -> bool {
         if let Some(next) = &self.next {
-            let next = next.borrow();
-            !has_overlap(
-                self.get_klu_min_low(),
-                self.get_klu_max_high(),
-                next.get_klu_min_low(),
-                next.get_klu_max_high(),
-                true,
-            )
+            if let Some(next) = next.upgrade() {
+                let next = next.borrow();
+                !has_overlap(
+                    self.get_klu_min_low(),
+                    self.get_klu_max_high(),
+                    next.get_klu_min_low(),
+                    next.get_klu_max_high(),
+                    true,
+                )
+            } else {
+                false
+            }
         } else {
             false
         }
@@ -126,10 +132,13 @@ impl CKLine {
                             .pre
                             .as_ref()
                             .unwrap()
+                            .upgrade()
+                            .unwrap()
                             .borrow()
                             .high
                             .max(item2.borrow().high),
-                        self.low.min(self.next.as_ref().unwrap().borrow().low),
+                        self.low
+                            .min(self.next.as_ref().unwrap().upgrade().unwrap().borrow().low),
                     ),
                     FxCheckMethod::Loss => (item2.borrow().high, self.low),
                     FxCheckMethod::Strict | FxCheckMethod::Totally => {
@@ -138,6 +147,8 @@ impl CKLine {
                                 .borrow()
                                 .pre
                                 .as_ref()
+                                .unwrap()
+                                .upgrade()
                                 .unwrap()
                                 .borrow()
                                 .high
@@ -154,19 +165,33 @@ impl CKLine {
                                 .pre
                                 .as_ref()
                                 .unwrap()
+                                .upgrade()
+                                .unwrap()
                                 .borrow()
                                 .high
                                 .max(item2.borrow().high)
-                                .max(item2.borrow().next.as_ref().unwrap().borrow().high)
+                                .max(
+                                    item2
+                                        .borrow()
+                                        .next
+                                        .as_ref()
+                                        .unwrap()
+                                        .upgrade()
+                                        .unwrap()
+                                        .borrow()
+                                        .high,
+                                )
                         };
                         let self_low = self
                             .pre
                             .as_ref()
                             .unwrap()
+                            .upgrade()
+                            .unwrap()
                             .borrow()
                             .low
                             .min(self.low)
-                            .min(self.next.as_ref().unwrap().borrow().low);
+                            .min(self.next.as_ref().unwrap().upgrade().unwrap().borrow().low);
                         (item2_high, self_low)
                     }
                 };
@@ -195,10 +220,13 @@ impl CKLine {
                             .pre
                             .as_ref()
                             .unwrap()
+                            .upgrade()
+                            .unwrap()
                             .borrow()
                             .low
                             .min(item2.borrow().low),
-                        self.high.max(self.next.as_ref().unwrap().borrow().high),
+                        self.high
+                            .max(self.next.as_ref().unwrap().upgrade().unwrap().borrow().high),
                     ),
                     FxCheckMethod::Loss => (item2.borrow().low, self.high),
                     FxCheckMethod::Strict | FxCheckMethod::Totally => {
@@ -207,6 +235,8 @@ impl CKLine {
                                 .borrow()
                                 .pre
                                 .as_ref()
+                                .unwrap()
+                                .upgrade()
                                 .unwrap()
                                 .borrow()
                                 .low
@@ -223,19 +253,33 @@ impl CKLine {
                                 .pre
                                 .as_ref()
                                 .unwrap()
+                                .upgrade()
+                                .unwrap()
                                 .borrow()
                                 .low
                                 .min(item2.borrow().low)
-                                .min(item2.borrow().next.as_ref().unwrap().borrow().low)
+                                .min(
+                                    item2
+                                        .borrow()
+                                        .next
+                                        .as_ref()
+                                        .unwrap()
+                                        .upgrade()
+                                        .unwrap()
+                                        .borrow()
+                                        .low,
+                                )
                         };
                         let cur_high = self
                             .pre
                             .as_ref()
                             .unwrap()
+                            .upgrade()
+                            .unwrap()
                             .borrow()
                             .high
                             .max(self.high)
-                            .max(self.next.as_ref().unwrap().borrow().high);
+                            .max(self.next.as_ref().unwrap().upgrade().unwrap().borrow().high);
                         (item2_low, cur_high)
                     }
                 };
@@ -255,14 +299,12 @@ impl CKLine {
 }
 
 impl CKLine {
-    pub fn pre(&self) -> Result<Handle<CKLine>, CChanException> {
-        self.pre.clone().ok_or_else(|| {
-            CChanException::new("No previous combiner".to_string(), ErrCode::CombinerErr)
-        })
+    pub fn pre(&self) -> Option<Handle<CKLine>> {
+        self.pre.clone().and_then(|weak| weak.upgrade())
     }
 
     pub fn next(&self) -> Option<Handle<CKLine>> {
-        self.next.clone()
+        self.next.clone().and_then(|weak| weak.upgrade())
     }
 
     pub fn get_next(&self) -> Option<Handle<CKLine>> {
@@ -310,7 +352,7 @@ impl CKLine {
             //.unwrap()
             //.downcast_mut::<CKLineUnit>()
             //{
-            unit_kl.borrow_mut().set_klc(Rc::clone(klc));
+            unit_kl.borrow_mut().set_klc(Rc::downgrade(klc));
             //}
 
             let dir_ = klc.borrow().dir;
@@ -418,13 +460,11 @@ impl CKLine {
     }
 
     pub fn set_pre(&mut self, pre: Handle<CKLine>) {
-        self.pre = Some(pre);
-        //self.clean_cache();
+        self.pre = Some(Rc::downgrade(&pre));
     }
 
     pub fn set_next(&mut self, next: Handle<CKLine>) {
-        self.next = Some(next);
-        //self.clean_cache();
+        self.next = Some(Rc::downgrade(&next));
     }
 }
 
