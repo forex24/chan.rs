@@ -98,8 +98,12 @@ impl CKLine {
         method: FxCheckMethod,
         for_virtual: bool,
     ) -> bool {
+        // for_virtual: 虚笔时使用
         assert!(self.next.is_some() && self.pre.is_some());
         assert!(item2.borrow().pre.is_some());
+        if item2.borrow().idx <= self.idx {
+            println!("item2:{} self:{}", item2.borrow().idx, self.idx)
+        }
         assert!(item2.borrow().idx > self.idx);
 
         match self.fx {
@@ -111,6 +115,7 @@ impl CKLine {
 
                 let (item2_high, self_low) = match method {
                     FxCheckMethod::Half => (
+                        // 检测前两KLC
                         item2
                             .borrow()
                             .pre
@@ -124,7 +129,11 @@ impl CKLine {
                         self.low
                             .min(self.next.as_ref().unwrap().upgrade().unwrap().borrow().low),
                     ),
-                    FxCheckMethod::Loss => (item2.borrow().high, self.low),
+                    FxCheckMethod::Loss =>
+                    //只检测顶底分形KLC
+                    {
+                        (item2.borrow().high, self.low)
+                    }
                     FxCheckMethod::Strict | FxCheckMethod::Totally => {
                         let item2_high = if for_virtual {
                             item2

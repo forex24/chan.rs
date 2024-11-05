@@ -1,20 +1,18 @@
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::{Handle, StrongHandle, WeakHandle};
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::Seg::CSeg;
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::fmt::Display;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 pub struct CBi {
+    pub idx: usize,
     pub begin_klc: WeakHandle<CKLine>,
     pub end_klc: WeakHandle<CKLine>,
     pub dir: BiDir,
-    pub idx: usize,
     pub bi_type: BiType,
     pub is_sure: bool,
     pub sure_end: Vec<WeakHandle<CKLine>>,
@@ -23,7 +21,6 @@ pub struct CBi {
     pub bsp: Option<WeakHandle<CBSPoint<CBi>>>,
     pub next: Option<WeakHandle<Self>>,
     pub pre: Option<WeakHandle<Self>>,
-    //pub memoize_cache: RefCell<HashMap<String, f64>>,
 }
 
 impl CBi {
@@ -46,14 +43,9 @@ impl CBi {
             bsp: None,
             next: None,
             pre: None,
-            //memoize_cache: RefCell::new(HashMap::new()),
         };
         bi.set(begin_klc, end_klc).unwrap();
         bi
-    }
-
-    pub fn clean_cache(&self) {
-        //self.memoize_cache.borrow_mut().clear();
     }
 
     pub fn begin_klc(&self) -> WeakHandle<CKLine> {
@@ -90,25 +82,6 @@ impl CBi {
 
     pub fn set_seg_idx(&mut self, idx: usize) {
         self.seg_idx = Some(idx);
-    }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "{}|{} ~ {}",
-            self.dir,
-            self.begin_klc.upgrade().unwrap().borrow().lst[0]
-                .borrow()
-                .time,
-            self.end_klc
-                .upgrade()
-                .unwrap()
-                .borrow()
-                .lst
-                .last()
-                .unwrap()
-                .borrow()
-                .time
-        )
     }
 
     pub fn check(&self) -> Result<(), CChanException> {
@@ -180,7 +153,6 @@ impl CBi {
             }
         };
         self.check()?;
-        self.clean_cache();
         Ok(())
     }
 
@@ -302,26 +274,25 @@ impl CBi {
         self.dir == BiDir::Up
     }
 
-    pub fn update_virtual_end(&mut self, new_klc: Handle<CKLine>) {
+    pub fn update_virtual_end(&mut self, new_klc: StrongHandle<CKLine>) {
         self.append_sure_end(self.end_klc.upgrade().unwrap());
         self.update_new_end(new_klc);
         self.is_sure = false;
     }
 
-    pub fn restore_from_virtual_end(&mut self, sure_end: Handle<CKLine>) {
+    pub fn restore_from_virtual_end(&mut self, sure_end: StrongHandle<CKLine>) {
         self.is_sure = true;
         self.update_new_end(sure_end);
         self.sure_end.clear();
     }
 
-    pub fn append_sure_end(&mut self, klc: Handle<CKLine>) {
+    pub fn append_sure_end(&mut self, klc: StrongHandle<CKLine>) {
         self.sure_end.push(Weak::clone(&self.end_klc));
     }
 
-    pub fn update_new_end(&mut self, new_klc: Handle<CKLine>) {
+    pub fn update_new_end(&mut self, new_klc: StrongHandle<CKLine>) {
         self.end_klc = Rc::downgrade(&new_klc);
         self.check().unwrap();
-        self.clean_cache();
     }
 
     pub fn cal_macd_metric(
@@ -511,14 +482,14 @@ impl CBi {
     //}
 
     // Helper methods for iterating over KLines
-    fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {
+    fn klc_lst(&self) -> impl Iterator<Item = StrongHandle<CKLine>> {
         KlcIterator {
             current: Some(Weak::clone(&self.begin_klc)),
             end_idx: self.end_klc.upgrade().unwrap().borrow().idx,
         }
     }
 
-    fn klc_lst_re(&self) -> impl Iterator<Item = Handle<CKLine>> {
+    fn klc_lst_re(&self) -> impl Iterator<Item = StrongHandle<CKLine>> {
         KlcReverseIterator {
             current: Some(Weak::clone(&self.end_klc)),
             begin_idx: self.begin_klc.upgrade().unwrap().borrow().idx,
@@ -532,7 +503,7 @@ struct KlcIterator {
 }
 
 impl Iterator for KlcIterator {
-    type Item = Handle<CKLine>;
+    type Item = StrongHandle<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
@@ -553,7 +524,7 @@ struct KlcReverseIterator {
 }
 
 impl Iterator for KlcReverseIterator {
-    type Item = Handle<CKLine>;
+    type Item = StrongHandle<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
@@ -565,5 +536,27 @@ impl Iterator for KlcReverseIterator {
         } else {
             None
         }
+    }
+}
+
+impl Display for CBi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}|{} ~ {}",
+            self.dir,
+            self.begin_klc.upgrade().unwrap().borrow().lst[0]
+                .borrow()
+                .time,
+            self.end_klc
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .lst
+                .last()
+                .unwrap()
+                .borrow()
+                .time
+        )
     }
 }

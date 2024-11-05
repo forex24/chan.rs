@@ -1,6 +1,6 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
-use crate::Common::types::{Handle, StrongHandle, WeakHandle};
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{FxType, KLineDir};
 use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
@@ -10,7 +10,7 @@ pub struct CBiList {
     pub bi_list: Vec<StrongHandle<CBi>>,
     pub last_end: Option<WeakHandle<CKLine>>,
     pub config: CBiConfig,
-    pub free_klc_lst: Vec<WeakHandle<CKLine>>,
+    pub free_klc_lst: Vec<WeakHandle<CKLine>>, // 仅仅用作第一笔未画出来之前的缓存，为了获得更精准的结果而已，不加这块逻辑其实对后续计算没太大影响
 }
 
 impl CBiList {
@@ -31,28 +31,21 @@ impl CBiList {
             .join("\n")
     }
 
-    pub fn len(&self) -> usize {
-        self.bi_list.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.bi_list.is_empty()
-    }
-
-    pub fn get(&self, index: usize) -> Option<StrongHandle<CBi>> {
-        self.bi_list.get(index).cloned()
-    }
-
+    // 已完备
     pub fn try_create_first_bi(&mut self, klc: WeakHandle<CKLine>) -> bool {
+        assert!(self.bi_list.is_empty());
+        assert!(klc.upgrade().unwrap().borrow().fx != FxType::Unknown);
+
         for exist_free_klc in &self.free_klc_lst {
             if exist_free_klc.upgrade().unwrap().borrow().fx == klc.upgrade().unwrap().borrow().fx {
                 continue;
             }
             if self.can_make_bi(
-                exist_free_klc.upgrade().unwrap(),
                 klc.upgrade().unwrap(),
+                exist_free_klc.upgrade().unwrap(),
                 false,
             ) {
+                println!("add first bi");
                 self.add_new_bi(
                     exist_free_klc.upgrade().unwrap(),
                     klc.upgrade().unwrap(),
@@ -67,12 +60,14 @@ impl CBiList {
         false
     }
 
+    // 已完备
     pub fn update_bi(
         &mut self,
-        klc: WeakHandle<CKLine>,
-        last_klc: WeakHandle<CKLine>,
+        klc: WeakHandle<CKLine>,      // klc:倒数第二根klc
+        last_klc: WeakHandle<CKLine>, // last_klc: 倒数第1根klc
         cal_virtual: bool,
     ) -> bool {
+        assert!(klc.upgrade().unwrap().borrow().idx < last_klc.upgrade().unwrap().borrow().idx);
         let flag1 = self.update_bi_sure(klc.clone());
         if cal_virtual {
             let flag2 = self.try_add_virtual_bi(last_klc.clone(), false);
@@ -82,12 +77,13 @@ impl CBiList {
         }
     }
 
+    // 已完备
     pub fn can_update_peak(&self, klc: &WeakHandle<CKLine>) -> bool {
         if self.config.bi_allow_sub_peak || self.bi_list.len() < 2 {
             return false;
         }
+
         let last_bi = self.bi_list.last().unwrap();
-        let second_last_bi = &self.bi_list[self.bi_list.len() - 2];
         if last_bi.borrow().is_down()
             && klc.upgrade().unwrap().borrow().high < last_bi.borrow().get_begin_val()
         {
@@ -98,13 +94,17 @@ impl CBiList {
         {
             return false;
         }
-        let strong_klc = klc.upgrade().unwrap();
+
+        let klc = klc.upgrade().unwrap();
+        let second_last_bi = &self.bi_list[self.bi_list.len() - 2];
+
         if !end_is_peak(
             &second_last_bi.borrow().begin_klc().upgrade().unwrap(),
-            &strong_klc,
+            &klc,
         ) {
             return false;
         }
+
         if last_bi.borrow().is_down()
             && last_bi.borrow().get_end_val() < second_last_bi.borrow().get_begin_val()
         {
@@ -115,9 +115,11 @@ impl CBiList {
         {
             return false;
         }
+
         true
     }
 
+    // 已完备
     pub fn update_peak(&mut self, klc: WeakHandle<CKLine>, for_virtual: bool) -> bool {
         if !self.can_update_peak(&klc) {
             return false;
@@ -138,11 +140,15 @@ impl CBiList {
         }
     }
 
+    // 已完备
     pub fn update_bi_sure(&mut self, klc: WeakHandle<CKLine>) -> bool {
+        // klc:倒数第二根klc
         let tmp_end = self.get_last_klu_of_last_bi();
         self.delete_virtual_bi();
+
+        // 返回值：是否出现新笔
         if klc.upgrade().unwrap().borrow().fx == FxType::Unknown {
-            return tmp_end != self.get_last_klu_of_last_bi();
+            return tmp_end != self.get_last_klu_of_last_bi(); // 虚笔是否有变
         }
         if self.last_end.is_none() || self.bi_list.is_empty() {
             return self.try_create_first_bi(klc.clone());
@@ -176,6 +182,7 @@ impl CBiList {
         tmp_end != self.get_last_klu_of_last_bi()
     }
 
+    // 已完备
     pub fn delete_virtual_bi(&mut self) {
         if !self.bi_list.is_empty() && !self.bi_list.last().unwrap().borrow().is_sure {
             let sure_end_list: Vec<_> = self.bi_list.last().unwrap().borrow().sure_end().to_vec();
@@ -218,6 +225,7 @@ impl CBiList {
                 self.bi_list.pop();
             }
         }
+
         self.last_end = if !self.bi_list.is_empty() {
             Some(Rc::downgrade(
                 &self
@@ -238,6 +246,7 @@ impl CBiList {
         }
     }
 
+    // 已完备
     pub fn try_add_virtual_bi(&mut self, klc: WeakHandle<CKLine>, need_del_end: bool) -> bool {
         if need_del_end {
             self.delete_virtual_bi();
@@ -267,6 +276,7 @@ impl CBiList {
                 && klc.upgrade().unwrap().borrow().low
                     <= last_bi.borrow().end_klc().upgrade().unwrap().borrow().low)
         {
+            // 更新最后一笔
             last_bi
                 .borrow_mut()
                 .update_virtual_end(klc.upgrade().unwrap());
@@ -299,6 +309,7 @@ impl CBiList {
                     .unwrap(),
                 true,
             ) {
+                // 新增一笔
                 self.add_new_bi(
                     self.last_end.as_ref().unwrap().upgrade().unwrap(),
                     k.clone(),
@@ -313,6 +324,7 @@ impl CBiList {
         false
     }
 
+    // 已完备
     pub fn add_new_bi(
         &mut self,
         pre_klc: StrongHandle<CKLine>,
@@ -333,6 +345,7 @@ impl CBiList {
         self.bi_list.push(new_bi);
     }
 
+    // 已完备
     pub fn satisfy_bi_span(
         &self,
         klc: &StrongHandle<CKLine>,
@@ -371,6 +384,7 @@ impl CBiList {
         bi_span >= 3 && uint_kl_cnt >= 3
     }
 
+    // 已完备
     pub fn get_klc_span(
         &self,
         klc: &StrongHandle<CKLine>,
@@ -381,7 +395,7 @@ impl CBiList {
             return span;
         }
         if span >= 4 {
-            // 加速计算
+            // 加速运算，如果span需要真正精确的值，需要去掉这一行
             return span;
         }
         let mut tmp_klc = Some(Rc::clone(last_end));
@@ -397,6 +411,7 @@ impl CBiList {
         span
     }
 
+    // 已完备
     pub fn can_make_bi(
         &self,
         klc: StrongHandle<CKLine>,
@@ -408,6 +423,7 @@ impl CBiList {
         } else {
             self.satisfy_bi_span(&klc, &last_end)
         };
+
         if !satisfy_span {
             return false;
         }
@@ -424,6 +440,7 @@ impl CBiList {
         true
     }
 
+    // 已完备
     pub fn try_update_end(&mut self, klc: StrongHandle<CKLine>, for_virtual: bool) -> bool {
         if self.bi_list.is_empty() {
             return false;
@@ -462,6 +479,7 @@ impl CBiList {
         }
     }
 
+    // 已完备
     pub fn get_last_klu_of_last_bi(&self) -> Option<usize> {
         self.bi_list
             .last()
@@ -472,7 +490,7 @@ impl CBiList {
 fn end_is_peak(last_end: &StrongHandle<CKLine>, cur_end: &StrongHandle<CKLine>) -> bool {
     match last_end.borrow().fx {
         FxType::Bottom => {
-            let cmp_thred = cur_end.borrow().high;
+            let cmp_thred = cur_end.borrow().high; // 或者严格点选择get_klu_max_high()
             let mut klc = last_end.borrow().get_next();
             while let Some(k) = klc {
                 if k.borrow().idx >= cur_end.borrow().idx {
@@ -485,7 +503,7 @@ fn end_is_peak(last_end: &StrongHandle<CKLine>, cur_end: &StrongHandle<CKLine>) 
             }
         }
         FxType::Top => {
-            let cmp_thred = cur_end.borrow().low;
+            let cmp_thred = cur_end.borrow().low; // 或者严格点选择get_klu_min_low()
             let mut klc = last_end.borrow().get_next();
             while let Some(k) = klc {
                 if k.borrow().idx >= cur_end.borrow().idx {
