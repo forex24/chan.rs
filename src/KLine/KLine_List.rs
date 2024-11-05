@@ -1,7 +1,11 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 //
-use super::KLine_Unit::MetricModel;
+use super::KLine_Unit::{CKLineUnit, MetricModel};
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::{Handle, StrongHandle};
+use crate::Common::types::StrongHandle;
+use crate::Common::CEnum::KLineDir;
 use crate::KLine::KLine::CKLine;
 
 pub struct CKLineList {
@@ -21,6 +25,27 @@ impl CKLineList {
         }
     }
 
+    pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Option<KLineDir> {
+        klu.set_metric(&mut self.metric_model_lst);
+        let klu = Rc::new(RefCell::new(klu));
+
+        if self.lst.is_empty() {
+            self.lst.push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
+            return None;
+        }
+
+        let dir = CKLine::try_add(self.lst.last().unwrap(), &klu);
+
+        if dir != KLineDir::Combine {
+            let new_kline = CKLine::new(Rc::clone(&klu), self.lst.len(), dir);
+            self.lst.push(new_kline.clone());
+            if self.lst.len() >= 3 {
+                let len = self.lst.len();
+                CKLine::update_fx(&self.lst[len - 2], &self.lst[len - 3], &self.lst[len - 1]);
+            }
+        }
+        Some(dir)
+    }
     /*pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Result<(), CChanException> {
         klu.set_metric(&mut self.metric_model_lst);
         let klu = Rc::new(RefCell::new(klu));

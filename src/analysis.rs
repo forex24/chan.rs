@@ -96,12 +96,24 @@ impl Analyzer {
     pub fn add_single_klu(&mut self, mut klu: CKLineUnit) -> Result<(), CChanException> {
         klu.set_metric(&mut self.metric_model_lst);
         let klu = Rc::new(RefCell::new(klu));
+
         if self.klc_list.is_empty() {
             self.klc_list
                 .push(CKLine::new(Rc::clone(&klu), 0, KLineDir::Up));
-        } else {
-            let dir = CKLine::try_add(self.klc_list.last().as_ref().unwrap(), &klu)?;
-            if dir != KLineDir::Combine {
+            return Ok(());
+        }
+
+        let dir = CKLine::try_add(self.klc_list.last().as_ref().unwrap(), &klu)?;
+        match dir {
+            KLineDir::Combine => {
+                if self
+                    .bi_list
+                    .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), true)
+                {
+                    self.cal_seg_and_zs()?;
+                }
+            }
+            _ => {
                 let new_kline = CKLine::new(Rc::clone(&klu), self.klc_list.len(), dir);
                 self.klc_list.push(new_kline.clone());
                 if self.klc_list.len() >= 3 {
@@ -120,12 +132,6 @@ impl Analyzer {
                 {
                     self.cal_seg_and_zs()?;
                 }
-            } else if self.step_calculation
-                && self
-                    .bi_list
-                    .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), true)
-            {
-                self.cal_seg_and_zs()?;
             }
         }
         Ok(())

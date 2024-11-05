@@ -411,11 +411,11 @@ impl CBiList {
         if !satisfy_span {
             return false;
         }
-        let check_fx_valid =
+        let is_fx_valid =
             last_end
                 .borrow()
                 .check_fx_valid(&klc, self.config.bi_fx_check, for_virtual);
-        if check_fx_valid.is_err() {
+        if !is_fx_valid {
             return false;
         }
         if self.config.bi_end_is_peak && !end_is_peak(&last_end, &klc) {
