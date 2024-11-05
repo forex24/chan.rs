@@ -1,5 +1,5 @@
 use crate::Common::func_util::revert_bi_dir;
-use crate::Common::types::{Handle, StrongHandle, WeakHandle};
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{BiDir, ZsAlgo};
 use crate::Seg::linetype::{Line, SegLine};
 use crate::Seg::Seg::CSeg;
@@ -30,7 +30,8 @@ impl<T: Line> CZSList<T> {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.borrow().is_sure {
-                self.last_sure_pos = Some(seg.borrow().start_bi.borrow().line_idx());
+                self.last_sure_pos =
+                    Some(seg.borrow().start_bi.upgrade().unwrap().borrow().line_idx());
                 return;
             }
         }
@@ -39,7 +40,7 @@ impl<T: Line> CZSList<T> {
     pub fn seg_need_cal(&self, seg: &StrongHandle<CSeg<T>>) -> bool {
         match self.last_sure_pos {
             None => true,
-            Some(pos) => seg.borrow().start_bi.borrow().line_idx() >= pos,
+            Some(pos) => seg.borrow().start_bi.upgrade().unwrap().borrow().line_idx() >= pos,
         }
     }
 
@@ -206,16 +207,23 @@ impl<T: Line> CZSList<T> {
                         continue;
                     }
                     self.clear_free_lst();
-                    let seg_bi_lst = &bi_lst[seg.borrow().start_bi.borrow().line_idx()
-                        ..seg.borrow().end_bi.borrow().line_idx() + 1];
+                    let seg_bi_lst =
+                        &bi_lst[seg.borrow().start_bi.upgrade().unwrap().borrow().line_idx()
+                            ..seg.borrow().end_bi.upgrade().unwrap().borrow().line_idx() + 1];
                     self.add_zs_from_bi_range(&seg_bi_lst, seg.borrow().dir, seg.borrow().is_sure);
                 }
 
                 if !seg_lst.is_empty() {
                     self.clear_free_lst();
                     let last_seg = seg_lst.last().unwrap();
-                    let remaining_bi_lst =
-                        &bi_lst[last_seg.borrow().end_bi.borrow().line_idx() + 1..];
+                    let remaining_bi_lst = &bi_lst[last_seg
+                        .borrow()
+                        .end_bi
+                        .upgrade()
+                        .unwrap()
+                        .borrow()
+                        .line_idx()
+                        + 1..];
                     self.add_zs_from_bi_range(
                         &remaining_bi_lst,
                         revert_bi_dir(&last_seg.borrow().dir),
@@ -259,12 +267,14 @@ impl<T: Line> CZSList<T> {
                     }
                     if seg_ref.is_sure || (!sure_seg_appear && exist_sure_seg) {
                         self.clear_free_lst();
-                        let seg_bi_lst = &bi_lst[seg_ref.start_bi.borrow().line_idx()
-                            ..seg_ref.end_bi.borrow().line_idx() + 1];
+                        let seg_bi_lst =
+                            &bi_lst[seg_ref.start_bi.upgrade().unwrap().borrow().line_idx()
+                                ..seg_ref.end_bi.upgrade().unwrap().borrow().line_idx() + 1];
                         self.add_zs_from_bi_range(&seg_bi_lst, seg_ref.dir, seg_ref.is_sure);
                     } else {
                         self.clear_free_lst();
-                        for bi in &bi_lst[seg_ref.start_bi.borrow().line_idx()..] {
+                        for bi in &bi_lst[seg_ref.start_bi.upgrade().unwrap().borrow().line_idx()..]
+                        {
                             self.update_overseg_zs(bi);
                         }
                         break;
@@ -353,7 +363,7 @@ impl<T: Line> CZSList<T> {
 }
 
 impl<T: Line> std::ops::Deref for CZSList<T> {
-    type Target = Vec<Handle<CZS<T>>>;
+    type Target = Vec<StrongHandle<CZS<T>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.zs_lst
@@ -367,7 +377,7 @@ impl<T: Line> std::ops::DerefMut for CZSList<T> {
 }
 
 impl<T: Line> std::iter::IntoIterator for CZSList<T> {
-    type Item = Handle<CZS<T>>;
+    type Item = StrongHandle<CZS<T>>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::Handle;
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{BiDir, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -15,18 +15,18 @@ use super::EigenFX::CEigenFX;
 //#[derive(Debug, Clone)]
 pub struct CSeg<T> {
     pub idx: usize,
-    pub start_bi: Handle<T>,
-    pub end_bi: Handle<T>,
+    pub start_bi: WeakHandle<T>,
+    pub end_bi: WeakHandle<T>,
     pub is_sure: bool,
     pub dir: BiDir,
-    pub zs_lst: VecDeque<Handle<CZS<T>>>,
+    pub zs_lst: VecDeque<WeakHandle<CZS<T>>>,
     pub eigen_fx: Option<CEigenFX<T>>,
     pub seg_idx: Option<usize>,
     pub parent_seg: Option<Weak<RefCell<CSeg<Self>>>>,
-    pub pre: Option<Handle<CSeg<T>>>,
-    pub next: Option<Handle<CSeg<T>>>,
-    pub bsp: Option<Handle<CBSPoint<CSeg<T>>>>,
-    pub bi_list: Vec<Handle<T>>,
+    pub pre: Option<WeakHandle<CSeg<T>>>,
+    pub next: Option<WeakHandle<CSeg<T>>>,
+    pub bsp: Option<WeakHandle<CBSPoint<CSeg<T>>>>,
+    pub bi_list: Vec<WeakHandle<T>>,
     pub reason: String,
     //pub support_trend_line: Option<CTrendLine>,
     //pub resistance_trend_line: Option<CTrendLine>,
@@ -36,26 +36,30 @@ pub struct CSeg<T> {
 impl<T: Line> CSeg<T> {
     pub fn new(
         idx: usize,
-        start_bi: Handle<T>,
-        end_bi: Handle<T>,
+        start_bi: WeakHandle<T>,
+        end_bi: WeakHandle<T>,
         is_sure: bool,
         seg_dir: Option<BiDir>,
         reason: &str,
     ) -> Result<Self, CChanException> {
         assert!(
-            start_bi.borrow().line_idx() == 0
-                || start_bi.borrow().line_dir() == end_bi.borrow().line_dir()
+            start_bi.upgrade().unwrap().borrow().line_idx() == 0
+                || start_bi.upgrade().unwrap().borrow().line_dir()
+                    == end_bi.upgrade().unwrap().borrow().line_dir()
                 || !is_sure,
             "start_bi and end_bi direction mismatch"
         );
 
-        let is_sure = if end_bi.borrow().line_idx() - start_bi.borrow().line_idx() < 2 {
+        let is_sure = if end_bi.upgrade().unwrap().borrow().line_idx()
+            - start_bi.upgrade().unwrap().borrow().line_idx()
+            < 2
+        {
             false
         } else {
             is_sure
         };
 
-        let dir = seg_dir.unwrap_or_else(|| end_bi.borrow().line_dir());
+        let dir = seg_dir.unwrap_or_else(|| end_bi.upgrade().unwrap().borrow().line_dir());
         let seg = Self {
             idx,
             start_bi,
@@ -89,10 +93,15 @@ impl<T: Line> CSeg<T> {
             return Ok(());
         }
 
-        let start_val = self.start_bi.borrow().line_get_begin_val();
-        let end_val = self.end_bi.borrow().line_get_end_val();
-        let start_idx = self.start_bi.borrow().line_idx();
-        let end_idx = self.end_bi.borrow().line_idx();
+        let start_val = self
+            .start_bi
+            .upgrade()
+            .unwrap()
+            .borrow()
+            .line_get_begin_val();
+        let end_val = self.end_bi.upgrade().unwrap().borrow().line_get_end_val();
+        let start_idx = self.start_bi.upgrade().unwrap().borrow().line_idx();
+        let end_idx = self.end_bi.upgrade().unwrap().borrow().line_idx();
 
         if self.is_down() {
             if start_val < end_val {
@@ -122,12 +131,15 @@ impl<T: Line> CSeg<T> {
         Ok(())
     }
 
-    pub fn add_zs(&mut self, zs: Handle<CZS<T>>) {
+    pub fn add_zs(&mut self, zs: WeakHandle<CZS<T>>) {
         self.zs_lst.push_front(zs);
     }
 
     pub fn cal_klu_slope(&self) -> f64 {
-        assert!(self.end_bi.borrow().line_idx() >= self.start_bi.borrow().line_idx());
+        assert!(
+            self.end_bi.upgrade().unwrap().borrow().line_idx()
+                >= self.start_bi.upgrade().unwrap().borrow().line_idx()
+        );
         let end_val = self.get_end_val();
         let begin_val = self.get_begin_val();
         let end_idx = self.get_end_klu().borrow().idx;
@@ -141,7 +153,9 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn cal_bi_cnt(&self) -> usize {
-        self.end_bi.borrow().line_idx() - self.start_bi.borrow().line_idx() + 1
+        self.end_bi.upgrade().unwrap().borrow().line_idx()
+            - self.start_bi.upgrade().unwrap().borrow().line_idx()
+            + 1
     }
 
     pub fn clear_zs_lst(&mut self) {
@@ -150,17 +164,41 @@ impl<T: Line> CSeg<T> {
 
     pub fn low(&self) -> f64 {
         if self.is_down() {
-            self.end_bi.borrow().line_get_end_klu().borrow().low
+            self.end_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_get_end_klu()
+                .borrow()
+                .low
         } else {
-            self.start_bi.borrow().line_get_begin_klu().borrow().low
+            self.start_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_get_begin_klu()
+                .borrow()
+                .low
         }
     }
 
     pub fn high(&self) -> f64 {
         if self.is_up() {
-            self.end_bi.borrow().line_get_end_klu().borrow().high
+            self.end_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_get_end_klu()
+                .borrow()
+                .high
         } else {
-            self.start_bi.borrow().line_get_begin_klu().borrow().high
+            self.start_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_get_begin_klu()
+                .borrow()
+                .high
         }
     }
 
@@ -173,23 +211,31 @@ impl<T: Line> CSeg<T> {
     }
 
     pub fn get_end_val(&self) -> f64 {
-        self.end_bi.borrow().line_get_end_val()
+        self.end_bi.upgrade().unwrap().borrow().line_get_end_val()
     }
 
     pub fn get_begin_val(&self) -> f64 {
-        self.start_bi.borrow().line_get_begin_val()
+        self.start_bi
+            .upgrade()
+            .unwrap()
+            .borrow()
+            .line_get_begin_val()
     }
 
     pub fn amp(&self) -> f64 {
         (self.get_end_val() - self.get_begin_val()).abs()
     }
 
-    pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
-        self.end_bi.borrow().line_get_end_klu()
+    pub fn get_end_klu(&self) -> StrongHandle<CKLineUnit> {
+        self.end_bi.upgrade().unwrap().borrow().line_get_end_klu()
     }
 
-    pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
-        self.start_bi.borrow().line_get_begin_klu()
+    pub fn get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
+        self.start_bi
+            .upgrade()
+            .unwrap()
+            .borrow()
+            .line_get_begin_klu()
     }
 
     pub fn get_klu_cnt(&self) -> usize {
@@ -249,15 +295,16 @@ impl<T: Line> CSeg<T> {
 
     pub fn update_bi_list(
         &mut self,
-        bi_lst: &[Handle<T>],
+        bi_lst: &[StrongHandle<T>],
         idx1: usize,
         idx2: usize,
-        parent: Handle<CSeg<T>>,
+        parent: WeakHandle<CSeg<T>>,
     ) {
         for bi_idx in idx1..=idx2 {
             let bi = bi_lst.get(bi_idx).unwrap().clone();
-            bi.borrow_mut().line_set_parent_seg(Some(parent.clone()));
-            self.bi_list.push(bi);
+            bi.borrow_mut()
+                .line_set_parent_seg(Some(parent.upgrade().unwrap()));
+            self.bi_list.push(Rc::downgrade(&bi));
         }
 
         // TODO:
@@ -268,25 +315,25 @@ impl<T: Line> CSeg<T> {
         //}
     }
 
-    pub fn get_first_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+    pub fn get_first_multi_bi_zs(&self) -> Option<WeakHandle<CZS<T>>> {
         self.zs_lst
             .iter()
-            .find(|zs| !zs.borrow().is_one_bi_zs())
+            .find(|zs| !zs.upgrade().unwrap().borrow().is_one_bi_zs())
             .cloned()
     }
 
-    pub fn get_final_multi_bi_zs(&self) -> Option<Handle<CZS<T>>> {
+    pub fn get_final_multi_bi_zs(&self) -> Option<WeakHandle<CZS<T>>> {
         self.zs_lst
             .iter()
             .rev()
-            .find(|zs| !zs.borrow().is_one_bi_zs())
+            .find(|zs| !zs.upgrade().unwrap().borrow().is_one_bi_zs())
             .cloned()
     }
 
     pub fn get_multi_bi_zs_cnt(&self) -> usize {
         self.zs_lst
             .iter()
-            .filter(|zs| !zs.borrow().is_one_bi_zs())
+            .filter(|zs| !zs.upgrade().unwrap().borrow().is_one_bi_zs())
             .count()
     }
 }
@@ -296,8 +343,8 @@ impl<T: Line> std::fmt::Display for CSeg<T> {
         write!(
             f,
             "{}->{}: {:?}  {}",
-            self.start_bi.borrow().line_idx(),
-            self.end_bi.borrow().line_idx(),
+            self.start_bi.upgrade().unwrap().borrow().line_idx(),
+            self.end_bi.upgrade().unwrap().borrow().line_idx(),
             self.dir,
             self.is_sure
         )

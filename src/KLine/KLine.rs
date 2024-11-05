@@ -1,8 +1,7 @@
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::{Handle, StrongHandle, WeakHandle};
+use crate::Common::types::{StrongHandle, WeakHandle};
 use crate::Common::CEnum::{FxCheckMethod, FxType, KLineDir};
 use crate::Common::CTime::CTime;
-use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -287,7 +286,7 @@ impl CKLine {
         self.next()
     }
 
-    pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KLineDir {
+    pub fn test_combine(&self, item: &StrongHandle<CKLineUnit>) -> KLineDir {
         if (self.high >= item.borrow().high && self.low <= item.borrow().low)
             || (self.high <= item.borrow().high && self.low >= item.borrow().low)
         {
@@ -304,7 +303,7 @@ impl CKLine {
         unreachable!();
     }
 
-    pub fn add(&mut self, unit_kl: Handle<CKLineUnit>) {
+    pub fn add(&mut self, unit_kl: StrongHandle<CKLineUnit>) {
         self.lst.push(unit_kl);
     }
 

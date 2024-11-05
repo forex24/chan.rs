@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::Common::{
-    types::{Handle, StrongHandle, WeakHandle},
+    types::{StrongHandle, WeakHandle},
     CEnum::{BiDir, LeftSegMethod, SegType},
     ChanException::{CChanException, ErrCode},
 };
@@ -37,10 +37,10 @@ impl<T: Line> CSegListChan<T> {
             let _seg = self.lst.last().unwrap().clone();
 
             for bi in &_seg.borrow().bi_list {
-                bi.borrow_mut().line_set_parent_seg(None);
+                bi.upgrade().unwrap().borrow_mut().line_set_parent_seg(None);
             }
             if let Some(pre) = &_seg.borrow().pre {
-                pre.borrow_mut().next = None;
+                pre.upgrade().unwrap().borrow_mut().next = None;
             }
             self.lst.pop();
         }
@@ -87,7 +87,17 @@ impl<T: Line> CSegListChan<T> {
         if self.lst.is_empty() {
             self.cal_seg_sure(bi_lst, 0);
         } else {
-            let begin_idx = self.lst.last().unwrap().borrow().end_bi.borrow().line_idx() + 1;
+            let begin_idx = self
+                .lst
+                .last()
+                .unwrap()
+                .borrow()
+                .end_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                + 1;
             self.cal_seg_sure(bi_lst, begin_idx);
         }
         self.collect_left_seg(bi_lst);
@@ -218,13 +228,18 @@ impl<T: Line> CSegListChan<T> {
             return false;
         }
         let last_seg_end_bi = &self.lst.last().unwrap().borrow().end_bi;
-        for bi in bi_lst.iter().skip(last_seg_end_bi.borrow().line_idx() + 1) {
-            if last_seg_end_bi.borrow().line_is_up()
-                && bi.upgrade().unwrap().borrow().line_high() > last_seg_end_bi.borrow().line_high()
+        for bi in bi_lst
+            .iter()
+            .skip(last_seg_end_bi.upgrade().unwrap().borrow().line_idx() + 1)
+        {
+            if last_seg_end_bi.upgrade().unwrap().borrow().line_is_up()
+                && bi.upgrade().unwrap().borrow().line_high()
+                    > last_seg_end_bi.upgrade().unwrap().borrow().line_high()
             {
                 return true;
-            } else if last_seg_end_bi.borrow().line_is_down()
-                && bi.upgrade().unwrap().borrow().line_low() < last_seg_end_bi.borrow().line_low()
+            } else if last_seg_end_bi.upgrade().unwrap().borrow().line_is_down()
+                && bi.upgrade().unwrap().borrow().line_low()
+                    < last_seg_end_bi.upgrade().unwrap().borrow().line_low()
             {
                 return true;
             }
@@ -366,17 +381,23 @@ impl<T: Line> CSegListChan<T> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
 
-        if last_bi.upgrade().unwrap().borrow().line_idx() - last_seg_end_bi.borrow().line_idx() < 3
+        if last_bi.upgrade().unwrap().borrow().line_idx()
+            - last_seg_end_bi.upgrade().unwrap().borrow().line_idx()
+            < 3
         {
             return;
         }
 
-        if last_seg_end_bi.borrow().line_is_down()
+        if last_seg_end_bi.upgrade().unwrap().borrow().line_is_down()
             && last_bi.upgrade().unwrap().borrow().line_get_end_val()
-                <= last_seg_end_bi.borrow().line_get_end_val()
+                <= last_seg_end_bi
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_get_end_val()
         {
             if let Some(peak_bi) = find_peak_bi(
-                bi_lst[last_seg_end_bi.borrow().line_idx() + 3..].iter(),
+                bi_lst[last_seg_end_bi.upgrade().unwrap().borrow().line_idx() + 3..].iter(),
                 true,
             ) {
                 self.add_new_seg(
@@ -389,12 +410,16 @@ impl<T: Line> CSegListChan<T> {
                 );
                 self.collect_left_seg(bi_lst);
             }
-        } else if last_seg_end_bi.borrow().line_is_up()
+        } else if last_seg_end_bi.upgrade().unwrap().borrow().line_is_up()
             && last_bi.upgrade().unwrap().borrow().line_get_end_val()
-                >= last_seg_end_bi.borrow().line_get_end_val()
+                >= last_seg_end_bi
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_get_end_val()
         {
             if let Some(peak_bi) = find_peak_bi(
-                bi_lst[last_seg_end_bi.borrow().line_idx() + 3..].iter(),
+                bi_lst[last_seg_end_bi.upgrade().unwrap().borrow().line_idx() + 3..].iter(),
                 false,
             ) {
                 self.add_new_seg(
@@ -413,7 +438,7 @@ impl<T: Line> CSegListChan<T> {
             // 容易找不到二类买卖点！！
             self.collect_left_as_seg(bi_lst);
         } else if self.config.left_method == LeftSegMethod::Peak {
-            self.collect_left_seg_peak_method(Rc::downgrade(&last_seg_end_bi), bi_lst);
+            self.collect_left_seg_peak_method(last_seg_end_bi.clone(), bi_lst);
         }
     }
 
@@ -431,11 +456,13 @@ impl<T: Line> CSegListChan<T> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().borrow().end_bi.clone();
 
-        if last_seg_end_bi.borrow().line_idx() + 1 >= bi_lst.len() {
+        if last_seg_end_bi.upgrade().unwrap().borrow().line_idx() + 1 >= bi_lst.len() {
             return;
         }
 
-        if last_seg_end_bi.borrow().line_dir() == last_bi.upgrade().unwrap().borrow().line_dir() {
+        if last_seg_end_bi.upgrade().unwrap().borrow().line_dir()
+            == last_bi.upgrade().unwrap().borrow().line_dir()
+        {
             self.add_new_seg(
                 bi_lst,
                 last_bi.upgrade().unwrap().borrow().line_idx() - 1,
@@ -529,15 +556,24 @@ impl<T: Line> CSegListChan<T> {
         let bi1_idx = if self.lst.is_empty() {
             0
         } else {
-            self.lst.last().unwrap().borrow().end_bi.borrow().line_idx() + 1
+            self.lst
+                .last()
+                .unwrap()
+                .borrow()
+                .end_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+                + 1
         };
         let bi1 = bi_lst[bi1_idx].clone();
         let bi2 = bi_lst[end_bi_idx].clone();
 
         let new_seg = Rc::new(RefCell::new(CSeg::new(
             self.lst.len(),
-            bi1.upgrade().unwrap(),
-            bi2.upgrade().unwrap(),
+            bi1,
+            bi2,
             is_sure,
             seg_dir,
             reason,
@@ -545,8 +581,8 @@ impl<T: Line> CSegListChan<T> {
 
         if !self.lst.is_empty() {
             let last_seg = self.lst.last().unwrap().clone();
-            last_seg.borrow_mut().next = Some(Rc::clone(&new_seg));
-            new_seg.borrow_mut().pre = Some(last_seg);
+            last_seg.borrow_mut().next = Some(Rc::downgrade(&new_seg));
+            new_seg.borrow_mut().pre = Some(Rc::downgrade(&last_seg));
         }
 
         new_seg.borrow_mut().update_bi_list(
@@ -556,7 +592,7 @@ impl<T: Line> CSegListChan<T> {
                 .collect::<Vec<_>>(),
             bi1_idx,
             end_bi_idx,
-            Rc::clone(&new_seg),
+            Rc::downgrade(&new_seg),
         );
         self.lst.push(new_seg);
 

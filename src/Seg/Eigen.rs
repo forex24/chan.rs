@@ -3,7 +3,6 @@
 use std::rc::Rc;
 use std::rc::Weak;
 
-use crate::Common::types::Handle;
 use crate::Common::types::StrongHandle;
 use crate::Common::types::WeakHandle;
 use crate::Common::CEnum::{BiDir, EqualMode, FxType, KLineDir};

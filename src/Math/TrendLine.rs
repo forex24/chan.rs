@@ -1,5 +1,5 @@
 use crate::Bi::Bi::CBi;
-use crate::Common::types::Handle;
+use crate::Common::types::StrongHandle;
 use crate::Common::CEnum::{BiDir, TrendLineSide};
 use std::f64;
 
@@ -46,13 +46,13 @@ pub struct CTrendLine {
 }
 
 impl CTrendLine {
-    pub fn new(lst: &[crate::Common::types::Handle<CBi>], side: TrendLineSide) -> Self {
+    pub fn new(lst: &[crate::Common::types::StrongHandle<CBi>], side: TrendLineSide) -> Self {
         let mut trend_line = CTrendLine { line: None, side };
         trend_line.cal(lst);
         trend_line
     }
 
-    pub fn cal(&mut self, lst: &[Handle<CBi>]) {
+    pub fn cal(&mut self, lst: &[StrongHandle<CBi>]) {
         let mut bench = f64::INFINITY;
         let all_p = if self.side == TrendLineSide::Inside {
             lst.iter()

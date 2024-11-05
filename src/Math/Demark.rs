@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::Common::types::Handle;
+use crate::Common::types::StrongHandle;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BiDir {
@@ -50,7 +50,7 @@ pub struct DemarkIndex {
     dir: BiDir,
     idx: usize,
     demark_type: DemarkType,
-    series: Handle<CDemarkSetup>,
+    series: StrongHandle<CDemarkSetup>,
 }
 
 #[derive(Clone, Default)]
@@ -68,7 +68,7 @@ impl CDemarkIndex {
         dir: BiDir,
         demark_type: DemarkType,
         idx: usize,
-        series: Handle<CDemarkSetup>,
+        series: StrongHandle<CDemarkSetup>,
     ) {
         self.data.push(DemarkIndex {
             dir,
@@ -272,7 +272,7 @@ impl CDemarkSetup {
 
 pub struct CDemarkEngine {
     kl_lst: Vec<CKL>,
-    series: Vec<Handle<CDemarkSetup>>,
+    series: Vec<StrongHandle<CDemarkSetup>>,
 }
 
 impl CDemarkEngine {

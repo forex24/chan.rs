@@ -191,7 +191,7 @@ impl<T: Line> CZS<T> {
     }
 
     pub fn is_inside(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.borrow().line_idx()
+        seg.start_bi.upgrade().unwrap().borrow().line_idx()
             <= self
                 .begin_bi
                 .as_ref()
@@ -208,7 +208,7 @@ impl<T: Line> CZS<T> {
                 .unwrap()
                 .borrow()
                 .line_idx()
-                <= seg.end_bi.borrow().line_idx()
+                <= seg.end_bi.upgrade().unwrap().borrow().line_idx()
     }
 
     pub fn is_divergence(
