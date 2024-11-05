@@ -112,7 +112,7 @@ impl Analyzer {
         }
         //self.seg_bs_point_lst
         //    .cal(&self.seg_list.lst, &self.segseg_list);
-        self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
+        //self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
         //self.record_current_bs_points();
 
         Ok(())

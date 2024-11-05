@@ -555,9 +555,9 @@ impl<T: Line> CSegListChan<T> {
             new_seg.borrow_mut().pre = Some(Rc::downgrade(&last_seg));
         }
 
-        new_seg
-            .borrow_mut()
-            .update_bi_list(&bi_lst, bi1_idx, end_bi_idx, Rc::downgrade(&new_seg));
+        //new_seg
+        //    .borrow_mut()
+        //    .update_bi_list(&bi_lst, bi1_idx, end_bi_idx, Rc::downgrade(&new_seg));
         self.lst.push(new_seg);
 
         Ok(())
