@@ -45,7 +45,6 @@ impl CBiList {
                 exist_free_klc.upgrade().unwrap(),
                 false,
             ) {
-                println!("add first bi");
                 self.add_new_bi(
                     exist_free_klc.upgrade().unwrap(),
                     klc.upgrade().unwrap(),
@@ -325,12 +324,7 @@ impl CBiList {
     }
 
     // 已完备
-    pub fn add_new_bi(
-        &mut self,
-        pre_klc: Handle<CKLine>,
-        cur_klc: Handle<CKLine>,
-        is_sure: bool,
-    ) {
+    pub fn add_new_bi(&mut self, pre_klc: Handle<CKLine>, cur_klc: Handle<CKLine>, is_sure: bool) {
         let new_bi = Rc::new(RefCell::new(CBi::new(
             Rc::downgrade(&pre_klc),
             Rc::downgrade(&cur_klc),
@@ -346,11 +340,7 @@ impl CBiList {
     }
 
     // 已完备
-    pub fn satisfy_bi_span(
-        &self,
-        klc: &Handle<CKLine>,
-        last_end: &Handle<CKLine>,
-    ) -> bool {
+    pub fn satisfy_bi_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> bool {
         let bi_span = self.get_klc_span(klc, last_end);
         if self.config.is_strict {
             return bi_span >= 4;
@@ -385,11 +375,7 @@ impl CBiList {
     }
 
     // 已完备
-    pub fn get_klc_span(
-        &self,
-        klc: &Handle<CKLine>,
-        last_end: &Handle<CKLine>,
-    ) -> usize {
+    pub fn get_klc_span(&self, klc: &Handle<CKLine>, last_end: &Handle<CKLine>) -> usize {
         let mut span = klc.borrow().idx - last_end.borrow().idx;
         if !self.config.gap_as_kl {
             return span;
