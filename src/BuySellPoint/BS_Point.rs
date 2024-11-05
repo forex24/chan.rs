@@ -1,6 +1,6 @@
 use crate::ChanModel::Features::CFeatures;
 use crate::ChanModel::Features::FeatureInput;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::BspType;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -25,7 +25,7 @@ impl<T: Line> CBSPoint<T> {
         bs_type: BspType,
         relate_bsp1: Option<WeakHandle<CBSPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
-    ) -> StrongHandle<Self> {
+    ) -> Handle<Self> {
         let klu = Rc::downgrade(&bi.upgrade().unwrap().borrow().line_get_end_klu());
         let bi_clone = bi.clone();
 

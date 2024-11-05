@@ -4,14 +4,14 @@ use std::rc::Rc;
 //
 use super::KLine_Unit::{CKLineUnit, MetricModel};
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::StrongHandle;
+use crate::Common::types::Handle;
 use crate::Common::CEnum::KLineDir;
 use crate::KLine::KLine::CKLine;
 
 pub struct CKLineList {
     pub kl_type: String,
     pub config: CChanConfig,
-    pub lst: Vec<StrongHandle<CKLine>>,
+    pub lst: Vec<Handle<CKLine>>,
     pub metric_model_lst: Vec<Box<dyn MetricModel>>,
 }
 
@@ -58,7 +58,7 @@ impl CKLineList {
 }
 
 impl std::ops::Deref for CKLineList {
-    type Target = Vec<StrongHandle<CKLine>>;
+    type Target = Vec<Handle<CKLine>>;
 
     fn deref(&self) -> &Self::Target {
         &self.lst

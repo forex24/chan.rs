@@ -4,7 +4,7 @@ use crate::{
     Bi::Bi::CBi,
     BuySellPoint::BS_Point::CBSPoint,
     Common::{
-        types::{StrongHandle, WeakHandle},
+        types::{Handle, WeakHandle},
         CEnum::{BiDir, MacdAlgo},
         ChanException::CChanException,
     },
@@ -26,23 +26,23 @@ pub trait Line: Sized {
     fn line_low(&self) -> f64;
     fn line_get_begin_val(&self) -> f64;
     fn line_get_end_val(&self) -> f64;
-    fn line_get_begin_klu(&self) -> StrongHandle<CKLineUnit>;
-    fn line_get_end_klu(&self) -> StrongHandle<CKLineUnit>;
+    fn line_get_begin_klu(&self) -> Handle<CKLineUnit>;
+    fn line_get_end_klu(&self) -> Handle<CKLineUnit>;
     fn line_dir(&self) -> BiDir;
     //fn get_pre(&self) -> Option<Handle<Self>>;
     //fn get_next(&self) -> Option<Handle<Self>>;
 
-    fn line_get_parent_seg(&self) -> Option<StrongHandle<CSeg<Self>>>;
-    fn line_set_parent_seg(&mut self, parent_seg: Option<StrongHandle<CSeg<Self>>>);
+    fn line_get_parent_seg(&self) -> Option<Handle<CSeg<Self>>>;
+    fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<CSeg<Self>>>);
 
     fn line_seg_idx(&self) -> Option<usize>;
     fn line_set_seg_idx(&mut self, idx: usize);
     // 修改属性
-    fn line_set_pre(&mut self, pre: Option<StrongHandle<Self>>);
-    fn line_set_next(&mut self, next: Option<StrongHandle<Self>>);
+    fn line_set_pre(&mut self, pre: Option<Handle<Self>>);
+    fn line_set_next(&mut self, next: Option<Handle<Self>>);
 
-    fn line_get_begin_klc(&self) -> StrongHandle<CKLine>;
-    fn line_get_end_klc(&self) -> StrongHandle<CKLine>;
+    fn line_get_begin_klc(&self) -> Handle<CKLine>;
+    fn line_get_end_klc(&self) -> Handle<CKLine>;
     // 默认方法实现
     fn line_is_up(&self) -> bool {
         self.line_dir() == BiDir::Up
@@ -53,8 +53,8 @@ pub trait Line: Sized {
     }
 
     fn line_is_sure(&self) -> bool;
-    fn line_next(&self) -> Option<StrongHandle<Self>>;
-    fn line_pre(&self) -> Option<StrongHandle<Self>>;
+    fn line_next(&self) -> Option<Handle<Self>>;
+    fn line_pre(&self) -> Option<Handle<Self>>;
 
     fn line_cal_macd_metric(
         &self,
@@ -62,7 +62,7 @@ pub trait Line: Sized {
         is_reverse: bool,
     ) -> Result<f64, CChanException>;
 
-    fn line_set_bsp(&mut self, bsp: Option<StrongHandle<CBSPoint<Self>>>)
+    fn line_set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized;
 
@@ -105,33 +105,33 @@ impl Line for CBi {
     //    self.next.clone()
     //}
 
-    fn line_set_pre(&mut self, pre: Option<StrongHandle<Self>>) {
+    fn line_set_pre(&mut self, pre: Option<Handle<Self>>) {
         self.pre = pre.map(|rc| Rc::downgrade(&rc));
     }
 
-    fn line_set_next(&mut self, next: Option<StrongHandle<Self>>) {
+    fn line_set_next(&mut self, next: Option<Handle<Self>>) {
         self.next = next.map(|rc| Rc::downgrade(&rc));
     }
 
-    fn line_get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
+    fn line_get_begin_klu(&self) -> Handle<CKLineUnit> {
         self.get_begin_klu()
     }
 
-    fn line_get_end_klu(&self) -> StrongHandle<CKLineUnit> {
+    fn line_get_end_klu(&self) -> Handle<CKLineUnit> {
         self.get_end_klu()
     }
 
-    fn line_set_parent_seg(&mut self, parent_seg: Option<StrongHandle<Self::Parent>>) {
+    fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
         self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
     }
 
-    fn line_get_begin_klc(&self) -> StrongHandle<CKLine> {
+    fn line_get_begin_klc(&self) -> Handle<CKLine> {
         self.begin_klc
             .upgrade()
             .expect("Invalid begin_klc reference")
     }
 
-    fn line_get_end_klc(&self) -> StrongHandle<CKLine> {
+    fn line_get_end_klc(&self) -> Handle<CKLine> {
         self.end_klc.upgrade().expect("Invalid end_klc reference")
     }
 
@@ -139,15 +139,15 @@ impl Line for CBi {
         self.is_sure
     }
 
-    fn line_next(&self) -> Option<StrongHandle<Self>> {
+    fn line_next(&self) -> Option<Handle<Self>> {
         self.next.as_ref().map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
 
-    fn line_pre(&self) -> Option<StrongHandle<Self>> {
+    fn line_pre(&self) -> Option<Handle<Self>> {
         self.pre.as_ref().map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
 
-    fn line_get_parent_seg(&self) -> Option<StrongHandle<Self::Parent>> {
+    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
         self.parent_seg
             .as_ref()
             .map(|x| Rc::clone(&x.upgrade().unwrap()))
@@ -173,7 +173,7 @@ impl Line for CBi {
         self.cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn line_set_bsp(&mut self, bsp: Option<StrongHandle<CBSPoint<Self>>>)
+    fn line_set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>)
     where
         Self: Sized,
     {
@@ -238,32 +238,32 @@ impl Line for CSeg<CBi> {
     //    self.next.clone()
     //}
 
-    fn line_set_pre(&mut self, pre: Option<StrongHandle<Self>>) {
+    fn line_set_pre(&mut self, pre: Option<Handle<Self>>) {
         self.pre = pre.map(|x| Rc::downgrade(&x));
     }
 
-    fn line_set_next(&mut self, next: Option<StrongHandle<Self>>) {
+    fn line_set_next(&mut self, next: Option<Handle<Self>>) {
         self.next = next.map(|x| Rc::downgrade(&x));
     }
 
-    fn line_get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
+    fn line_get_begin_klu(&self) -> Handle<CKLineUnit> {
         self.get_begin_klu()
     }
 
-    fn line_get_end_klu(&self) -> StrongHandle<CKLineUnit> {
+    fn line_get_end_klu(&self) -> Handle<CKLineUnit> {
         self.get_end_klu()
     }
 
-    fn line_get_parent_seg(&self) -> Option<StrongHandle<Self::Parent>> {
+    fn line_get_parent_seg(&self) -> Option<Handle<Self::Parent>> {
         self.parent_seg
             .as_ref()
             .map(|x| Rc::clone(&x.upgrade().unwrap()))
     }
-    fn line_set_parent_seg(&mut self, parent_seg: Option<StrongHandle<Self::Parent>>) {
+    fn line_set_parent_seg(&mut self, parent_seg: Option<Handle<Self::Parent>>) {
         self.parent_seg = parent_seg.map(|rc| Rc::downgrade(&rc));
     }
 
-    fn line_get_begin_klc(&self) -> StrongHandle<CKLine> {
+    fn line_get_begin_klc(&self) -> Handle<CKLine> {
         self.start_bi
             .upgrade()
             .unwrap()
@@ -273,7 +273,7 @@ impl Line for CSeg<CBi> {
             .expect("Invalid begin_klc reference")
     }
 
-    fn line_get_end_klc(&self) -> StrongHandle<CKLine> {
+    fn line_get_end_klc(&self) -> Handle<CKLine> {
         self.end_bi
             .upgrade()
             .unwrap()
@@ -287,11 +287,11 @@ impl Line for CSeg<CBi> {
         self.is_sure
     }
 
-    fn line_next(&self) -> Option<StrongHandle<Self>> {
+    fn line_next(&self) -> Option<Handle<Self>> {
         self.next.as_ref().map(|x| x.upgrade().unwrap())
     }
 
-    fn line_pre(&self) -> Option<StrongHandle<Self>> {
+    fn line_pre(&self) -> Option<Handle<Self>> {
         self.pre.as_ref().map(|x| x.upgrade().unwrap())
     }
 
@@ -307,7 +307,7 @@ impl Line for CSeg<CBi> {
         self.cal_macd_metric(macd_algo, is_reverse)
     }
 
-    fn line_set_bsp(&mut self, bsp: Option<StrongHandle<CBSPoint<Self>>>) {
+    fn line_set_bsp(&mut self, bsp: Option<Handle<CBSPoint<Self>>>) {
         self.bsp = bsp.map(|x| Rc::downgrade(&x));
     }
 

@@ -1,5 +1,5 @@
 use crate::Common::func_util::revert_bi_dir;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::{BiDir, ZsAlgo};
 use crate::Seg::linetype::{Line, SegLine};
 use crate::Seg::Seg::CSeg;
@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CZSList<T> {
-    zs_lst: Vec<StrongHandle<CZS<T>>>,
+    zs_lst: Vec<Handle<CZS<T>>>,
     config: CZSConfig,
     free_item_lst: Vec<WeakHandle<T>>,
     last_sure_pos: Option<usize>,
@@ -37,7 +37,7 @@ impl<T: Line> CZSList<T> {
         }
     }
 
-    pub fn seg_need_cal(&self, seg: &StrongHandle<CSeg<T>>) -> bool {
+    pub fn seg_need_cal(&self, seg: &Handle<CSeg<T>>) -> bool {
         match self.last_sure_pos {
             None => true,
             Some(pos) => seg.borrow().start_bi.upgrade().unwrap().borrow().line_idx() >= pos,
@@ -75,12 +75,12 @@ impl<T: Line> CZSList<T> {
         self.free_item_lst.clear();
     }
 
-    pub fn update(&mut self, bi: WeakHandle<T>, is_sure: bool) {
-        if self.free_item_lst.is_empty() && self.try_add_to_end(&bi) {
+    pub fn update(&mut self, bi: Handle<T>, is_sure: bool) {
+        if self.free_item_lst.is_empty() && self.try_add_to_end(&Rc::downgrade(&bi)) {
             self.try_combine();
             return;
         }
-        self.add_to_free_lst(&bi, is_sure, ZsAlgo::Normal);
+        self.add_to_free_lst(&Rc::downgrade(&bi), is_sure, ZsAlgo::Normal);
     }
 
     pub fn try_add_to_end(&mut self, bi: &WeakHandle<T>) -> bool {
@@ -97,17 +97,17 @@ impl<T: Line> CZSList<T> {
 
     pub fn add_zs_from_bi_range(
         &mut self,
-        seg_bi_lst: &[WeakHandle<T>],
+        seg_bi_lst: &[Handle<T>],
         seg_dir: BiDir,
         seg_is_sure: bool,
     ) {
         let mut deal_bi_cnt = 0;
         for bi in seg_bi_lst {
-            if bi.upgrade().unwrap().borrow().line_dir() == seg_dir {
+            if bi.borrow().line_dir() == seg_dir {
                 continue;
             }
             if deal_bi_cnt < 1 {
-                self.add_to_free_lst(bi, seg_is_sure, ZsAlgo::Normal);
+                self.add_to_free_lst(&Rc::downgrade(bi), seg_is_sure, ZsAlgo::Normal);
                 deal_bi_cnt += 1;
             } else {
                 self.update(bi.clone(), seg_is_sure);
@@ -178,7 +178,7 @@ impl<T: Line> CZSList<T> {
         }
     }
 
-    pub fn cal_bi_zs(&mut self, bi_lst: &[WeakHandle<T>], seg_lst: &CSegListChan<T>) {
+    pub fn cal_bi_zs(&mut self, bi_lst: &[Handle<T>], seg_lst: &CSegListChan<T>) {
         // 移除不确定的中枢
         while !self.zs_lst.is_empty() {
             let last_zs = self.zs_lst.last().unwrap();
@@ -286,13 +286,13 @@ impl<T: Line> CZSList<T> {
         self.update_last_pos(seg_lst);
     }
 
-    pub fn update_overseg_zs(&mut self, bi: &WeakHandle<T>) {
+    pub fn update_overseg_zs(&mut self, bi: &Handle<T>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
-            if bi.upgrade().unwrap().borrow().line_next().is_none() {
+            if bi.borrow().line_next().is_none() {
                 return;
             }
             let last_zs = self.zs_lst.last().unwrap();
-            if bi.upgrade().unwrap().borrow().line_idx()
+            if bi.borrow().line_idx()
                 - last_zs
                     .borrow()
                     .end_bi
@@ -305,21 +305,16 @@ impl<T: Line> CZSList<T> {
                 <= 1
                 && last_zs
                     .borrow()
-                    .in_range(&bi.upgrade().unwrap().borrow().line_next().as_ref().unwrap())
-                && last_zs.borrow_mut().try_add_to_end(&bi.upgrade().unwrap())
+                    .in_range(&bi.borrow().line_next().as_ref().unwrap())
+                && last_zs.borrow_mut().try_add_to_end(&bi)
             {
                 return;
             }
         }
         if !self.zs_lst.is_empty()
             && self.free_item_lst.is_empty()
-            && self
-                .zs_lst
-                .last()
-                .unwrap()
-                .borrow()
-                .in_range(&bi.upgrade().unwrap())
-            && bi.upgrade().unwrap().borrow().line_idx()
+            && self.zs_lst.last().unwrap().borrow().in_range(&bi)
+            && bi.borrow().line_idx()
                 - self
                     .zs_lst
                     .last()
@@ -337,8 +332,8 @@ impl<T: Line> CZSList<T> {
             return;
         }
         self.add_to_free_lst(
-            bi,
-            bi.upgrade().unwrap().borrow().line_is_sure(),
+            &Rc::downgrade(bi),
+            bi.borrow().line_is_sure(),
             ZsAlgo::Normal,
         );
     }
@@ -363,7 +358,7 @@ impl<T: Line> CZSList<T> {
 }
 
 impl<T: Line> std::ops::Deref for CZSList<T> {
-    type Target = Vec<StrongHandle<CZS<T>>>;
+    type Target = Vec<Handle<CZS<T>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.zs_lst
@@ -377,7 +372,7 @@ impl<T: Line> std::ops::DerefMut for CZSList<T> {
 }
 
 impl<T: Line> std::iter::IntoIterator for CZSList<T> {
-    type Item = StrongHandle<CZS<T>>;
+    type Item = Handle<CZS<T>>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

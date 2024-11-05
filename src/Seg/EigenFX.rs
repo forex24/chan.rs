@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 
 use crate::Common::{
     func_util::revert_bi_dir,
-    types::{StrongHandle, WeakHandle},
+    types::{Handle, WeakHandle},
     CEnum::{BiDir, EqualMode, FxType, KLineDir, SegType},
 };
 
@@ -16,7 +16,7 @@ use super::{linetype::Line, Eigen::CEigen};
 pub struct CEigenFX<T> {
     pub lv: SegType,
     pub dir: BiDir, // 线段方向
-    pub ele: [Option<StrongHandle<CEigen<T>>>; 3],
+    pub ele: [Option<Handle<CEigen<T>>>; 3],
     pub lst: Vec<WeakHandle<T>>,
     pub exclude_included: bool,
     pub kl_dir: KLineDir,
@@ -213,17 +213,13 @@ impl<T: Line> CEigenFX<T> {
     }
 
     // 已完备
-    pub fn can_be_end(&mut self, bi_lst: &[WeakHandle<T>]) -> Option<bool> {
+    pub fn can_be_end(&mut self, bi_lst: &[Handle<T>]) -> Option<bool> {
         assert!(self.ele[1].is_some());
         let ele1_gap = self.ele[1].as_ref().unwrap().borrow().gap;
         if ele1_gap {
             assert!(self.ele[0].is_some());
             let end_bi_idx = self.get_peak_bi_idx();
-            let thred_value = bi_lst[end_bi_idx]
-                .upgrade()
-                .unwrap()
-                .borrow()
-                .line_get_end_val();
+            let thred_value = bi_lst[end_bi_idx].borrow().line_get_end_val();
             let break_thred = if self.is_up() {
                 self.ele[0].as_ref().unwrap().borrow().low
             } else {
@@ -335,19 +331,19 @@ impl<T: Line> CEigenFX<T> {
     // 已完备
     pub fn find_revert_fx(
         &mut self,
-        bi_list: &[WeakHandle<T>],
+        bi_list: &[Handle<T>],
         begin_idx: usize,
         thred_value: f64,
         break_thred: f64,
     ) -> Option<bool> {
         const COMMON_COMBINE: bool = true;
 
-        let first_bi_dir = bi_list[begin_idx].upgrade().unwrap().borrow().line_dir();
+        let first_bi_dir = bi_list[begin_idx].borrow().line_dir();
         let mut eigen_fx =
             CEigenFX::<T>::new(revert_bi_dir(&first_bi_dir), !COMMON_COMBINE, self.lv);
 
         for bi in bi_list.iter().skip(begin_idx).step_by(2) {
-            if eigen_fx.add(bi.clone()) {
+            if eigen_fx.add(Rc::downgrade(bi)) {
                 if COMMON_COMBINE {
                     return Some(true);
                 }
@@ -356,7 +352,7 @@ impl<T: Line> CEigenFX<T> {
                     let _test = eigen_fx.can_be_end(bi_list);
                     match _test {
                         Some(true) | None => {
-                            self.last_evidence_bi = Some(bi.clone());
+                            self.last_evidence_bi = Some(Rc::downgrade(bi));
                             return _test;
                         }
                         Some(false) => {
@@ -368,8 +364,7 @@ impl<T: Line> CEigenFX<T> {
                 }
             }
 
-            let bi_strong = bi.upgrade().unwrap();
-            let bi_ref = bi_strong.borrow();
+            let bi_ref = bi.borrow();
 
             if (bi_ref.line_is_down() && bi_ref.line_low() < thred_value)
                 || (bi_ref.line_is_up() && bi_ref.line_high() > thred_value)

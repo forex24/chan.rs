@@ -1,5 +1,5 @@
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::{FxCheckMethod, FxType, KLineDir};
 use crate::Common::CTime::CTime;
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -16,17 +16,17 @@ pub struct CKLine {
     pub low: f64,
     pub high: f64,
     pub dir: KLineDir,
-    pub lst: Vec<StrongHandle<CKLineUnit>>,
+    pub lst: Vec<Handle<CKLineUnit>>,
     pub pre: Option<WeakHandle<CKLine>>,
     pub next: Option<WeakHandle<CKLine>>,
 }
 
 impl CKLine {
     pub fn new(
-        kl_unit: StrongHandle<CKLineUnit>,
+        kl_unit: Handle<CKLineUnit>,
         idx: usize,
         dir: KLineDir, /*缺省值为KLINE_DIR.UP*/
-    ) -> StrongHandle<Self> {
+    ) -> Handle<Self> {
         let kline = Rc::new(RefCell::new(CKLine {
             idx,
             kl_type: kl_unit.borrow().kl_type.clone(),
@@ -93,7 +93,7 @@ impl CKLine {
 
     pub fn check_fx_valid(
         &self,
-        item2: &StrongHandle<CKLine>,
+        item2: &Handle<CKLine>,
         method: FxCheckMethod,
         for_virtual: bool,
     ) -> bool {
@@ -273,20 +273,20 @@ impl CKLine {
 }
 
 impl CKLine {
-    pub fn pre(&self) -> Option<StrongHandle<CKLine>> {
+    pub fn pre(&self) -> Option<Handle<CKLine>> {
         self.pre.clone().and_then(|weak| weak.upgrade())
     }
 
-    pub fn next(&self) -> Option<StrongHandle<CKLine>> {
+    pub fn next(&self) -> Option<Handle<CKLine>> {
         self.next.clone().and_then(|weak| weak.upgrade())
     }
 
-    pub fn get_next(&self) -> Option<StrongHandle<CKLine>> {
+    pub fn get_next(&self) -> Option<Handle<CKLine>> {
         debug_assert!(self.next.is_some());
         self.next()
     }
 
-    pub fn test_combine(&self, item: &StrongHandle<CKLineUnit>) -> KLineDir {
+    pub fn test_combine(&self, item: &Handle<CKLineUnit>) -> KLineDir {
         if (self.high >= item.borrow().high && self.low <= item.borrow().low)
             || (self.high <= item.borrow().high && self.low >= item.borrow().low)
         {
@@ -303,7 +303,7 @@ impl CKLine {
         unreachable!();
     }
 
-    pub fn add(&mut self, unit_kl: StrongHandle<CKLineUnit>) {
+    pub fn add(&mut self, unit_kl: Handle<CKLineUnit>) {
         self.lst.push(unit_kl);
     }
 
@@ -311,7 +311,7 @@ impl CKLine {
         self.fx = fx;
     }
 
-    pub fn try_add(klc: &StrongHandle<CKLine>, bar: &StrongHandle<CKLineUnit>) -> KLineDir {
+    pub fn try_add(klc: &Handle<CKLine>, bar: &Handle<CKLineUnit>) -> KLineDir {
         let dir = klc.borrow().test_combine(&bar);
         if dir == KLineDir::Combine {
             klc.borrow_mut().lst.push(Rc::clone(bar));
@@ -350,7 +350,7 @@ impl CKLine {
         dir
     }
 
-    pub fn get_peak_klu(&self, is_high: bool) -> Option<StrongHandle<CKLineUnit>> {
+    pub fn get_peak_klu(&self, is_high: bool) -> Option<Handle<CKLineUnit>> {
         if is_high {
             self.get_high_peak_klu()
         } else {
@@ -358,7 +358,7 @@ impl CKLine {
         }
     }
 
-    pub fn get_high_peak_klu(&self) -> Option<StrongHandle<CKLineUnit>> {
+    pub fn get_high_peak_klu(&self) -> Option<Handle<CKLineUnit>> {
         //if let Some(cached) = self.memoize_cache.get("high_peak") {
         //    return Ok(cached.clone());
         //}
@@ -376,7 +376,7 @@ impl CKLine {
         //))
     }
 
-    pub fn get_low_peak_klu(&self) -> Option<StrongHandle<CKLineUnit>> {
+    pub fn get_low_peak_klu(&self) -> Option<Handle<CKLineUnit>> {
         //if let Some(cached) = self.memoize_cache.get("low_peak") {
         //    return Ok(cached.clone());
         //}
@@ -394,11 +394,7 @@ impl CKLine {
         //))
     }
 
-    pub fn update_fx(
-        cur: &StrongHandle<CKLine>,
-        pre: &StrongHandle<CKLine>,
-        next: &StrongHandle<CKLine>,
-    ) {
+    pub fn update_fx(cur: &Handle<CKLine>, pre: &Handle<CKLine>, next: &Handle<CKLine>) {
         cur.borrow_mut().set_next(next.clone());
         cur.borrow_mut().set_pre(pre.clone());
         next.borrow_mut().set_pre(cur.clone());
@@ -418,11 +414,11 @@ impl CKLine {
         //self.clean_cache();
     }
 
-    pub fn set_pre(&mut self, pre: StrongHandle<CKLine>) {
+    pub fn set_pre(&mut self, pre: Handle<CKLine>) {
         self.pre = Some(Rc::downgrade(&pre));
     }
 
-    pub fn set_next(&mut self, next: StrongHandle<CKLine>) {
+    pub fn set_next(&mut self, next: Handle<CKLine>) {
         self.next = Some(Rc::downgrade(&next));
     }
 }

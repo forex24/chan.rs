@@ -1,13 +1,13 @@
 use crate::Bi::Bi::CBi;
 use crate::Bi::BiConfig::CBiConfig;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::{FxType, KLineDir};
 use crate::KLine::KLine::CKLine;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct CBiList {
-    pub bi_list: Vec<StrongHandle<CBi>>,
+    pub bi_list: Vec<Handle<CBi>>,
     pub last_end: Option<WeakHandle<CKLine>>,
     pub config: CBiConfig,
     pub free_klc_lst: Vec<WeakHandle<CKLine>>, // 仅仅用作第一笔未画出来之前的缓存，为了获得更精准的结果而已，不加这块逻辑其实对后续计算没太大影响
@@ -327,8 +327,8 @@ impl CBiList {
     // 已完备
     pub fn add_new_bi(
         &mut self,
-        pre_klc: StrongHandle<CKLine>,
-        cur_klc: StrongHandle<CKLine>,
+        pre_klc: Handle<CKLine>,
+        cur_klc: Handle<CKLine>,
         is_sure: bool,
     ) {
         let new_bi = Rc::new(RefCell::new(CBi::new(
@@ -348,8 +348,8 @@ impl CBiList {
     // 已完备
     pub fn satisfy_bi_span(
         &self,
-        klc: &StrongHandle<CKLine>,
-        last_end: &StrongHandle<CKLine>,
+        klc: &Handle<CKLine>,
+        last_end: &Handle<CKLine>,
     ) -> bool {
         let bi_span = self.get_klc_span(klc, last_end);
         if self.config.is_strict {
@@ -387,8 +387,8 @@ impl CBiList {
     // 已完备
     pub fn get_klc_span(
         &self,
-        klc: &StrongHandle<CKLine>,
-        last_end: &StrongHandle<CKLine>,
+        klc: &Handle<CKLine>,
+        last_end: &Handle<CKLine>,
     ) -> usize {
         let mut span = klc.borrow().idx - last_end.borrow().idx;
         if !self.config.gap_as_kl {
@@ -414,8 +414,8 @@ impl CBiList {
     // 已完备
     pub fn can_make_bi(
         &self,
-        klc: StrongHandle<CKLine>,
-        last_end: StrongHandle<CKLine>,
+        klc: Handle<CKLine>,
+        last_end: Handle<CKLine>,
         for_virtual: bool,
     ) -> bool {
         let satisfy_span = if self.config.bi_algo == "fx" {
@@ -441,19 +441,19 @@ impl CBiList {
     }
 
     // 已完备
-    pub fn try_update_end(&mut self, klc: StrongHandle<CKLine>, for_virtual: bool) -> bool {
+    pub fn try_update_end(&mut self, klc: Handle<CKLine>, for_virtual: bool) -> bool {
         if self.bi_list.is_empty() {
             return false;
         }
         let last_bi = self.bi_list.last().unwrap();
-        let check_top = |k: &StrongHandle<CKLine>, for_virtual: bool| -> bool {
+        let check_top = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KLineDir::Up
             } else {
                 k.borrow().fx == FxType::Top
             }
         };
-        let check_bottom = |k: &StrongHandle<CKLine>, for_virtual: bool| -> bool {
+        let check_bottom = |k: &Handle<CKLine>, for_virtual: bool| -> bool {
             if for_virtual {
                 k.borrow().dir == KLineDir::Down
             } else {
@@ -487,7 +487,7 @@ impl CBiList {
     }
 }
 
-fn end_is_peak(last_end: &StrongHandle<CKLine>, cur_end: &StrongHandle<CKLine>) -> bool {
+fn end_is_peak(last_end: &Handle<CKLine>, cur_end: &Handle<CKLine>) -> bool {
     match last_end.borrow().fx {
         FxType::Bottom => {
             let cmp_thred = cur_end.borrow().high; // 或者严格点选择get_klu_max_high()
@@ -521,7 +521,7 @@ fn end_is_peak(last_end: &StrongHandle<CKLine>, cur_end: &StrongHandle<CKLine>) 
 }
 
 impl std::ops::Deref for CBiList {
-    type Target = Vec<StrongHandle<CBi>>;
+    type Target = Vec<Handle<CBi>>;
 
     fn deref(&self) -> &Self::Target {
         &self.bi_list

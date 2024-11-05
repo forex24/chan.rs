@@ -1,5 +1,5 @@
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
@@ -172,7 +172,7 @@ impl CBi {
         }
     }
 
-    pub fn get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
+    pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
         if self.is_up() {
             self.begin_klc
                 .upgrade()
@@ -190,7 +190,7 @@ impl CBi {
         }
     }
 
-    pub fn get_end_klu(&self) -> StrongHandle<CKLineUnit> {
+    pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
         if self.is_up() {
             self.end_klc
                 .upgrade()
@@ -274,23 +274,23 @@ impl CBi {
         self.dir == BiDir::Up
     }
 
-    pub fn update_virtual_end(&mut self, new_klc: StrongHandle<CKLine>) {
+    pub fn update_virtual_end(&mut self, new_klc: Handle<CKLine>) {
         self.append_sure_end(self.end_klc.upgrade().unwrap());
         self.update_new_end(new_klc);
         self.is_sure = false;
     }
 
-    pub fn restore_from_virtual_end(&mut self, sure_end: StrongHandle<CKLine>) {
+    pub fn restore_from_virtual_end(&mut self, sure_end: Handle<CKLine>) {
         self.is_sure = true;
         self.update_new_end(sure_end);
         self.sure_end.clear();
     }
 
-    pub fn append_sure_end(&mut self, klc: StrongHandle<CKLine>) {
+    pub fn append_sure_end(&mut self, klc: Handle<CKLine>) {
         self.sure_end.push(Weak::clone(&self.end_klc));
     }
 
-    pub fn update_new_end(&mut self, new_klc: StrongHandle<CKLine>) {
+    pub fn update_new_end(&mut self, new_klc: Handle<CKLine>) {
         self.end_klc = Rc::downgrade(&new_klc);
         self.check().unwrap();
     }
@@ -482,14 +482,14 @@ impl CBi {
     //}
 
     // Helper methods for iterating over KLines
-    fn klc_lst(&self) -> impl Iterator<Item = StrongHandle<CKLine>> {
+    fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcIterator {
             current: Some(Weak::clone(&self.begin_klc)),
             end_idx: self.end_klc.upgrade().unwrap().borrow().idx,
         }
     }
 
-    fn klc_lst_re(&self) -> impl Iterator<Item = StrongHandle<CKLine>> {
+    fn klc_lst_re(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcReverseIterator {
             current: Some(Weak::clone(&self.end_klc)),
             begin_idx: self.begin_klc.upgrade().unwrap().borrow().idx,
@@ -503,7 +503,7 @@ struct KlcIterator {
 }
 
 impl Iterator for KlcIterator {
-    type Item = StrongHandle<CKLine>;
+    type Item = Handle<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
@@ -524,7 +524,7 @@ struct KlcReverseIterator {
 }
 
 impl Iterator for KlcReverseIterator {
-    type Item = StrongHandle<CKLine>;
+    type Item = Handle<CKLine>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;

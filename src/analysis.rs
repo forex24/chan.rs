@@ -3,10 +3,9 @@ use crate::Bi::BiConfig::CBiConfig;
 use crate::Bi::BiList::CBiList;
 use crate::BuySellPoint::BSPointList::CBSPointList;
 use crate::ChanConfig::CChanConfig;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::Handle;
 use crate::Common::CEnum::{KLineDir, SegType};
 use crate::Common::ChanException::CChanException;
-use crate::KLine::KLine::CKLine;
 use crate::KLine::KLine_List::CKLineList;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -15,7 +14,6 @@ use crate::Seg::SegListChan::CSegListChan;
 use crate::ZS::ZSList::CZSList;
 use crate::ZS::ZS::CZS;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
@@ -61,42 +59,7 @@ impl Analyzer {
             seg_bs_point_history: Vec::new(),
         }
     }
-    /*
-        pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
-            //if !self.step_calculation {
-            //    self.bi_list
-            //        .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), false);
-            //}
-            let start_time = Instant::now();
-            assert!(!self.bi_list.is_empty());
-            let _ = cal_seg(self.bi_list.as_slice(), &mut self.seg_list);
-            self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
-            update_zs_in_seg(
-                self.bi_list.as_weak_slice(),
-                &mut self.seg_list.lst,
-                &mut self.zs_list.as_weak_slice(),
-            )?;
 
-            //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
-            //self.segzs_list
-            //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
-            //update_zs_in_seg(
-            //    &self.seg_list.lst,
-            //    &mut self.segseg_list.lst,
-            //    &mut self.segzs_list,
-            //)?;
-            let elapsed = start_time.elapsed();
-            if elapsed.as_secs() > 1 {
-                println!("cal_seg 耗时: {:?}", elapsed); // 打印耗时
-            }
-            //self.seg_bs_point_lst
-            //    .cal(&self.seg_list.lst, &self.segseg_list);
-            self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
-            //self.record_current_bs_points();
-
-            Ok(())
-        }
-    */
     pub fn add_single_klu(&mut self, klu: CKLineUnit) -> Result<(), CChanException> {
         let dir = self.klc_list.add_single_klu(klu);
         if let Some(dir) = dir {
@@ -106,7 +69,7 @@ impl Analyzer {
                         Rc::downgrade(&self.klc_list.last().unwrap().clone()),
                         true,
                     ) {
-                        //self.cal_seg_and_zs()?;
+                        self.cal_seg_and_zs()?;
                     }
                 }
                 _ => {
@@ -116,11 +79,42 @@ impl Analyzer {
                         true, //self.step_calculation,
                     ) && self.step_calculation
                     {
-                        //self.cal_seg_and_zs()?;
+                        self.cal_seg_and_zs()?;
                     }
                 }
             }
         }
+        Ok(())
+    }
+
+    pub fn cal_seg_and_zs(&mut self) -> Result<(), CChanException> {
+        //if !self.step_calculation {
+        //    self.bi_list
+        //        .try_add_virtual_bi(self.klc_list.last().unwrap().clone(), false);
+        //}
+        let start_time = Instant::now();
+        assert!(!self.bi_list.is_empty());
+        let _ = cal_seg(self.bi_list.as_slice(), &mut self.seg_list);
+        self.zs_list.cal_bi_zs(&self.bi_list, &mut self.seg_list);
+        update_zs_in_seg(&self.bi_list, &mut self.seg_list.lst, &mut self.zs_list)?;
+
+        //cal_seg(&self.seg_list.lst, &mut self.segseg_list);
+        //self.segzs_list
+        //    .cal_bi_zs(&self.seg_list.lst, &self.segseg_list);
+        //update_zs_in_seg(
+        //    &self.seg_list.lst,
+        //    &mut self.segseg_list.lst,
+        //    &mut self.segzs_list,
+        //)?;
+        let elapsed = start_time.elapsed();
+        if elapsed.as_secs() > 1 {
+            println!("cal_seg 耗时: {:?}", elapsed); // 打印耗时
+        }
+        //self.seg_bs_point_lst
+        //    .cal(&self.seg_list.lst, &self.segseg_list);
+        self.bs_point_lst.cal(&self.bi_list, &self.seg_list);
+        //self.record_current_bs_points();
+
         Ok(())
     }
 
@@ -131,8 +125,8 @@ impl Analyzer {
     //}
 }
 
-/*pub fn cal_seg<U: Line>(
-    bi_list: &[StrongHandle<U>],
+pub fn cal_seg<U: Line>(
+    bi_list: &[Handle<U>],
     seg_list: &mut CSegListChan<U>,
 ) -> Result<(), CChanException> {
     seg_list.update(bi_list);
@@ -160,18 +154,41 @@ impl Analyzer {
     let mut cur_seg = seg_list.last().unwrap().clone();
     for bi in bi_list.iter().rev() {
         if bi.borrow().line_seg_idx().is_some()
-            && bi.borrow().line_idx() < begin_seg.borrow().start_bi.borrow().line_idx()
+            && bi.borrow().line_idx()
+                < begin_seg
+                    .borrow()
+                    .start_bi
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_idx()
         {
             break;
         }
-        if bi.borrow().line_idx() > cur_seg.borrow().end_bi.borrow().line_idx() {
+        if bi.borrow().line_idx()
+            > cur_seg
+                .borrow()
+                .end_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+        {
             bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx + 1);
             continue;
         }
-        if bi.borrow().line_idx() < cur_seg.borrow().start_bi.borrow().line_idx() {
+        if bi.borrow().line_idx()
+            < cur_seg
+                .borrow()
+                .start_bi
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .line_idx()
+        {
             assert!(cur_seg.borrow().pre.is_some());
             let pre_seg = cur_seg.borrow().pre.as_ref().unwrap().clone();
-            cur_seg = pre_seg;
+            cur_seg = pre_seg.upgrade().unwrap();
         }
         bi.borrow_mut().line_set_seg_idx(cur_seg.borrow().idx);
     }
@@ -180,13 +197,13 @@ impl Analyzer {
 }
 
 pub fn update_zs_in_seg<T: Line>(
-    bi_list: &[WeakHandle<T>],
-    seg_list: &mut [WeakHandle<CSeg<T>>], //CSegListChan<CBi>,
-    zs_list: &mut [WeakHandle<CZS<T>>],   //CZSList,
+    bi_list: &[Handle<T>],
+    seg_list: &mut [Handle<CSeg<T>>], //CSegListChan<CBi>,
+    zs_list: &mut [Handle<CZS<T>>],   //CZSList,
 ) -> Result<(), CChanException> {
     let mut sure_seg_cnt = 0;
     for seg in seg_list.iter().rev() {
-        let mut seg = seg.upgrade().unwrap().borrow_mut();
+        let mut seg = seg.borrow_mut();
         if seg.ele_inside_is_sure {
             break;
         }
@@ -196,8 +213,6 @@ pub fn update_zs_in_seg<T: Line>(
         seg.clear_zs_lst();
         for zs in zs_list.iter().rev() {
             if zs
-                .upgrade()
-                .unwrap()
                 .borrow()
                 .end
                 .as_ref()
@@ -206,17 +221,22 @@ pub fn update_zs_in_seg<T: Line>(
                 .unwrap()
                 .borrow()
                 .idx
-                < seg.start_bi.borrow().line_get_begin_klu().borrow().idx
+                < seg
+                    .start_bi
+                    .upgrade()
+                    .unwrap()
+                    .borrow()
+                    .line_get_begin_klu()
+                    .borrow()
+                    .idx
             {
                 break;
             }
-            if zs.upgrade().unwrap().borrow().is_inside(&seg) {
-                seg.add_zs(Rc::clone(&zs.upgrade().unwrap()));
+            if zs.borrow().is_inside(&seg) {
+                seg.add_zs(Rc::downgrade(zs));
             }
             assert!(
-                zs.upgrade()
-                    .unwrap()
-                    .borrow()
+                zs.borrow()
                     .begin_bi
                     .as_ref()
                     .unwrap()
@@ -228,9 +248,7 @@ pub fn update_zs_in_seg<T: Line>(
             );
 
             assert!(
-                zs.upgrade()
-                    .unwrap()
-                    .borrow()
+                zs.borrow()
                     .begin_bi
                     .as_ref()
                     .unwrap()
@@ -245,8 +263,6 @@ pub fn update_zs_in_seg<T: Line>(
             assert!(!bi_list.is_empty());
 
             let bi_in = bi_list[zs
-                .upgrade()
-                .unwrap()
                 .borrow()
                 .begin_bi
                 .as_ref()
@@ -257,14 +273,9 @@ pub fn update_zs_in_seg<T: Line>(
                 .line_idx()
                 - 1]
             .clone();
-            zs.upgrade()
-                .unwrap()
-                .borrow_mut()
-                .set_bi_in(bi_in.upgrade().unwrap());
+            zs.borrow_mut().set_bi_in(bi_in);
 
             if zs
-                .upgrade()
-                .unwrap()
                 .borrow_mut()
                 .end_bi
                 .as_ref()
@@ -277,8 +288,6 @@ pub fn update_zs_in_seg<T: Line>(
                 < bi_list.len()
             {
                 let bi_out = bi_list[zs
-                    .upgrade()
-                    .unwrap()
                     .borrow()
                     .end_bi
                     .as_ref()
@@ -290,14 +299,9 @@ pub fn update_zs_in_seg<T: Line>(
                     + 1]
                 .clone();
 
-                zs.upgrade()
-                    .unwrap()
-                    .borrow_mut()
-                    .set_bi_out(bi_out.upgrade().unwrap());
+                zs.borrow_mut().set_bi_out(bi_out);
             }
             let lst = &bi_list[zs
-                .upgrade()
-                .unwrap()
                 .borrow()
                 .begin_bi
                 .as_ref()
@@ -307,8 +311,6 @@ pub fn update_zs_in_seg<T: Line>(
                 .borrow()
                 .line_idx()
                 ..=zs
-                    .upgrade()
-                    .unwrap()
                     .borrow()
                     .end_bi
                     .as_ref()
@@ -318,7 +320,7 @@ pub fn update_zs_in_seg<T: Line>(
                     .borrow()
                     .line_idx()]
                 .to_vec();
-            zs.upgrade().unwrap().borrow_mut().set_bi_lst(lst);
+            zs.borrow_mut().set_bi_lst(lst);
         }
 
         if sure_seg_cnt > 2 && !seg.ele_inside_is_sure {
@@ -328,7 +330,7 @@ pub fn update_zs_in_seg<T: Line>(
 
     Ok(())
 }
-*/
+
 mod test {
     use std::time::Instant;
 

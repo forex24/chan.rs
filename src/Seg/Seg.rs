@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::{BiDir, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
@@ -36,34 +36,30 @@ pub struct CSeg<T> {
 impl<T: Line> CSeg<T> {
     pub fn new(
         idx: usize,
-        start_bi: WeakHandle<T>,
-        end_bi: WeakHandle<T>,
+        start_bi: Handle<T>,
+        end_bi: Handle<T>,
         is_sure: bool,
         seg_dir: Option<BiDir>,
         reason: &str,
     ) -> Result<Self, CChanException> {
         assert!(
-            start_bi.upgrade().unwrap().borrow().line_idx() == 0
-                || start_bi.upgrade().unwrap().borrow().line_dir()
-                    == end_bi.upgrade().unwrap().borrow().line_dir()
+            start_bi.borrow().line_idx() == 0
+                || start_bi.borrow().line_dir() == end_bi.borrow().line_dir()
                 || !is_sure,
             "start_bi and end_bi direction mismatch"
         );
 
-        let is_sure = if end_bi.upgrade().unwrap().borrow().line_idx()
-            - start_bi.upgrade().unwrap().borrow().line_idx()
-            < 2
-        {
+        let is_sure = if end_bi.borrow().line_idx() - start_bi.borrow().line_idx() < 2 {
             false
         } else {
             is_sure
         };
 
-        let dir = seg_dir.unwrap_or_else(|| end_bi.upgrade().unwrap().borrow().line_dir());
+        let dir = seg_dir.unwrap_or_else(|| end_bi.borrow().line_dir());
         let seg = Self {
             idx,
-            start_bi,
-            end_bi,
+            start_bi: Rc::downgrade(&start_bi),
+            end_bi: Rc::downgrade(&end_bi),
             is_sure,
             dir,
             zs_lst: VecDeque::new(),
@@ -226,11 +222,11 @@ impl<T: Line> CSeg<T> {
         (self.get_end_val() - self.get_begin_val()).abs()
     }
 
-    pub fn get_end_klu(&self) -> StrongHandle<CKLineUnit> {
+    pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
         self.end_bi.upgrade().unwrap().borrow().line_get_end_klu()
     }
 
-    pub fn get_begin_klu(&self) -> StrongHandle<CKLineUnit> {
+    pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
         self.start_bi
             .upgrade()
             .unwrap()
@@ -295,7 +291,7 @@ impl<T: Line> CSeg<T> {
 
     pub fn update_bi_list(
         &mut self,
-        bi_lst: &[StrongHandle<T>],
+        bi_lst: &[Handle<T>],
         idx1: usize,
         idx2: usize,
         parent: WeakHandle<CSeg<T>>,

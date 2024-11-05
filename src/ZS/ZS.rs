@@ -1,6 +1,6 @@
 use crate::BuySellPoint::BSPointConfig::CPointConfig;
 use crate::Common::func_util::has_overlap;
-use crate::Common::types::{StrongHandle, WeakHandle};
+use crate::Common::types::{Handle, WeakHandle};
 use crate::Common::CEnum::ZsCombineMode;
 use crate::KLine::KLine_Unit::CKLineUnit;
 use crate::Seg::linetype::Line;
@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 pub struct CZS<T> {
     pub is_sure: bool,
-    pub sub_zs_lst: Vec<StrongHandle<CZS<T>>>,
+    pub sub_zs_lst: Vec<Handle<CZS<T>>>,
     pub begin: Option<WeakHandle<CKLineUnit>>,
     pub begin_bi: Option<WeakHandle<T>>,
     pub low: f64,
@@ -26,7 +26,7 @@ pub struct CZS<T> {
 }
 
 impl<T: Line> CZS<T> {
-    pub fn new(lst: Option<Vec<StrongHandle<T>>>, is_sure: bool) -> Self {
+    pub fn new(lst: Option<Vec<Handle<T>>>, is_sure: bool) -> Self {
         // begin/end：永远指向 klu
         // low/high: 中枢的范围
         // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
@@ -62,7 +62,7 @@ impl<T: Line> CZS<T> {
 
     //pub fn clean_cache(&mut self) {}
 
-    pub fn update_zs_range(&mut self, lst: &[StrongHandle<T>]) {
+    pub fn update_zs_range(&mut self, lst: &[Handle<T>]) {
         self.low = lst
             .iter()
             .map(|bi| bi.borrow().line_low())
@@ -89,7 +89,7 @@ impl<T: Line> CZS<T> {
             .unwrap_or(false)
     }
 
-    pub fn update_zs_end(&mut self, item: &StrongHandle<T>) {
+    pub fn update_zs_end(&mut self, item: &Handle<T>) {
         self.end = Some(Rc::downgrade(&item.borrow().line_get_end_klu()));
         self.end_bi = Some(Rc::downgrade(item));
         if item.borrow().line_low() < self.peak_low {
@@ -166,7 +166,7 @@ impl<T: Line> CZS<T> {
         //self.clean_cache();
     }
 
-    pub fn try_add_to_end(&mut self, item: &StrongHandle<T>) -> bool {
+    pub fn try_add_to_end(&mut self, item: &Handle<T>) -> bool {
         if !self.in_range(item) {
             return false;
         }
@@ -180,7 +180,7 @@ impl<T: Line> CZS<T> {
         true
     }
 
-    pub fn in_range(&self, item: &StrongHandle<T>) -> bool {
+    pub fn in_range(&self, item: &Handle<T>) -> bool {
         has_overlap(
             self.low,
             self.high,
@@ -214,7 +214,7 @@ impl<T: Line> CZS<T> {
     pub fn is_divergence(
         &self,
         config: &CPointConfig,
-        out_bi: Option<StrongHandle<T>>,
+        out_bi: Option<Handle<T>>,
     ) -> (bool, Option<f64>) {
         let out_bi = out_bi.as_ref().map(|x| Rc::clone(&x));
         if !self.end_bi_break(out_bi.clone()) {
@@ -267,7 +267,7 @@ impl<T: Line> CZS<T> {
         copy
     }
 
-    pub fn end_bi_break(&self, end_bi: Option<StrongHandle<T>>) -> bool {
+    pub fn end_bi_break(&self, end_bi: Option<Handle<T>>) -> bool {
         let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
         let end_bi = end_bi.borrow();
         (end_bi.line_is_down() && end_bi.line_low() < self.low)
@@ -302,7 +302,7 @@ impl<T: Line> CZS<T> {
         (true, Some(peak_rate))
     }
 
-    pub fn get_bi_in(&self) -> StrongHandle<T> {
+    pub fn get_bi_in(&self) -> Handle<T> {
         self.bi_in
             .as_ref()
             .expect("bi_in is None")
@@ -310,7 +310,7 @@ impl<T: Line> CZS<T> {
             .expect("bi_in was dropped")
     }
 
-    pub fn get_bi_out(&self) -> StrongHandle<T> {
+    pub fn get_bi_out(&self) -> Handle<T> {
         self.bi_out
             .as_ref()
             .expect("bi_out is None")
@@ -318,17 +318,17 @@ impl<T: Line> CZS<T> {
             .expect("bi_out was dropped")
     }
 
-    pub fn set_bi_in(&mut self, bi: StrongHandle<T>) {
+    pub fn set_bi_in(&mut self, bi: Handle<T>) {
         self.bi_in = Some(Rc::downgrade(&bi));
         //self.clean_cache();
     }
 
-    pub fn set_bi_out(&mut self, bi: StrongHandle<T>) {
+    pub fn set_bi_out(&mut self, bi: Handle<T>) {
         self.bi_out = Some(Rc::downgrade(&bi));
         //self.clean_cache();
     }
 
-    pub fn set_bi_lst(&mut self, bi_lst: &[StrongHandle<T>]) {
+    pub fn set_bi_lst(&mut self, bi_lst: &[Handle<T>]) {
         self.bi_lst = bi_lst.iter().map(|x| Rc::downgrade(x)).collect();
     }
 }
