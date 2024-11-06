@@ -10,3 +10,4 @@ rls/
 **/flamegraph.svg
 .env
 **/.DS_Store
+**/cargo-flamegraph.stacks

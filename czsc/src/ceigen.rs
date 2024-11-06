@@ -1,3 +1,4 @@
+// 已完备
 use crate::{Direction, EqualMode, FxType, IHighLow, LineType, ToHandle};
 use crate::{Handle, KlineDir};
 
@@ -7,7 +8,7 @@ pub struct CEigen<T> {
     pub high: f64,
     pub low: f64,
     pub lst: Vec<Handle<T>>,
-    pub dir: KlineDir,
+    pub dir: KlineDir, // TODO: 改成Direction?
     pub fx_type: FxType,
     pub gap: bool,
 }
@@ -33,6 +34,7 @@ impl<T: LineType + ToHandle> CEigen<T> {
         }
     }
 
+    // 已完备
     pub fn try_add(
         &mut self,
         unit_kl: Handle<T>,
@@ -40,6 +42,7 @@ impl<T: LineType + ToHandle> CEigen<T> {
         allow_top_equal: Option<EqualMode>,
     ) -> KlineDir {
         let _dir = self.test_combine(&unit_kl, exclude_included, allow_top_equal);
+
         if _dir == KlineDir::Combine {
             self.lst.push(unit_kl);
 
@@ -67,6 +70,7 @@ impl<T: LineType + ToHandle> CEigen<T> {
         _dir
     }
 
+    // 已完备
     fn test_combine(
         &self,
         item: &T,
@@ -77,24 +81,25 @@ impl<T: LineType + ToHandle> CEigen<T> {
             return KlineDir::Combine;
         }
         if self.high <= item.high() && self.low >= item.low() {
-            if allow_top_equal == Some(EqualMode::TopEqual)
-                && self.high == item.high()
-                && self.low > item.low()
-            {
-                return KlineDir::Down;
+            match allow_top_equal {
+                Some(EqualMode::TopEqual) if self.high == item.high() && self.low > item.low() => {
+                    return KlineDir::Down
+                }
+                Some(EqualMode::BottomEqual)
+                    if self.low == item.low() && self.high < item.high() =>
+                {
+                    return KlineDir::Up
+                }
+                _ => {
+                    return if exclude_included {
+                        KlineDir::Included
+                    } else {
+                        KlineDir::Combine
+                    }
+                }
             }
-            if allow_top_equal == Some(EqualMode::BottomEqual)
-                && self.low == item.low()
-                && self.high < item.high()
-            {
-                return KlineDir::Up;
-            }
-            return if exclude_included {
-                KlineDir::Included
-            } else {
-                KlineDir::Combine
-            };
         }
+
         if self.high > item.high() && self.low > item.low() {
             return KlineDir::Down;
         }

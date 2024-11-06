@@ -447,16 +447,16 @@ impl IParent for CBi {
     fn set_seg_idx(&mut self, idx: usize) {
         self.seg_idx = Some(idx)
     }
-    fn set_parent_seg_idx(&mut self, parent_seg_idx: usize) {
-        self.parent_seg_idx = Some(parent_seg_idx);
+    fn set_parent_seg_idx(&mut self, parent_seg_idx: Option<usize>) {
+        self.parent_seg_idx = parent_seg_idx;
     }
 
     fn parent_seg_idx(&self) -> Option<usize> {
         self.parent_seg_idx
     }
 
-    fn set_parent_seg_dir(&mut self, dir: Direction) {
-        self.parent_seg_dir = Some(dir);
+    fn set_parent_seg_dir(&mut self, dir: Option<Direction>) {
+        self.parent_seg_dir = dir;
     }
 
     fn parent_seg_dir(&self) -> Option<Direction> {

@@ -1,3 +1,4 @@
+// 已完备
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
@@ -110,6 +111,7 @@ impl<T: LineType> CSeg<T> {
         if !self.is_sure {
             return;
         }
+
         if self._is_down() {
             if self.start_bi.get_begin_val() < self.end_bi.get_end_val() {
                 panic!("下降线段起始点应该高于结束点! idx={}", self.index());
@@ -117,6 +119,7 @@ impl<T: LineType> CSeg<T> {
         } else if self.start_bi.get_begin_val() > self.end_bi.get_end_val() {
             panic!("上升线段起始点应该低于结束点! idx={}", self.index());
         }
+
         if self.end_bi.index() - self.start_bi.index() < 2 {
             panic!(
                 "线段({}-{})长度不能小于2! idx={}",
@@ -129,8 +132,9 @@ impl<T: LineType> CSeg<T> {
 
     fn __cal_klu_slope(&self) -> f64 {
         assert!(self.end_bi.index() >= self.start_bi.index());
+
         (self._get_end_val() - self._get_begin_val())
-            / (self._get_end_klu().index() - self._get_begin_klu().index()) as f64
+            / (self._get_end_klu().index() as f64 - self._get_begin_klu().index() as f64)
             / self._get_begin_val()
     }
 
@@ -213,14 +217,15 @@ impl<T: LineType> CSeg<T> {
     fn cal_macd_slope(&self) -> f64 {
         let begin_klu = self._get_begin_klu();
         let end_klu = self._get_end_klu();
+
         if self._is_up() {
             (end_klu.high - begin_klu.low)
                 / end_klu.high
-                / (end_klu.index() - begin_klu.index() + 1) as f64
+                / (end_klu.index() as f64 - begin_klu.index() as f64 + 1.0)
         } else {
             (begin_klu.high - end_klu.low)
                 / begin_klu.high
-                / (end_klu.index() - begin_klu.index() + 1) as f64
+                / (end_klu.index() as f64 - begin_klu.index() as f64 + 1.0)
         }
     }
 
@@ -228,6 +233,7 @@ impl<T: LineType> CSeg<T> {
     fn cal_macd_amp(&self) -> f64 {
         let begin_klu = self._get_begin_klu();
         let end_klu = self._get_end_klu();
+
         if self._is_down() {
             (begin_klu.high - end_klu.low) / begin_klu.high
         } else {
@@ -237,20 +243,20 @@ impl<T: LineType> CSeg<T> {
 }
 
 impl<T: LineType + IParent + ToHandle> CSeg<T> {
-    // TODO:趋势性计算
     pub fn update_bi_list(&mut self, bi_lst: &[T], idx1: usize, idx2: usize) {
         (idx1..=idx2).for_each(|bi_idx| {
             bi_lst[bi_idx]
                 .to_handle()
                 .as_mut()
-                .set_parent_seg_idx(self.handle.index());
+                .set_parent_seg_idx(Some(self.handle.index()));
             bi_lst[bi_idx]
                 .to_handle()
                 .as_mut()
-                .set_parent_seg_dir(self.dir);
+                .set_parent_seg_dir(Some(self.dir));
 
             self.bi_list.push(bi_lst[bi_idx].to_handle());
         });
+
         // TODO:
         //if self.bi_list.len() >= 3 {
         //    self.support_trend_line = Some(CTrendLine::new(&self.bi_list, TrendLineSide::Inside));
@@ -300,16 +306,16 @@ impl<T> IParent for CSeg<T> {
         self.seg_idx = Some(idx)
     }
 
-    fn set_parent_seg_idx(&mut self, parent_seg_idx: usize) {
-        self.parent_seg_idx = Some(parent_seg_idx);
+    fn set_parent_seg_idx(&mut self, parent_seg_idx: Option<usize>) {
+        self.parent_seg_idx = parent_seg_idx;
     }
 
     fn parent_seg_idx(&self) -> Option<usize> {
         self.parent_seg_idx
     }
 
-    fn set_parent_seg_dir(&mut self, dir: Direction) {
-        self.parent_seg_dir = Some(dir);
+    fn set_parent_seg_dir(&mut self, dir: Option<Direction>) {
+        self.parent_seg_dir = dir;
     }
 
     fn parent_seg_dir(&self) -> Option<Direction> {

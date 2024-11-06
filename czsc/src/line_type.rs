@@ -28,10 +28,10 @@ pub trait IParent {
     fn seg_idx(&self) -> Option<usize>;
     fn set_seg_idx(&mut self, idx: usize);
 
-    fn set_parent_seg_idx(&mut self, parent_seg_idx: usize);
+    fn set_parent_seg_idx(&mut self, parent_seg_idx: Option<usize>);
     fn parent_seg_idx(&self) -> Option<usize>;
 
-    fn set_parent_seg_dir(&mut self, dir: Direction);
+    fn set_parent_seg_dir(&mut self, dir: Option<Direction>);
     fn parent_seg_dir(&self) -> Option<Direction>;
 }
 
