@@ -47,10 +47,10 @@ pub struct CChanConfig {
 }
 
 impl CChanConfig {
-    pub fn get_metric_model(&self) -> Vec<Box<MetricModel>> {
-        let mut res: Vec<Box<MetricModel>> = Vec::new();
+    pub fn get_metric_model(&self) -> Vec<MetricModel> {
+        let mut res: Vec<MetricModel> = Vec::new();
 
-        res.push(Box::new(CMACD::new(
+        res.push(MetricModel::MACD(CMACD::new(
             *self.macd_config.get("fast").unwrap_or(&12.0),
             *self.macd_config.get("slow").unwrap_or(&26.0),
             *self.macd_config.get("signal").unwrap_or(&9.0),
