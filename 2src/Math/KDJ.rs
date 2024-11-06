@@ -13,13 +13,15 @@ impl KDJItem {
     }
 }
 
+#[derive(Debug)]
 pub struct KDJ {
     arr: VecDeque<KDJData>,
     period: usize,
     pre_kdj: KDJItem,
 }
 
-struct KDJData {
+#[derive(Debug)]
+pub struct KDJData {
     high: f64,
     low: f64,
 }
@@ -61,35 +63,3 @@ impl KDJ {
         cur_kdj
     }
 }
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_kdj() {
-        let mut kdj = KDJ::new(9);
-        let data = vec![
-            (10.0, 8.0, 9.0),
-            (11.0, 9.0, 10.0),
-            (12.0, 10.0, 11.0),
-            (13.0, 11.0, 12.0),
-            (14.0, 12.0, 13.0),
-        ];
-
-        for (high, low, close) in data {
-            let result = kdj.add(high, low, close);
-            println!(
-                "KDJ: K={:.2}, D={:.2}, J={:.2}",
-                result.k, result.d, result.j
-            );
-        }
-
-        let last_result = kdj.add(15.0, 13.0, 14.0);
-        assert!((last_result.k - 77.78).abs() < 0.01);
-        assert!((last_result.d - 68.52).abs() < 0.01);
-        assert!((last_result.j - 96.30).abs() < 0.01);
-    }
-}
-*/

@@ -1,6 +1,6 @@
 use crate::impl_handle;
 use crate::BuySellPoint::BS_Point::CBSPoint;
-use crate::Common::handle::Handle;
+use crate::Common::handle::{Handle, Indexable};
 use crate::Common::CEnum::{BiDir, BiType, FxType, MacdAlgo};
 use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine::CKLine;
@@ -67,7 +67,7 @@ impl CBi {
     }
 
     pub fn idx(&self) -> usize {
-        self.handle.idx
+        self.handle.index()
     }
 
     pub fn bi_type(&self) -> BiType {
@@ -96,7 +96,7 @@ impl CBi {
                 return Err(CChanException::new(
                     format!(
                         "{}:{}~{} 笔的方向和收尾位置不一致!",
-                        self.idx(),
+                        self.index(),
                         self.begin_klc.lst[0].time,
                         self.end_klc.lst.last().unwrap().time
                     ),
@@ -107,7 +107,7 @@ impl CBi {
             return Err(CChanException::new(
                 format!(
                     "{}:{}~{} 笔的方向和收尾位置不一致!",
-                    self.idx(),
+                    self.index(),
                     self.begin_klc.lst[0].time,
                     self.end_klc.lst.last().unwrap().time
                 ),
@@ -155,7 +155,7 @@ impl CBi {
         }
     }
 
-    pub fn get_begin_klu(&self) -> Handle<CKLineUnit> {
+    pub fn get_begin_klu(&self) -> &CKLineUnit {
         if self.is_up() {
             self.begin_klc.get_peak_klu(false).unwrap()
         } else {
@@ -163,7 +163,7 @@ impl CBi {
         }
     }
 
-    pub fn get_end_klu(&self) -> Handle<CKLineUnit> {
+    pub fn get_end_klu(&self) -> &CKLineUnit {
         if self.is_up() {
             self.end_klc.get_peak_klu(true).unwrap()
         } else {
@@ -176,19 +176,19 @@ impl CBi {
     }
 
     pub fn get_klu_cnt(&self) -> usize {
-        self.get_end_klu().idx - self.get_begin_klu().idx + 1
+        self.get_end_klu().index() - self.get_begin_klu().index() + 1
     }
 
     pub fn get_klc_cnt(&self) -> usize {
         assert_eq!(
-            self.end_klc.idx,
-            self.get_end_klu().klc.as_ref().unwrap().idx
+            self.end_klc.index(),
+            self.get_end_klu().klc.as_ref().unwrap().index()
         );
         assert_eq!(
-            self.begin_klc.idx,
-            self.get_begin_klu().klc.as_ref().unwrap().idx
+            self.begin_klc.index(),
+            self.get_begin_klu().klc.as_ref().unwrap().index()
         );
-        self.end_klc.idx - self.begin_klc.idx + 1
+        self.end_klc.index() - self.begin_klc.index() + 1
     }
 
     pub fn high(&self) -> f64 {
@@ -247,7 +247,7 @@ impl CBi {
         is_reverse: bool,
     ) -> Result<f64, CChanException> {
         match macd_algo {
-            MacdAlgo::Rsi => self.cal_rsi(),
+            //MacdAlgo::Rsi => self.cal_rsi(),
             MacdAlgo::Area => self.cal_macd_half(is_reverse),
             MacdAlgo::Peak => self.cal_macd_peak(),
             MacdAlgo::FullArea => self.cal_macd_area(),
@@ -269,25 +269,25 @@ impl CBi {
         }
     }
 
-    pub fn cal_rsi(&self) -> Result<f64, CChanException> {
-        let mut rsi_lst: Vec<f64> = Vec::new();
-        for klc in self.klc_lst() {
-            for klu in klc.lst.iter() {
-                if let Some(rsi) = klu.rsi {
-                    rsi_lst.push(rsi);
-                }
-            }
-        }
-        if self.is_down() {
-            Ok(10000.0 / (rsi_lst.iter().fold(f64::INFINITY, |a, &b| a.min(b)) + 1e-7))
-        } else {
-            Ok(rsi_lst
-                .iter()
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .copied()
-                .unwrap_or(0.0))
-        }
-    }
+    //pub fn cal_rsi(&self) -> Result<f64, CChanException> {
+    //    let mut rsi_lst: Vec<f64> = Vec::new();
+    //    for klc in self.klc_lst() {
+    //        for klu in klc.lst.iter() {
+    //            if let Some(rsi) = klu.rsi {
+    //                rsi_lst.push(rsi);
+    //            }
+    //        }
+    //    }
+    //    if self.is_down() {
+    //        Ok(10000.0 / (rsi_lst.iter().fold(f64::INFINITY, |a, &b| a.min(b)) + 1e-7))
+    //    } else {
+    //        Ok(rsi_lst
+    //            .iter()
+    //            .max_by(|a, b| a.partial_cmp(b).unwrap())
+    //            .copied()
+    //            .unwrap_or(0.0))
+    //    }
+    //}
 
     pub fn cal_macd_area(&self) -> Result<f64, CChanException> {
         let mut s = 1e-7;
@@ -330,7 +330,7 @@ impl CBi {
         let peak_macd = begin_klu.macd.as_ref().unwrap().macd;
         for klc in self.klc_lst() {
             for klu in klc.lst.iter() {
-                if klu.idx < begin_klu.idx {
+                if klu.index() < begin_klu.index() {
                     continue;
                 }
                 if klu.macd.as_ref().unwrap().macd * peak_macd > 0.0 {
@@ -349,7 +349,7 @@ impl CBi {
         let peak_macd = begin_klu.macd.as_ref().unwrap().macd;
         for klc in self.klc_lst_re() {
             for klu in klc.lst.iter().rev() {
-                if klu.idx > begin_klu.idx {
+                if klu.index() > begin_klu.index() {
                     continue;
                 }
                 if klu.macd.as_ref().unwrap().macd * peak_macd > 0.0 {
@@ -385,11 +385,11 @@ impl CBi {
         if self.is_up() {
             Ok((end_klu.high - begin_klu.low)
                 / end_klu.high
-                / (end_klu.idx - begin_klu.idx + 1) as f64)
+                / (end_klu.index() - begin_klu.index() + 1) as f64)
         } else {
             Ok((begin_klu.high - end_klu.low)
                 / begin_klu.high
-                / (end_klu.idx - begin_klu.idx + 1) as f64)
+                / (end_klu.index() - begin_klu.index() + 1) as f64)
         }
     }
 
@@ -431,14 +431,14 @@ impl CBi {
     fn klc_lst(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcIterator {
             current: Some(self.begin_klc),
-            end_idx: self.end_klc.idx,
+            end_idx: self.end_klc.index(),
         }
     }
 
     fn klc_lst_re(&self) -> impl Iterator<Item = Handle<CKLine>> {
         KlcReverseIterator {
             current: Some(self.end_klc),
-            begin_idx: self.begin_klc.idx,
+            begin_idx: self.begin_klc.index(),
         }
     }
 }
@@ -453,7 +453,7 @@ impl Iterator for KlcIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.idx;
+        let current_idx = current.index();
         if current_idx <= self.end_idx {
             self.current = current.next.clone();
             Some(current)
@@ -473,7 +473,7 @@ impl Iterator for KlcReverseIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current.take()?;
-        let current_idx = current.idx;
+        let current_idx = current.index();
         if current_idx >= self.begin_idx {
             self.current = current.pre.clone();
             Some(current)

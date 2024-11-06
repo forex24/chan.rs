@@ -8,6 +8,7 @@ fn truncate(x: f64) -> f64 {
     }
 }
 
+#[derive(Debug)]
 pub struct BOLLMetric {
     pub theta: f64,
     pub up: f64,

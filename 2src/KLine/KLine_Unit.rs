@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     impl_handle,
     Common::{
-        handle::{AsHandle, Handle, Indexable},
+        handle::{AsHandle, Handle},
         CEnum::TrendType,
         CTime::CTime,
         ChanException::{CChanException, ErrCode}, //TradeInfo::CTradeInfo,
@@ -12,15 +12,15 @@ use crate::{
         metric::MetricModel,
         //Demark::{CDemarkEngine, CDemarkIndex},
         //TrendModel::CTrendModel,
-        BOLL::{BOLLMetric, BollModel},
+        BOLL::BOLLMetric,
         KDJ::KDJ,
-        MACD::{CMACDItem, CMACD},
-        RSI::RSI,
+        MACD::CMACDItem,
     },
 };
 
 use super::KLine::CKLine;
 
+#[derive(Debug, Clone)]
 pub struct CKLineUnit {
     handle: Handle<Self>,
     // 基本属性
@@ -46,10 +46,10 @@ pub struct CKLineUnit {
     //pub limit_flag: i32,
     //pub trade_info: CTradeInfo,
     //pub demark: CDemarkIndex,     // CDemarkEngine的CDemarkIndex
-    pub macd: Option<CMACDItem>,  // CMACD
-    pub boll: Option<BOLLMetric>, // BollModel的BOLL_Metric
-    pub rsi: Option<f64>,         // RSI
-    pub kdj: Option<KDJ>,         // KDJ
+    pub macd: Option<CMACDItem>, // CMACD
+                                 //pub boll: Option<BOLLMetric>, // BollModel的BOLL_Metric
+                                 //pub rsi: Option<f64>,         // RSI
+                                 //pub kdj: Option<KDJ>,         // KDJ
 }
 
 impl CKLineUnit {
@@ -82,9 +82,9 @@ impl CKLineUnit {
             pre: None,
             next: None,
             macd: None,
-            boll: None,
-            rsi: None,
-            kdj: None,
+            //boll: None,
+            //rsi: None,
+            //kdj: None,
         };
 
         unit.check(autofix)?;
@@ -150,10 +150,9 @@ impl CKLineUnit {
             match metric_model {
                 MetricModel::MACD(ref mut cmacd) => {
                     self.macd = Some(cmacd.add(self.close));
-                }
-                MetricModel::BOLL(ref mut boll_model) => {
-                    self.boll = Some(boll_model.add(self.close));
-                }
+                } //MetricModel::BOLL(ref mut boll_model) => {
+                  //    self.boll = Some(boll_model.add(self.close));
+                  //}
             }
         }
     }
@@ -216,6 +215,12 @@ impl CKLineUnit {
     pub fn get_klc(&self) -> Option<Handle<CKLine>> {
         self.klc.clone()
     }
+
+    //pub fn set_metric(&mut self, metric_model_lst: &mut [Box<dyn MetricModel>]) {
+    //    for metric_model in metric_model_lst {
+    //        metric_model.update_kline_unit(self);
+    //    }
+    //}
 }
 
 // FIXME: 所有的都需要添加Display

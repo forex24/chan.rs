@@ -1,12 +1,5 @@
 use strum_macros::{Display, EnumIter, EnumString};
 
-//#[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
-//pub enum DATA_SRC {
-//    BAO_STOCK,
-//    CCXT,
-//    CSV,
-//}
-
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KlType {
     K_1S = 1,
@@ -49,6 +42,15 @@ pub enum FxType {
 pub enum BiDir {
     Up,
     Down,
+}
+
+impl BiDir {
+    pub fn flip(&self) -> Self {
+        match self {
+            BiDir::Down => BiDir::Up,
+            BiDir::Up => BiDir::Down,
+        }
+    }
 }
 
 #[derive(Debug, EnumString, Display, Clone, Copy, PartialEq, Eq, Hash)]
@@ -144,7 +146,7 @@ pub enum MacdAlgo {
 pub struct DataField;
 
 impl DataField {
-    pub const FIELD_TIME: &'static str = "time_key";
+    pub const FIELD_TIME: &'static str = "timestamp";
     pub const FIELD_OPEN: &'static str = "open";
     pub const FIELD_HIGH: &'static str = "high";
     pub const FIELD_LOW: &'static str = "low";

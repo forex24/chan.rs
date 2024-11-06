@@ -108,6 +108,13 @@ impl CKLineList {
     //        .iter()
     //        .flat_map(|klc| klc.borrow().lst.iter())
     //}
+
+    /// Iterator over KLineUnits
+    pub fn klu_iter(&self, klc_begin_idx: usize) -> impl Iterator<Item = &Handle<CKLineUnit>> {
+        self.lst[klc_begin_idx..]
+            .iter()
+            .flat_map(|klc| klc.lst.iter())
+    }
 }
 
 impl std::ops::Deref for CKLineList {

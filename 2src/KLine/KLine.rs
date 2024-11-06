@@ -7,6 +7,7 @@ use crate::Common::ChanException::{CChanException, ErrCode};
 use crate::KLine::KLine_Unit::CKLineUnit;
 
 // 合并后的K线
+#[derive(Debug, Clone)]
 pub struct CKLine {
     handle: Handle<Self>,
     pub kl_type: Option<String>,
