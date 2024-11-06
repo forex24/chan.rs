@@ -17,7 +17,7 @@ pub struct CBiList {
 impl CBiList {
     pub fn new(bi_conf: CBiConfig) -> Self {
         CBiList {
-            bi_list: Box::new(Vec::with_capacity(102_400)),
+            bi_list: Box::new(Vec::with_capacity(10240)),
             last_end: None,
             config: bi_conf,
             free_klc_lst: Vec::new(),

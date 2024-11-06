@@ -11,7 +11,7 @@ pub async fn parse(opt: &Opt) {
     let mut fname = opt.input.clone().unwrap_or(PathBuf::from(&opt.symbol));
     fname.set_extension("csv");
     let klines = read_kline_from_csv(&fname);
-
+    println!("csv loaded");
     czsc_parse(&klines)
 }
 

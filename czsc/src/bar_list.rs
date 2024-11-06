@@ -11,7 +11,7 @@ pub struct CBarList {
 impl CBarList {
     pub fn new() -> Self {
         Self {
-            bar_list: Box::new(Vec::with_capacity(10_024_000)),
+            bar_list: Box::new(Vec::with_capacity(1_024_000)),
             //metric_model_lst: vec![],
         }
     }

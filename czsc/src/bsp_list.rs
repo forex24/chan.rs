@@ -30,9 +30,9 @@ pub struct CBSPointList<T> {
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
-            lst: Vec::with_capacity(1_024_000),
+            lst: Vec::with_capacity(1024),
             //bsp_dict: HashMap::new(),
-            bsp1_lst: Vec::with_capacity(1_024_000),
+            bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
             last_sure_pos: -1,
         }

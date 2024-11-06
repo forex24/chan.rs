@@ -8,7 +8,7 @@ pub struct CandleList {
 impl CandleList {
     pub fn new() -> Self {
         CandleList {
-            candle_list: Box::new(Vec::with_capacity(10_024_000)),
+            candle_list: Box::new(Vec::with_capacity(1_024_000)),
         }
     }
 
