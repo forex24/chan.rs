@@ -35,7 +35,7 @@ pub struct CSeg<T> {
     pub parent_seg_idx: Option<usize>,
     pub parent_seg_dir: Option<Direction>,
     pub bsp: Option<Rc<RefCell<CBspPoint<Self>>>>,
-    pub bi_list: Vec<Handle<T>>,
+    pub bi_list: Vec<Handle<T>>, // 仅通过self.update_bi_list来更新
     pub reason: String,
     //pub support_trend_line: Option<CTrendLine>,
     //pub resistance_trend_line: Option<CTrendLine>,
@@ -244,6 +244,7 @@ impl<T: LineType> CSeg<T> {
 
 impl<T: LineType + IParent + ToHandle> CSeg<T> {
     pub fn update_bi_list(&mut self, bi_lst: &[T], idx1: usize, idx2: usize) {
+        assert!(idx2 < bi_lst.len());
         (idx1..=idx2).for_each(|bi_idx| {
             bi_lst[bi_idx]
                 .to_handle()
@@ -254,6 +255,7 @@ impl<T: LineType + IParent + ToHandle> CSeg<T> {
                 .as_mut()
                 .set_parent_seg_dir(Some(self.dir));
 
+            // TODO:这里可以优化，只需要记录idx1,idx2就可以了,注意idx2所在笔可能会失效
             self.bi_list.push(bi_lst[bi_idx].to_handle());
         });
 

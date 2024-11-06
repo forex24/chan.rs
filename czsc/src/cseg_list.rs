@@ -40,13 +40,17 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     }
 
     // 已完备
-    fn do_init(&mut self) {
+    fn do_init(&mut self, bi_lst: &[T]) {
         // 删除末尾不确定的线段
         while !self.lst.is_empty() && !self.lst.last().unwrap().is_sure {
+            // FIXME: index out of bounds: the len is 16 but the index is 16
             let seg = self.lst.last().unwrap();
             for bi in &seg.bi_list {
-                bi.as_mut().set_parent_seg_dir(None);
-                bi.as_mut().set_parent_seg_idx(None);
+                if bi.index() < bi_lst.len() {
+                    // 这里检查的原因是，如果是虚笔，最后一笔可能失效
+                    bi.as_mut().set_parent_seg_dir(None);
+                    bi.as_mut().set_parent_seg_idx(None);
+                }
             }
             self.lst.pop();
         }
@@ -73,7 +77,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
 
     // 已完备
     pub fn update(&mut self, bi_lst: &[T]) {
-        self.do_init();
+        self.do_init(bi_lst);
         let begin_idx = if self.lst.is_empty() {
             0
         } else {
