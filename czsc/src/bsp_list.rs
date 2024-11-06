@@ -30,9 +30,9 @@ pub struct CBSPointList<T> {
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
-            lst: Vec::new(),
+            lst: Vec::with_capacity(1_024_000),
             //bsp_dict: HashMap::new(),
-            bsp1_lst: Vec::new(),
+            bsp1_lst: Vec::with_capacity(1_024_000),
             config: bs_point_config,
             last_sure_pos: -1,
         }
@@ -73,6 +73,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 80% 完备
+    // TODO: 性能热点
     pub fn add_bs(
         &mut self,
         bs_type: BspType,
@@ -257,6 +258,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         );
     }
 
+    // TODO: 性能热点
     fn bsp1_idx_dict(&self) -> HashMap<isize, Rc<RefCell<CBspPoint<T>>>> {
         self.bsp1_lst
             .iter()
@@ -649,7 +651,7 @@ fn cal_bsp3_bi_end_idx<T: LineType>(seg: Option<Handle<CSeg<T>>>) -> usize {
     end_bi_idx
 }
 
-/*impl<T> std::ops::Deref for CBSPointList<T> {
+impl<T> std::ops::Deref for CBSPointList<T> {
     type Target = Vec<Rc<RefCell<CBspPoint<T>>>>;
 
     fn deref(&self) -> &Self::Target {
@@ -661,4 +663,4 @@ impl<T> std::ops::DerefMut for CBSPointList<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.lst
     }
-}*/
+}

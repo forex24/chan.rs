@@ -48,9 +48,9 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
             low: 0.0,
             peak_high: f64::NEG_INFINITY,
             peak_low: f64::INFINITY,
-            bi_in: None,        //进中枢那一笔
-            bi_out: None,       //出中枢那一笔
-            bi_lst: Vec::new(), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
+            bi_in: None,                      //进中枢那一笔
+            bi_out: None,                     //出中枢那一笔
+            bi_lst: Vec::with_capacity(1024), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
         };
 
         zs.update_zs_range(lst);

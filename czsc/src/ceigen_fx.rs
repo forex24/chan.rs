@@ -267,13 +267,13 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         thred_value: f64,
         break_thred: f64,
     ) -> Option<bool> {
-        const COMMON_Combine: bool = true;
+        const COMMON_COMBINE: bool = true;
 
         let first_bi_dir = bi_list[begin_idx].direction();
-        let mut egien_fx = CEigenFx::new(first_bi_dir.flip(), !COMMON_Combine, self.lv);
+        let mut egien_fx = CEigenFx::new(first_bi_dir.flip(), !COMMON_COMBINE, self.lv);
         for bi in bi_list.iter().skip(begin_idx).step_by(2) {
             if egien_fx.add(bi.to_handle()) {
-                if COMMON_Combine {
+                if COMMON_COMBINE {
                     return Some(true);
                 }
                 loop {

@@ -58,7 +58,7 @@ impl CBi {
             dir,
             bi_type: BiType::Strict,
             sure_end: Vec::new(),
-            klc_lst: Vec::new(),
+            klc_lst: Vec::with_capacity(1024),
             seg_idx: None,
             parent_seg_idx: None,
             parent_seg_dir: None,
@@ -145,9 +145,10 @@ impl CBi {
     }
 
     // 已完备
+    // TODO: 性能热点
     pub fn _get_end_klu(&self) -> Handle<Bar> {
-        if let Some(ref bar) = self.cached_end_klu.borrow().as_ref() {
-            return **bar;
+        if let Some(bar) = self.cached_end_klu.borrow().as_ref() {
+            return *bar;
         }
         let bar = match self._is_up() {
             true => self.end_klc.get_peak_klu(true),
@@ -258,7 +259,7 @@ impl CBi {
     }
 
     // 99% 完备
-    fn _cal_macd_metric(&self, macd_algo: &MacdAlgo, is_reverse: bool) -> f64 {
+    fn _cal_macd_metric(&self, _macd_algo: &MacdAlgo, _is_reverse: bool) -> f64 {
         /*match macd_algo {
             MacdAlgo::Area => self.cal_macd_half(is_reverse),
             MacdAlgo::Peak => self.cal_macd_peak(),

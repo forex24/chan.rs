@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
 
-use crate::{AsHandle, Candle, Handle, ICandlestick, IHighLow, MetricModel};
+use crate::{AsHandle, Candle, Handle, ICandlestick, IHighLow};
 
 // 原始K线
 #[derive(Debug, Clone)]

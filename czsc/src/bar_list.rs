@@ -1,4 +1,4 @@
-use crate::{AsHandle, Bar, Handle, Kline, MetricModel};
+use crate::{AsHandle, Bar, Handle, Kline};
 
 #[derive(Debug)]
 pub struct CBarList {
@@ -11,7 +11,7 @@ pub struct CBarList {
 impl CBarList {
     pub fn new() -> Self {
         Self {
-            bar_list: Box::new(Vec::with_capacity(102400)),
+            bar_list: Box::new(Vec::with_capacity(10_024_000)),
             //metric_model_lst: vec![],
         }
     }
@@ -29,7 +29,7 @@ impl CBarList {
         self.add_bar(bar)
     }
 
-    fn add_bar(&mut self, mut bar: Bar) -> Handle<Bar> {
+    fn add_bar(&mut self, bar: Bar) -> Handle<Bar> {
         //bar.set_metric(&mut self.metric_model_lst);
         let klu_handle = bar.as_handle();
         self.bar_list.push(bar);
