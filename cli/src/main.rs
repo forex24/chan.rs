@@ -67,19 +67,19 @@ async fn main() {
     }
     let stdout_log = tracing_subscriber::fmt::layer().with_ansi(true).pretty();
 
-    let file_appender = tracing_appender::rolling::daily("./logs", "download_debug");
-    let (non_blocking_appender, _worker_guard) = tracing_appender::non_blocking(file_appender);
+    //let file_appender = tracing_appender::rolling::daily("./logs", "download_debug");
+    //let (non_blocking_appender, _worker_guard) = tracing_appender::non_blocking(file_appender);
 
     let stdout_log_level =
         tracing::Level::from_str(&env::var("stdout_log_level").unwrap_or("info".to_string()))
             .unwrap();
-    let file_log_level =
-        tracing::Level::from_str(&env::var("file_log_level").unwrap_or("debug".to_string()))
-            .unwrap();
+    //let file_log_level =
+    //    tracing::Level::from_str(&env::var("file_log_level").unwrap_or("debug".to_string()))
+    //        .unwrap();
 
-    let debug_log = tracing_subscriber::fmt::layer()
-        .with_ansi(false)
-        .with_writer(non_blocking_appender);
+    //let debug_log = tracing_subscriber::fmt::layer()
+    //    .with_ansi(false)
+    //    .with_writer(non_blocking_appender);
 
     tracing_subscriber::registry()
         .with(
@@ -87,7 +87,7 @@ async fn main() {
                 .with_filter(filter::LevelFilter::from_level(stdout_log_level))
                 // Combine the filtered `stdout_log` layer with the
                 // `debug_log` layer, producing a new `Layered` layer.
-                .and_then(debug_log.with_filter(filter::LevelFilter::from_level(file_log_level))),
+                //.and_then(debug_log.with_filter(filter::LevelFilter::from_level(file_log_level))),
         )
         .init();
 
