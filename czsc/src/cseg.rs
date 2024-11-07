@@ -130,7 +130,7 @@ impl<T: LineType> CSeg<T> {
         }
     }
 
-    fn __cal_klu_slope(&self) -> f64 {
+    pub fn __cal_klu_slope(&self) -> f64 {
         assert!(self.end_bi.index() >= self.start_bi.index());
 
         (self._get_end_val() - self._get_begin_val())
@@ -138,16 +138,16 @@ impl<T: LineType> CSeg<T> {
             / self._get_begin_val()
     }
 
-    fn __cal_amp(&self) -> f64 {
+    pub fn __cal_amp(&self) -> f64 {
         (self._get_end_val() - self._get_begin_val()) / self._get_begin_val()
     }
 
-    fn __cal_bi_cnt(&self) -> usize {
+    pub fn __cal_bi_cnt(&self) -> usize {
         self.end_bi.index() - self.start_bi.index() + 1
     }
 
     // 已完备
-    fn _low(&self) -> f64 {
+    pub fn _low(&self) -> f64 {
         if self._is_down() {
             self.end_bi.get_end_klu().low
         } else {
@@ -156,7 +156,7 @@ impl<T: LineType> CSeg<T> {
     }
 
     // 已完备
-    fn _high(&self) -> f64 {
+    pub fn _high(&self) -> f64 {
         if self._is_up() {
             self.end_bi.get_end_klu().high
         } else {
@@ -165,47 +165,47 @@ impl<T: LineType> CSeg<T> {
     }
 
     // 已完备
-    fn _is_down(&self) -> bool {
+    pub fn _is_down(&self) -> bool {
         self.dir == Direction::Down
     }
 
     // 已完备
-    fn _is_up(&self) -> bool {
+    pub fn _is_up(&self) -> bool {
         self.dir == Direction::Up
     }
 
     // 已完备
-    fn _get_end_val(&self) -> f64 {
+    pub fn _get_end_val(&self) -> f64 {
         self.end_bi.get_end_val()
     }
 
     // 已完备
-    fn _get_begin_val(&self) -> f64 {
+    pub fn _get_begin_val(&self) -> f64 {
         self.start_bi.get_begin_val()
     }
 
     // 已完备
-    fn _amp(&self) -> f64 {
+    pub fn _amp(&self) -> f64 {
         (self._get_end_val() - self._get_begin_val()).abs()
     }
 
     // 已完备
-    fn _get_end_klu(&self) -> Handle<Bar> {
+    pub fn _get_end_klu(&self) -> Handle<Bar> {
         self.end_bi.get_end_klu().as_handle()
     }
 
     // 已完备
-    fn _get_begin_klu(&self) -> Handle<Bar> {
+    pub fn _get_begin_klu(&self) -> Handle<Bar> {
         self.start_bi.get_begin_klu().as_handle()
     }
 
     // 已完备
-    fn __get_klu_cnt(&self) -> usize {
+    pub fn __get_klu_cnt(&self) -> usize {
         self._get_end_klu().index() - self._get_begin_klu().index() + 1
     }
 
     // 已完备
-    fn _cal_macd_metric(&self, macd_algo: &MacdAlgo, _is_reverse: bool) -> f64 {
+    pub fn _cal_macd_metric(&self, macd_algo: &MacdAlgo, _is_reverse: bool) -> f64 {
         match macd_algo {
             MacdAlgo::Slope => self.cal_macd_slope(),
             MacdAlgo::Amp => self.cal_macd_amp(),

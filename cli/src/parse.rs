@@ -32,6 +32,7 @@ fn czsc_parse(klines: &[Kline]) {
     });
     let duration = start_time.elapsed();
     pb.finish_with_message("done");
+    let _ = ca.to_csv("./output");
     println!(
         "parse time:{}s\nbsp count:{} seg count:{} bi count:{}",
         duration.as_secs(),

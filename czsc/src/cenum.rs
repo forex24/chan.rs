@@ -93,6 +93,21 @@ pub enum BiType {
     TiaokongValue,
 }
 
+impl ToString for BiType {
+    fn to_string(&self) -> String {
+        match self {
+            BiType::Unknown => "Unknown".to_string(),
+            BiType::Strict => "Strict".to_string(),
+            BiType::SubValue => "SubValue".to_string(),
+            BiType::TiaokongThred => "TiaokongThred".to_string(),
+            BiType::Daheng => "Daheng".to_string(),
+            BiType::Tuibi => "Tuibi".to_string(),
+            BiType::Unstrict => "Unstrict".to_string(),
+            BiType::TiaokongValue => "TiaokongValue".to_string()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BspType {
     T1,  // 一类买卖点

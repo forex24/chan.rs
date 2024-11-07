@@ -1,10 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fs::{self, File}, path::Path, rc::Rc};
 
 use crate::{
     AsHandle, Bar, CBSPointList, CBarList, CBi, CBiList, CBspPoint, CChanConfig, CSeg,
     CSegListChan, CZs, CZsList, Candle, CandleList, ICalcMetric, IParent, Indexable, Kline,
     LineType, SegType, ToHandle,
 };
+use std::io::Write;
 
 pub struct Analyzer {
     pub kl_type: i32,
@@ -140,6 +141,141 @@ impl Analyzer {
         for bi in self.bi_list.iter_mut() {
             bi.set_klc_lst(&self.candle_list[bi.begin_klc.index()..=bi.end_klc.index()]);
         }
+    }
+}
+
+
+impl Analyzer {
+    // storage funciton
+    pub fn to_dataframes(&self) -> HashMap<String, Vec<HashMap<String, String>>> {
+        let mut dataframes = HashMap::new();
+        
+        // KLine List
+        let kline_list = self.candle_list.iter()
+            .map(|kl| {
+                let mut map = HashMap::new();
+                map.insert("begin_time".to_string(), kl.time_begin.to_string());
+                map.insert("end_time".to_string(), kl.time_end.to_string());
+                map.insert("idx".to_string(), kl.index().to_string());
+                map.insert("dir".to_string(), kl.dir.to_string());
+                map.insert("high".to_string(), kl.high.to_string());
+                map.insert("low".to_string(), kl.low.to_string());
+                map.insert("fx".to_string(), kl.fx_type.to_string());
+                map
+            })
+            .collect();
+        dataframes.insert("kline_list".to_string(), kline_list);
+
+        // Bi List
+        let bi_list = self.bi_list.iter()
+            .map(|bi| {
+                let mut map = HashMap::new();
+                map.insert("begin_time".to_string(), bi.get_begin_klu().time.to_string());
+                map.insert("end_time".to_string(), bi.get_end_klu().time.to_string());
+                map.insert("idx".to_string(), bi.index().to_string());
+                map.insert("dir".to_string(), bi.dir.to_string());
+                map.insert("high".to_string(), bi._high().to_string());
+                map.insert("low".to_string(), bi._low().to_string());
+                map.insert("type".to_string(), bi.bi_type.to_string());
+                map.insert("is_sure".to_string(), bi.is_sure.to_string());
+                map.insert("seg_idx".to_string(), bi.seg_idx.unwrap_or(0).to_string());
+                map.insert("parent_seg".to_string(), bi.parent_seg_idx().unwrap_or(0).to_string());
+                map.insert("begin_klc".to_string(), bi.begin_klc.index().to_string());
+                map.insert("end_klc".to_string(), bi.end_klc.index().to_string());
+                map.insert("begin_val".to_string(), bi._get_begin_val().to_string());
+                map.insert("end_val".to_string(), bi._get_end_val().to_string());
+                map.insert("klu_cnt".to_string(), bi._get_klu_cnt().to_string());
+                map.insert("klc_cnt".to_string(), bi._get_klc_cnt().to_string());
+                map
+            })
+            .collect();
+        dataframes.insert("bi_list".to_string(), bi_list);
+
+        // Seg List
+        let seg_list = self.seg_list.iter()
+            .map(|seg| {
+                let mut map = HashMap::new();
+                map.insert("begin_time".to_string(), seg.get_begin_klu().time.to_string());
+                map.insert("end_time".to_string(), seg.get_end_klu().time.to_string());
+                map.insert("idx".to_string(), seg.index().to_string());
+                map.insert("dir".to_string(), seg.dir.to_string());
+                map.insert("high".to_string(), seg._high().to_string());
+                map.insert("low".to_string(), seg._low().to_string());
+                map.insert("is_sure".to_string(), seg.is_sure.to_string());
+                map.insert("start_bi_idx".to_string(), seg.start_bi.index().to_string());
+                map.insert("end_bi_idx".to_string(), seg.end_bi.index().to_string());
+                map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
+                map.insert("bi_count".to_string(), seg.bi_list.len().to_string());
+                map.insert("reason".to_string(), seg.reason.clone());
+                map
+            })
+            .collect();
+        dataframes.insert("seg_list".to_string(), seg_list);
+
+        // 其他列表的转换逻辑类似，我继续写下去...
+        
+        // ZS List
+        let zs_list = self.zs_list.iter()
+            .map(|zs| {
+                let mut map = HashMap::new();
+                map.insert("begin_time".to_string(), zs.begin_bi.get_begin_klu().time.to_string());
+                map.insert("end_time".to_string(), zs.end_bi.unwrap()._get_end_klu().time.to_string());
+                map.insert("high".to_string(), zs.high.to_string());
+                map.insert("low".to_string(), zs.low.to_string());
+                map.insert("peak_high".to_string(), zs.peak_high.to_string());
+                map.insert("peak_low".to_string(), zs.peak_low.to_string());
+                map.insert("is_sure".to_string(), zs.is_sure.to_string());
+                map.insert("begin_bi_idx".to_string(), zs.begin_bi.index().to_string());
+                map.insert("end_bi_idx".to_string(), zs.end_bi.unwrap().index().to_string());
+                map.insert("bi_in".to_string(), zs.bi_in.as_ref().map_or("".to_string(), |bi| bi.index().to_string()));
+                map.insert("bi_out".to_string(), zs.bi_out.as_ref().map_or("".to_string(), |bi| bi.index().to_string()));
+                map
+            })
+            .collect();
+        dataframes.insert("zs_list".to_string(), zs_list);
+
+        // BS Point List
+        let bs_point_list = self.bs_point_lst.iter()
+            .map(|bsp| {
+                let mut map = HashMap::new();
+                map.insert("begin_time".to_string(), bsp.borrow().klu.time.to_string());
+                map.insert("bsp_type".to_string(), bsp.borrow().type2str());
+                map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
+                map.insert("bi_begin_time".to_string(), bsp.borrow().bi.get_begin_klu().time.to_string());
+                map.insert("bi_end_time".to_string(), bsp.borrow().bi.get_end_klu().time.to_string());
+                map
+            })
+            .collect();
+        dataframes.insert("bs_point_lst".to_string(), bs_point_list);
+
+        dataframes
+    }
+
+    pub fn to_csv(&self, directory: &str) -> std::io::Result<()> {
+        fs::create_dir_all(directory)?;
+        
+        let dataframes = self.to_dataframes();
+        
+        for (name, data) in &dataframes {
+            let file_path = Path::new(directory).join(format!("{}.csv", name));
+            let mut file = File::create(file_path)?;
+            
+            // Write headers
+            if let Some(first_row) = data.first() {
+                let headers: Vec<String> = first_row.keys().cloned().collect();
+                writeln!(file, "{}", headers.join(","))?;
+                
+                // Write data rows
+                for row in data {
+                    let values: Vec<String> = headers.iter()
+                        .map(|key| row.get(key).unwrap_or(&String::new()).clone())
+                        .collect();
+                    writeln!(file, "{}", values.join(","))?;
+                }
+            }
+        }
+        
+        Ok(())
     }
 }
 
