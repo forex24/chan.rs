@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
 
-use crate::{AsHandle, Candle, Handle, ICandlestick, IHighLow};
+use crate::{AsHandle, BollMetric, CMACDItem, Candle, Handle, ICandlestick, IHighLow, MetricModel};
 
 // 原始K线
 #[derive(Debug, Clone)]
@@ -18,14 +18,14 @@ pub struct Bar {
     pub sup_kl: Option<Handle<Bar>>,   // 指向更高级别KLU
     pub klc: Option<Handle<Candle>>,   // 指向KLine
 
-                                       // indicator
-                                       //pub macd: Option<Handle<CMACDItem>>,
-                                       //pub boll: Option<BollMetric>,
-                                       //pub trade_info: CTradeInfo,
-                                       //pub demark: CDemarkIndex,
-                                       //pub trend: HashMap<TrendType, HashMap<i32, f64>>,
-                                       //pub limit_flag: i32,  // 0:普通 -1:跌停，1:涨停
-                                       //pub kdj: Option<KDJItem>,
+    // indicator
+    pub macd: Option<Handle<CMACDItem>>,
+    pub boll: Option<BollMetric>,
+    //pub trade_info: CTradeInfo,
+    //pub demark: CDemarkIndex,
+    //pub trend: HashMap<TrendType, HashMap<i32, f64>>,
+    //pub limit_flag: i32,  // 0:普通 -1:跌停，1:涨停
+    //pub kdj: Option<KDJItem>,
 }
 
 impl Display for Bar {
@@ -64,8 +64,8 @@ impl Bar {
             sub_kl_list: Vec::new(),
             sup_kl: None,
             klc: None,
-            //macd: None,
-            //boll: None,
+            macd: None,
+            boll: None,
             //trade_info: CTradeInfo::new(kl_dict),
             //demark: CDemarkIndex::new(),
             //trend: HashMap::new(),
@@ -116,18 +116,18 @@ impl Bar {
         self.sub_kl_list.iter()
     }
 
-    //pub fn set_metric(&mut self, metric_model_lst: &mut Vec<MetricModel>) {
-    //    for metric_model in metric_model_lst {
-    //        match metric_model {
-    //            MetricModel::MACD(ref mut cmacd) => {
-    //                self.macd = Some(cmacd.add(self.close));
-    //            }
-    //            MetricModel::BOLL(ref mut boll_model) => {
-    //                self.boll = Some(boll_model.add(self.close));
-    //            }
-    //        }
-    //    }
-    //}
+    pub fn set_metric(&mut self, metric_model_lst: &mut Vec<MetricModel>) {
+        for metric_model in metric_model_lst {
+            match metric_model {
+                MetricModel::MACD(ref mut cmacd) => {
+                    self.macd = Some(cmacd.add(self.close));
+                }
+                MetricModel::BOLL(ref mut boll_model) => {
+                    self.boll = Some(boll_model.add(self.close));
+                }
+            }
+        }
+    }
 
     pub fn get_parent_klc(&self) -> Option<Handle<Candle>> {
         self.sup_kl.as_ref().and_then(|sup_kl| sup_kl.klc)

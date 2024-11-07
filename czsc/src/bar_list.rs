@@ -1,18 +1,21 @@
-use crate::{AsHandle, Bar, Handle, Kline};
+use crate::{AsHandle, Bar, BollModel, Handle, Kline, MetricModel, CMACD};
 
 #[derive(Debug)]
 pub struct CBarList {
     #[allow(clippy::box_collection)]
     bar_list: Box<Vec<Bar>>,
     //metric
-    //pub metric_model_lst: Vec<Box<dyn MetricModel>>,
+    pub metric_model_lst: Vec<MetricModel>,
 }
 
 impl CBarList {
     pub fn new() -> Self {
         Self {
             bar_list: Box::new(Vec::with_capacity(1_024_000)),
-            //metric_model_lst: vec![],
+            metric_model_lst: vec![
+                MetricModel::MACD(CMACD::new(12, 26, 9)),
+                MetricModel::BOLL(BollModel::new(20)),
+            ],
         }
     }
 
@@ -29,8 +32,8 @@ impl CBarList {
         self.add_bar(bar)
     }
 
-    fn add_bar(&mut self, bar: Bar) -> Handle<Bar> {
-        //bar.set_metric(&mut self.metric_model_lst);
+    fn add_bar(&mut self, mut bar: Bar) -> Handle<Bar> {
+        bar.set_metric(&mut self.metric_model_lst);
         let klu_handle = bar.as_handle();
         self.bar_list.push(bar);
         klu_handle

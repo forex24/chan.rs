@@ -74,17 +74,17 @@ pub use features::*;
 
 //mod ctrade_info;
 //mod demark;
-//mod iboll;
-//pub use iboll::*;
+mod iboll;
+pub use iboll::*;
 
-//mod imacd;
-//pub use imacd::*;
+mod imacd;
+pub use imacd::*;
 
 //mod ikdj;
 //pub use ikdj::*;
 
-//mod irsi;
-//pub use irsi::*;
+mod irsi;
+pub use irsi::*;
 
 //pub use ctrade_info::*;
 

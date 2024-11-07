@@ -259,8 +259,8 @@ impl CBi {
     }
 
     // 99% 完备
-    fn _cal_macd_metric(&self, _macd_algo: &MacdAlgo, _is_reverse: bool) -> f64 {
-        /*match macd_algo {
+    fn _cal_macd_metric(&self, macd_algo: &MacdAlgo, is_reverse: bool) -> f64 {
+        match macd_algo {
             MacdAlgo::Area => self.cal_macd_half(is_reverse),
             MacdAlgo::Peak => self.cal_macd_peak(),
             MacdAlgo::FullArea => self.cal_macd_area(),
@@ -273,8 +273,7 @@ impl CBi {
             // MacdAlgo::AmountAvg => self.cal_macd_trade_metric(DataField::Turnover, true),
             // MacdAlgo::TurnrateAvg => self.cal_macd_trade_metric(DataField::Turnrate, true),
             //MacdAlgo::Rsi => self.cal_rsi(),
-        }*/
-        0.0
+        }
     }
 
     /*pub fn cal_rsi(&self) -> f64 {
@@ -289,123 +288,134 @@ impl CBi {
         }
     }*/
 
-    /*fn cal_macd_area(&self) -> f64 {
-            let mut s = 1e-7;
-            for klc in &self.klc_lst {
-                for klu in &klc.lst {
+    fn cal_macd_area(&self) -> f64 {
+        let mut s = 1e-7;
+        let begin_klu = self.get_begin_klu();
+        let end_klu = self.get_end_klu();
+
+        for klc in &self.klc_lst {
+            for klu in &klc.lst {
+                //s += klu.macd.unwrap().macd.abs();
+                if klu.index() < begin_klu.index() || klu.index() > end_klu.index() {
+                    continue;
+                }
+                if (self.is_down() && klu.macd.unwrap().macd < 0.0)
+                    || (self.is_up() && klu.macd.unwrap().macd > 0.0)
+                {
+                    s += klu.macd.unwrap().macd.abs()
+                }
+            }
+        }
+        s
+    }
+
+    // TODO:
+    #[allow(clippy::if_same_then_else)]
+    fn cal_macd_peak(&self) -> f64 {
+        let mut peak = 1e-7;
+        for klc in &self.klc_lst {
+            for klu in &klc.lst {
+                if klu.macd.unwrap().macd.abs() > peak {
+                    if self.is_down() && klu.macd.unwrap().macd < 0.0 {
+                        peak = klu.macd.unwrap().macd.abs();
+                    } else if self.is_up() && klu.macd.unwrap().macd > 0.0 {
+                        peak = klu.macd.unwrap().macd.abs();
+                    }
+                }
+            }
+        }
+        peak
+    }
+
+    // 已完备
+    fn cal_macd_half(&self, is_reverse: bool) -> f64 {
+        if is_reverse {
+            self.cal_macd_half_reverse()
+        } else {
+            self.cal_macd_half_obverse()
+        }
+    }
+
+    fn cal_macd_half_obverse(&self) -> f64 {
+        let mut s = 1e-7;
+        let begin_klu = self.get_begin_klu();
+        let peak_macd = begin_klu.macd.unwrap().macd;
+        for klc in &self.klc_lst {
+            for klu in &klc.lst {
+                if klu.index() < begin_klu.index() {
+                    continue;
+                }
+                if klu.macd.unwrap().macd * peak_macd > 0.0 {
                     s += klu.macd.unwrap().macd.abs();
+                } else {
+                    break;
                 }
             }
-            s
         }
+        s
+    }
 
-        // TODO:
-        #[allow(clippy::if_same_then_else)]
-        fn cal_macd_peak(&self) -> f64 {
-            let mut peak = 1e-7;
-            for klc in &self.klc_lst {
-                for klu in &klc.lst {
-                    if klu.macd.unwrap().macd.abs() > peak {
-                        if self.is_down() && klu.macd.unwrap().macd < 0.0 {
-                            peak = klu.macd.unwrap().macd.abs();
-                        } else if self.is_up() && klu.macd.unwrap().macd > 0.0 {
-                            peak = klu.macd.unwrap().macd.abs();
-                        }
-                    }
+    fn cal_macd_half_reverse(&self) -> f64 {
+        let mut s = 1e-7;
+        let begin_klu = self.get_end_klu();
+        let peak_macd = begin_klu.macd.unwrap().macd;
+        for klc in self.klc_lst.iter().rev() {
+            for klu in klc.lst.iter().rev() {
+                if klu.index() > begin_klu.index() {
+                    continue;
+                }
+                if klu.macd.unwrap().macd * peak_macd > 0.0 {
+                    s += klu.macd.unwrap().macd.abs();
+                } else {
+                    break;
                 }
             }
-            peak
         }
+        s
+    }
 
-        // 已完备
-        fn cal_macd_half(&self, is_reverse: bool) -> f64 {
-            if is_reverse {
-                self.cal_macd_half_reverse()
-            } else {
-                self.cal_macd_half_obverse()
-            }
-        }
-
-        fn cal_macd_half_obverse(&self) -> f64 {
-            let mut s = 1e-7;
-            let begin_klu = self.get_begin_klu();
-            let peak_macd = begin_klu.macd.unwrap().macd;
-            for klc in &self.klc_lst {
-                for klu in &klc.lst {
-                    if klu.index() < begin_klu.index() {
-                        continue;
-                    }
-                    if klu.macd.unwrap().macd * peak_macd > 0.0 {
-                        s += klu.macd.unwrap().macd.abs();
-                    } else {
-                        break;
-                    }
+    // macd红绿柱最大值最小值之差
+    fn cal_macd_diff(&self) -> f64 {
+        let mut max_ = f64::NEG_INFINITY;
+        let mut min_ = f64::INFINITY;
+        for klc in &self.klc_lst {
+            for klu in &klc.lst {
+                let macd = klu.macd.unwrap().macd;
+                if macd > max_ {
+                    max_ = macd;
+                }
+                if macd < min_ {
+                    min_ = macd;
                 }
             }
-            s
         }
+        max_ - min_
+    }
 
-        fn cal_macd_half_reverse(&self) -> f64 {
-            let mut s = 1e-7;
-            let begin_klu = self.get_end_klu();
-            let peak_macd = begin_klu.macd.unwrap().macd;
-            for klc in self.klc_lst.iter().rev() {
-                for klu in klc.lst.iter().rev() {
-                    if klu.index() > begin_klu.index() {
-                        continue;
-                    }
-                    if klu.macd.unwrap().macd * peak_macd > 0.0 {
-                        s += klu.macd.unwrap().macd.abs();
-                    } else {
-                        break;
-                    }
-                }
-            }
-            s
+    fn cal_macd_slope(&self) -> f64 {
+        let begin_klu = self.get_begin_klu();
+        let end_klu = self.get_end_klu();
+        if self.is_up() {
+            (end_klu.high - begin_klu.low)
+                / end_klu.high
+                / (end_klu.index() - begin_klu.index() + 1) as f64
+        } else {
+            (begin_klu.high - end_klu.low)
+                / begin_klu.high
+                / (end_klu.index() - begin_klu.index() + 1) as f64
         }
+    }
 
-        // macd红绿柱最大值最小值之差
-        fn cal_macd_diff(&self) -> f64 {
-            let mut max_ = f64::NEG_INFINITY;
-            let mut min_ = f64::INFINITY;
-            for klc in &self.klc_lst {
-                for klu in &klc.lst {
-                    let macd = klu.macd.unwrap().macd;
-                    if macd > max_ {
-                        max_ = macd;
-                    }
-                    if macd < min_ {
-                        min_ = macd;
-                    }
-                }
-            }
-            max_ - min_
+    fn cal_macd_amp(&self) -> f64 {
+        let begin_klu = self.get_begin_klu();
+        let end_klu = self.get_end_klu();
+        if self.is_down() {
+            (begin_klu.high - end_klu.low) / begin_klu.high
+        } else {
+            (end_klu.high - begin_klu.low) / begin_klu.low
         }
+    }
 
-        fn cal_macd_slope(&self) -> f64 {
-            let begin_klu = self.get_begin_klu();
-            let end_klu = self.get_end_klu();
-            if self.is_up() {
-                (end_klu.high - begin_klu.low)
-                    / end_klu.high
-                    / (end_klu.index() - begin_klu.index() + 1) as f64
-            } else {
-                (begin_klu.high - end_klu.low)
-                    / begin_klu.high
-                    / (end_klu.index() - begin_klu.index() + 1) as f64
-            }
-        }
-
-        fn cal_macd_amp(&self) -> f64 {
-            let begin_klu = self.get_begin_klu();
-            let end_klu = self.get_end_klu();
-            if self.is_down() {
-                (begin_klu.high - end_klu.low) / begin_klu.high
-            } else {
-                (end_klu.high - begin_klu.low) / begin_klu.low
-            }
-        }
-    */
     /*pub fn cal_macd_trade_metric(&self, metric: DataField, cal_avg: bool) -> f64 {
         let mut s = 0.0;
         for klc in &self.klc_lst {
