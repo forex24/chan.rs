@@ -12,3 +12,5 @@ rls/
 **/.DS_Store
 **/cargo-flamegraph.stacks
 logs/
+python_result/
+output/
