@@ -4,11 +4,10 @@
 //    fn update_bar(&mut self, klu: &Bar);
 //}
 
-use crate::{BollModel, CMACD, CRSI};
+use crate::{BollModel, CMACD};
 
 #[derive(Debug)]
 pub enum MetricModel {
     MACD(CMACD),
     BOLL(BollModel),
-    //RSI(CRSI),
 }

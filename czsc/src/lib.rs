@@ -83,8 +83,8 @@ pub use imacd::*;
 //mod ikdj;
 //pub use ikdj::*;
 
-mod irsi;
-pub use irsi::*;
+//mod irsi;
+//pub use irsi::*;
 
 //pub use ctrade_info::*;
 
