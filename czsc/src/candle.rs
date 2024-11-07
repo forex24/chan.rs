@@ -27,16 +27,17 @@ pub struct Candle {
 impl Candle {
     #[allow(clippy::borrowed_box)]
     pub fn new(box_vec: &Box<Vec<Self>>, bar: Handle<Bar>, idx: usize, dir: KlineDir) -> Candle {
-        Self {
+        let c = Self {
             handle: Handle::new(box_vec, idx),
             time_begin: bar.time,
             time_end: bar.time,
             lst: vec![bar],
             high: bar.high,
             low: bar.low,
-            dir,
-            fx_type: FxType::Unknown,
-        }
+            dir,            fx_type: FxType::Unknown,
+        };
+        bar.as_mut().set_klc(&c);
+        c
     }
 
     pub fn get_sub_klc(&self) -> impl Iterator<Item = Handle<Self>> + '_ {
