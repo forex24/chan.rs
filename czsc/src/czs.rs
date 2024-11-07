@@ -5,11 +5,14 @@ use crate::{
 
 #[derive(Debug)]
 pub struct CZs<T> {
+    // begin/end：永远指向 klu
+    // low/high: 中枢的范围
+    // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
     handle: Handle<Self>,
     pub is_sure: bool,
     pub sub_zs_lst: Vec<Handle<CZs<T>>>,
     pub begin: Handle<Bar>,
-    pub begin_bi: Handle<T>,
+    pub begin_bi: Handle<T>, // 中枢内部的笔
     pub low: f64,
     pub high: f64,
     pub end: Option<Handle<Bar>>,
@@ -73,8 +76,8 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
 
     // 已完备
     fn update_zs_end(&mut self, item: Handle<T>) {
-        self.end = Some(item.get_end_klu().as_handle());
-        self.end_bi = Some(item.to_handle());
+        self.end = Some(item.get_end_klu());
+        self.end_bi = Some(item);
         if item.low() < self.peak_low {
             self.peak_low = item.low();
         }
@@ -189,6 +192,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     // 已完备
     fn end_bi_break(&self, end_bi: Option<&T>) -> bool {
         let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
+
         (end_bi.is_down() && end_bi.low() < self.low)
             || (end_bi.is_up() && end_bi.high() > self.high)
     }
@@ -197,6 +201,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     pub fn out_bi_is_peak(&self, end_bi_idx: usize) -> (bool, Option<f64>) {
         //返回 (是否最低点，bi_out与中枢里面尾部最接近它的差距比例)
         assert!(!self.bi_lst.is_empty());
+
         if let Some(bi_out) = self.bi_out {
             let mut peak_rate = f64::INFINITY;
             for bi in &self.bi_lst {
@@ -222,12 +227,14 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     // 已完备
     pub fn get_bi_in(&self) -> &T {
         assert!(self.bi_in.is_some());
+
         self.bi_in.as_ref().unwrap()
     }
 
     // 已完备
     pub fn get_bi_out(&self) -> &T {
         assert!(self.bi_out.is_some());
+
         self.bi_out.as_ref().unwrap()
     }
 
@@ -251,6 +258,7 @@ impl<T> CZs<T> {
     // 已完备
     pub fn is_one_bi_zs(&self) -> bool {
         assert!(self.end_bi.is_some());
+
         self.begin_bi.index() == self.end_bi.unwrap().index()
     }
 }

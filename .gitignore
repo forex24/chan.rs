@@ -11,3 +11,4 @@ rls/
 .env
 **/.DS_Store
 **/cargo-flamegraph.stacks
+logs/

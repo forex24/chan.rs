@@ -37,21 +37,21 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
         relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
     ) -> Rc<RefCell<Self>> {
-        let bsp_point = Rc::new(RefCell::new(Self {
+        let bsp = Rc::new(RefCell::new(Self {
             bi,
-            klu: bi.get_end_klu().as_handle(),
+            klu: bi.get_end_klu(),
             is_buy,
             types: vec![bs_type],
             relate_bsp1,
             features: CFeatures::new(feature_dict),
             is_segbsp: false,
         }));
-        bsp_point
-            .borrow_mut()
-            .bi
-            .as_mut()
-            .set_bsp(bsp_point.clone());
-        bsp_point
+
+        bsp.borrow_mut().bi.as_mut().set_bsp(bsp.clone());
+
+        //bsp.borrow_mut().init_common_feature();
+
+        bsp
     }
 
     // Add a new type to the types vector
@@ -66,6 +66,7 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
         relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
     ) {
         self.add_type(bs_type);
+
         if self.relate_bsp1.is_none() {
             self.relate_bsp1 = relate_bsp1;
         } else if let Some(ref relate_bsp1) = relate_bsp1 {
@@ -81,6 +82,22 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
             );
         }
     }
+
+    //pub fn add_feat<K>(&mut self, inp1: K, inp2: Option<f64>)
+    //where
+    //    K: Into<CFeatures> + std::fmt::Debug,
+    //{
+    //    self.features.add_feat(inp1, inp2);
+    //}
+    //
+    //pub fn init_common_feature(&mut self) {
+    //    // Initialize features that apply to all buy/sell points
+    //    let mut common_features = HashMap::new();
+    //    self.features
+    //        .insert("bsp_bi_amp".to_string(), self.bi.amp());
+    //
+    //    self.add_feat(common_features, None);
+    //}
 }
 
 impl<T> CBspPoint<T> {
@@ -88,7 +105,7 @@ impl<T> CBspPoint<T> {
         self.types
             .iter()
             .map(|x| x.to_string())
-            .collect::<Vec<String>>()
+            .collect::<Vec<_>>()
             .join("_")
     }
     // TODO:Add a feature

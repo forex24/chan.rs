@@ -21,7 +21,7 @@ use crate::ToHandle;
 
 pub struct CBSPointList<T> {
     pub lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
-    //bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
+    bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
     bsp1_lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
     pub config: CBSPointConfig,
     pub last_sure_pos: isize,
@@ -31,7 +31,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
             lst: Vec::with_capacity(1024),
-            //bsp_dict: HashMap::new(),
+            bsp_dict: HashMap::new(),
             bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
             last_sure_pos: -1,
@@ -42,11 +42,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
         self.lst
             .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
-        //self.bsp_dict = self
-        //    .lst
-        //    .iter()
-        //    .map(|bsp| (bsp.borrow().bi.get_end_klu().index(), bsp.clone()))
-        //    .collect();
+        self.bsp_dict = self
+            .lst
+            .iter()
+            .map(|bsp| (bsp.borrow().bi.get_end_klu().index(), bsp.clone()))
+            .collect();
         self.bsp1_lst
             .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
 
@@ -83,23 +83,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         feature_dict: Option<HashMap<String, Option<f64>>>,
     ) {
         let is_buy = bi.is_down();
-        for exist_bsp in self.lst.iter() {
-            if exist_bsp.borrow().klu.index() == bi.get_end_klu().index() {
-                assert_eq!(exist_bsp.borrow().is_buy, is_buy);
-                exist_bsp
-                    .borrow_mut()
-                    .add_another_bsp_prop(bs_type, relate_bsp1);
-                return;
-            }
-        }
+        let end_klu_idx = bi.get_end_klu().index();
 
-        //if let Some(exist_bsp) = self.bsp_dict.get(&(bi.get_end_klu().index())) {
-        //    assert_eq!(exist_bsp.borrow().is_buy, is_buy);
-        //    exist_bsp
-        //        .borrow_mut()
-        //        .add_another_bsp_prop(bs_type, relate_bsp1);
-        //    return;
-        //}
+        if let Some(exist_bsp) = self.bsp_dict.get(&end_klu_idx) {
+            assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+            exist_bsp
+                .borrow_mut()
+                .add_another_bsp_prop(bs_type, relate_bsp1);
+            //if let Some(features) = feature_dict {
+            //    exist_bsp.borrow_mut().add_feat(features, None);
+            //}
+            return;
+        }
 
         let is_target_bsp = if !self
             .config
@@ -112,18 +107,59 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             is_target_bsp
         };
 
-        if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
+        if is_target_bsp || matches!(bs_type, BspType::T1 | BspType::T1P) {
             let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
 
             if is_target_bsp {
                 self.lst.push(bsp.clone());
-                //self.bsp_dict.insert(bi.get_end_klu().index(), bsp.clone());
+                self.bsp_dict.insert(end_klu_idx, bsp.clone());
             }
-
-            if bs_type == BspType::T1 || bs_type == BspType::T1P {
+            if matches!(bs_type, BspType::T1 | BspType::T1P) {
                 self.bsp1_lst.push(bsp.clone());
             }
         }
+
+        //for exist_bsp in self.lst.iter() {
+        //    if exist_bsp.borrow().klu.index() == bi.get_end_klu().index() {
+        //        assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+        //        exist_bsp
+        //            .borrow_mut()
+        //            .add_another_bsp_prop(bs_type, relate_bsp1);
+        //        return;
+        //    }
+        //}
+
+        //if let Some(exist_bsp) = self.bsp_dict.get(&(bi.get_end_klu().index())) {
+        //    assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+        //    exist_bsp
+        //        .borrow_mut()
+        //        .add_another_bsp_prop(bs_type, relate_bsp1);
+        //    return;
+        //}
+
+        //let is_target_bsp = if !self
+        //    .config
+        //    .get_bs_config(is_buy)
+        //    .target_types
+        //    .contains(&bs_type)
+        //{
+        //    false
+        //} else {
+        //    is_target_bsp
+        //};
+        //
+        //if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
+        //    let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
+        //
+        //    if is_target_bsp {
+        //        self.lst.push(bsp.clone());
+        //        //self.bsp_dict.insert(bi.get_end_klu().index(), bsp.clone());
+        //    }
+        //
+        //    if bs_type == BspType::T1 || bs_type == BspType::T1P {
+        //        self.bsp1_lst.push(bsp.clone());
+        //    }
+        //}
     }
 
     // 已完备
@@ -140,40 +176,53 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn cal_single_bs1point(&mut self, seg: &CSeg<T>, bi_list: &[T]) {
         let is_buy = seg.is_down();
         let bsp_conf = self.config.get_bs_config(is_buy);
+
         let zs_cnt = if bsp_conf.bsp1_only_multibi_zs {
             seg.get_multi_bi_zs_cnt()
         } else {
             seg.zs_lst.len()
         };
+
         let is_target_bsp = bsp_conf.min_zs_cnt == 0 || zs_cnt >= bsp_conf.min_zs_cnt;
-        if !seg.zs_lst.is_empty()
-            && !seg.zs_lst.iter().last().unwrap().is_one_bi_zs()
-            && ((seg.zs_lst.iter().last().unwrap().bi_out.is_some()
-                && seg.zs_lst.iter().last().unwrap().bi_out.unwrap().index() >= seg.end_bi.index())
-                || seg
-                    .zs_lst
-                    .iter()
-                    .last()
-                    .unwrap()
-                    .bi_lst
-                    .last()
-                    .unwrap()
-                    .index()
-                    >= seg.end_bi.index())
-            && seg.end_bi.index()
-                - seg
-                    .zs_lst
-                    .iter()
-                    .last()
-                    .unwrap()
-                    .get_bi_in()
-                    .to_handle()
-                    .index()
-                > 2
-        {
-            self.treat_bsp1(seg, is_buy, is_target_bsp);
-        } else {
-            self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp);
+
+        //if !seg.zs_lst.is_empty()
+        //    && !seg.zs_lst.iter().last().unwrap().is_one_bi_zs()
+        //    && ((seg.zs_lst.iter().last().unwrap().bi_out.is_some()
+        //        && seg.zs_lst.iter().last().unwrap().bi_out.unwrap().index() >= seg.end_bi.index())
+        //        || seg
+        //            .zs_lst
+        //            .iter()
+        //            .last()
+        //            .unwrap()
+        //            .bi_lst
+        //            .last()
+        //            .unwrap()
+        //            .index()
+        //            >= seg.end_bi.index())
+        //    && seg.end_bi.index()
+        //        - seg
+        //            .zs_lst
+        //            .iter()
+        //            .last()
+        //            .unwrap()
+        //            .get_bi_in()
+        //            .to_handle()
+        //            .index()
+        //        > 2
+        if !seg.zs_lst.is_empty() {
+            let last_zs = &seg.zs_lst.back().unwrap();
+
+            let valid_last_zs = !last_zs.is_one_bi_zs()
+                && ((last_zs.bi_out.is_some()
+                    && last_zs.bi_out.unwrap().index() >= seg.end_bi.index())
+                    || last_zs.bi_lst.last().unwrap().index() >= seg.end_bi.index())
+                && seg.end_bi.index() - last_zs.get_bi_in().to_handle().index() > 2;
+
+            if valid_last_zs {
+                self.treat_bsp1(seg, is_buy, is_target_bsp);
+            } else {
+                self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp);
+            }
         }
     }
 
@@ -182,19 +231,24 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         let mut is_target_bsp = is_target_bsp;
         let bsp_conf = self.config.get_bs_config(is_buy);
 
-        let last_zs = seg.zs_lst.iter().last().unwrap();
+        let last_zs = seg.zs_lst.back().unwrap();
 
         let (break_peak, _) = last_zs.out_bi_is_peak(seg.end_bi.index());
+
         if bsp_conf.bs1_peak && !break_peak {
             is_target_bsp = false;
         }
+
         let (is_diver, divergence_rate) = last_zs.is_divergence(bsp_conf, Some(&seg.end_bi));
         if !is_diver {
             is_target_bsp = false;
         }
+
+        // TODO: add custom feature
         let feature_dict = Some(hashmap! {
             "divergence_rate".to_string() => divergence_rate,
         });
+
         self.add_bs(BspType::T1, seg.end_bi, None, is_target_bsp, feature_dict);
     }
 
@@ -222,13 +276,16 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         if last_bi.seg_idx() != pre_bi.seg_idx() {
             return;
         }
+
         if last_bi.direction() != seg.dir {
             return;
         }
+
         // 创新低?
         if last_bi.is_down() && last_bi.low() > pre_bi.low() {
             return;
         }
+
         // 创新高?
         if last_bi.is_up() && last_bi.high() < pre_bi.high() {
             return;
@@ -236,6 +293,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
         let in_metric = pre_bi.cal_macd_metric(&bsp_conf.macd_algo, false);
         let out_metric = last_bi.cal_macd_metric(&bsp_conf.macd_algo, true);
+
         let (is_diver, divergence_rate) = (
             out_metric <= bsp_conf.divergence_rate * in_metric,
             out_metric / (in_metric + 1e-7),
@@ -247,6 +305,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
         let feature_dict = Some(hashmap! {
             "divergence_rate".to_string() => Some(divergence_rate),
+            "bsp1_bi_amp".to_string() => Some(last_bi.amp()),
         });
 
         self.add_bs(
@@ -269,11 +328,25 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     // 已完备
     pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
+        //let mut bsp1_bi_idx_dict = HashMap::new();
+        //for bsp in &self.bsp1_lst {
+        //    bsp1_bi_idx_dict.insert(bsp.borrow().bi.index() as isize, bsp.clone());
+        //}
+
         for seg in seg_list.iter() {
+            let is_buy = seg.is_down();
+            let config = self.config.get_bs_config(is_buy);
+            if !config.target_types.contains(&BspType::T2)
+                && !config.target_types.contains(&BspType::T2S)
+            {
+                continue;
+            }
+
             self.treat_bsp2(seg, &bsp1_bi_idx_dict, seg_list, bi_list);
         }
     }
 
+    // 已完备
     pub fn treat_bsp2(
         &mut self,
         seg: &CSeg<T>,
@@ -326,17 +399,33 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             //  check bsp2_follow_1
             return;
         }
+
         let retrace_rate = bsp2_bi.amp() / break_bi.amp();
         let bsp2_flag = retrace_rate <= bsp_conf.max_bs2_rate;
         if bsp2_flag {
+            let feature_dict = Some(hashmap! {
+                "bsp2_retrace_rate".to_string() => Some(retrace_rate),
+                "bsp2_break_bi_amp".to_string() => Some(break_bi.amp()),
+                "bsp2_bi_amp".to_string() => Some(bsp2_bi.amp()),
+            });
+
             self.add_bs(
                 BspType::T2,
                 bsp2_bi.to_handle(),
                 real_bsp1.clone(),
                 true,
-                None,
+                feature_dict,
             );
         } else if bsp_conf.bsp2s_follow_2 {
+            return;
+        }
+
+        if !self
+            .config
+            .get_bs_config(seg.is_down())
+            .target_types
+            .contains(&BspType::T2S)
+        {
             return;
         }
 
@@ -411,12 +500,19 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 break;
             }
 
+            let feature_dict = Some(hashmap! {
+                "bsp2_retrace_rate".to_string() => Some(retrace_rate),
+                "bsp2_break_bi_amp".to_string() => Some(break_bi.amp()),
+                "bsp2_bi_amp".to_string() => Some(bsp2_bi.amp()),
+                "bsp2s_lv".to_string() => Some(bias as f64 /2.0),
+            });
+
             self.add_bs(
                 BspType::T2S,
                 bsp2s_bi.to_handle(),
                 real_bsp1.clone(),
                 true,
-                None,
+                feature_dict,
             );
             bias += 2;
         }
@@ -429,6 +525,15 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             if !self.seg_need_cal(seg) {
                 continue;
             }
+
+            let is_buy = seg.is_down();
+            let config = self.config.get_bs_config(is_buy);
+            if !config.target_types.contains(&BspType::T3A)
+                && !config.target_types.contains(&BspType::T3B)
+            {
+                continue;
+            }
+
             let (next_seg, next_seg_idx, bsp1_bi, real_bsp1, bsp1_bi_idx, is_buy) =
                 if seg_list.len() > 1 {
                     let bsp1_bi = seg.end_bi;
@@ -556,7 +661,19 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         if bsp_conf.bsp3_peak && !bsp3_peak_zs {
             return;
         }
-        self.add_bs(BspType::T3A, bsp3_bi.to_handle(), real_bsp1, true, None);
+
+        let feature_dict = Some(hashmap! {
+            "bsp3_zs_height".to_string() => Some((first_zs.unwrap().high - first_zs.unwrap().low)/first_zs.unwrap().low),
+            "bsp3_bi_amp".to_string() => Some(bsp3_bi.amp()),
+        });
+
+        self.add_bs(
+            BspType::T3A,
+            bsp3_bi.to_handle(),
+            real_bsp1,
+            true,
+            feature_dict,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -602,7 +719,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             if bsp3_back2zs(bsp3_bi, cmp_zs.unwrap()) {
                 continue;
             }
-            self.add_bs(BspType::T3B, bsp3_bi.to_handle(), real_bsp1, true, None);
+
+            let feature_dict = Some(hashmap! {
+                "bsp3_zs_height".to_string() => Some((cmp_zs.unwrap().high - cmp_zs.unwrap().low)/cmp_zs.unwrap().low),
+                "bsp3_bi_amp".to_string() => Some(bsp3_bi.amp()),
+            });
+            self.add_bs(
+                BspType::T3B,
+                bsp3_bi.to_handle(),
+                real_bsp1,
+                true,
+                feature_dict,
+            );
             break;
         }
     }
