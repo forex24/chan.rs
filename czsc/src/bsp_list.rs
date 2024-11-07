@@ -21,7 +21,7 @@ use crate::ToHandle;
 
 pub struct CBSPointList<T> {
     pub lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
-    bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
+    //bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
     bsp1_lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
     pub config: CBSPointConfig,
     pub last_sure_pos: isize,
@@ -31,7 +31,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
             lst: Vec::with_capacity(1024),
-            bsp_dict: HashMap::new(),
+            //bsp_dict: HashMap::new(),
             bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
             last_sure_pos: -1,
@@ -42,11 +42,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
         self.lst
             .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
-        self.bsp_dict = self
-            .lst
-            .iter()
-            .map(|bsp| (bsp.borrow().bi.get_end_klu().index(), bsp.clone()))
-            .collect();
+        //self.bsp_dict = self
+        //    .lst
+        //    .iter()
+        //    .map(|bsp| (bsp.borrow().bi.get_end_klu().index(), bsp.clone()))
+        //    .collect();
         self.bsp1_lst
             .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
 
@@ -82,18 +82,62 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_target_bsp: bool,
         feature_dict: Option<HashMap<String, Option<f64>>>,
     ) {
-        let is_buy = bi.is_down();
-        let end_klu_idx = bi.get_end_klu().index();
+        //let is_buy = bi.is_down();
+        //let end_klu_idx = bi.get_end_klu().index();
+        //
+        //if let Some(exist_bsp) = self.bsp_dict.get(&end_klu_idx) {
+        //    assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+        //    exist_bsp
+        //        .borrow_mut()
+        //        .add_another_bsp_prop(bs_type, relate_bsp1);
+        //    //if let Some(features) = feature_dict {
+        //    //    exist_bsp.borrow_mut().add_feat(features, None);
+        //    //}
+        //    return;
+        //}
+        //
+        //let is_target_bsp = if !self
+        //    .config
+        //    .get_bs_config(is_buy)
+        //    .target_types
+        //    .contains(&bs_type)
+        //{
+        //    false
+        //} else {
+        //    is_target_bsp
+        //};
+        //
+        //if is_target_bsp || matches!(bs_type, BspType::T1 | BspType::T1P) {
+        //    let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
+        //
+        //    if is_target_bsp {
+        //        self.lst.push(bsp.clone());
+        //        self.bsp_dict.insert(end_klu_idx, bsp.clone());
+        //    }
+        //    if matches!(bs_type, BspType::T1 | BspType::T1P) {
+        //        self.bsp1_lst.push(bsp.clone());
+        //    }
+        //}
 
-        if let Some(exist_bsp) = self.bsp_dict.get(&end_klu_idx) {
-            assert_eq!(exist_bsp.borrow().is_buy, is_buy);
-            exist_bsp
-                .borrow_mut()
-                .add_another_bsp_prop(bs_type, relate_bsp1);
-            //if let Some(features) = feature_dict {
-            //    exist_bsp.borrow_mut().add_feat(features, None);
-            //}
-            return;
+        //for exist_bsp in self.lst.iter() {
+        //    if exist_bsp.borrow().klu.index() == bi.get_end_klu().index() {
+        //        assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+        //        exist_bsp
+        //            .borrow_mut()
+        //            .add_another_bsp_prop(bs_type, relate_bsp1);
+        //        return;
+        //    }
+        //}
+
+        let is_buy = bi.is_down();
+        for exist_bsp in self.lst.iter() {
+            if exist_bsp.borrow().klu.index() == bi.get_end_klu().index() {
+                assert_eq!(exist_bsp.borrow().is_buy, is_buy);
+                exist_bsp
+                    .borrow_mut()
+                    .add_another_bsp_prop(bs_type, relate_bsp1);
+                return;
+            }
         }
 
         let is_target_bsp = if !self
@@ -107,59 +151,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             is_target_bsp
         };
 
-        if is_target_bsp || matches!(bs_type, BspType::T1 | BspType::T1P) {
+        if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
             let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
 
             if is_target_bsp {
                 self.lst.push(bsp.clone());
-                self.bsp_dict.insert(end_klu_idx, bsp.clone());
+                //self.bsp_dict.insert(bi.get_end_klu().index(), bsp.clone());
             }
-            if matches!(bs_type, BspType::T1 | BspType::T1P) {
+
+            if bs_type == BspType::T1 || bs_type == BspType::T1P {
                 self.bsp1_lst.push(bsp.clone());
             }
         }
-
-        //for exist_bsp in self.lst.iter() {
-        //    if exist_bsp.borrow().klu.index() == bi.get_end_klu().index() {
-        //        assert_eq!(exist_bsp.borrow().is_buy, is_buy);
-        //        exist_bsp
-        //            .borrow_mut()
-        //            .add_another_bsp_prop(bs_type, relate_bsp1);
-        //        return;
-        //    }
-        //}
-
-        //if let Some(exist_bsp) = self.bsp_dict.get(&(bi.get_end_klu().index())) {
-        //    assert_eq!(exist_bsp.borrow().is_buy, is_buy);
-        //    exist_bsp
-        //        .borrow_mut()
-        //        .add_another_bsp_prop(bs_type, relate_bsp1);
-        //    return;
-        //}
-
-        //let is_target_bsp = if !self
-        //    .config
-        //    .get_bs_config(is_buy)
-        //    .target_types
-        //    .contains(&bs_type)
-        //{
-        //    false
-        //} else {
-        //    is_target_bsp
-        //};
-        //
-        //if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
-        //    let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
-        //
-        //    if is_target_bsp {
-        //        self.lst.push(bsp.clone());
-        //        //self.bsp_dict.insert(bi.get_end_klu().index(), bsp.clone());
-        //    }
-        //
-        //    if bs_type == BspType::T1 || bs_type == BspType::T1P {
-        //        self.bsp1_lst.push(bsp.clone());
-        //    }
-        //}
     }
 
     // 已完备
