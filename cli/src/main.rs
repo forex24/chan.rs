@@ -23,8 +23,10 @@ mod util;
 //mod web;
 //mod zs;
 
+#[cfg(not(target_env = "msvc"))]
 extern crate jemallocator;
 
+#[cfg(not(target_env = "msvc"))]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
@@ -83,11 +85,9 @@ async fn main() {
 
     tracing_subscriber::registry()
         .with(
-            stdout_log
-                .with_filter(filter::LevelFilter::from_level(stdout_log_level))
-                // Combine the filtered `stdout_log` layer with the
-                // `debug_log` layer, producing a new `Layered` layer.
-                //.and_then(debug_log.with_filter(filter::LevelFilter::from_level(file_log_level))),
+            stdout_log.with_filter(filter::LevelFilter::from_level(stdout_log_level)), // Combine the filtered `stdout_log` layer with the
+                                                                                       // `debug_log` layer, producing a new `Layered` layer.
+                                                                                       //.and_then(debug_log.with_filter(filter::LevelFilter::from_level(file_log_level))),
         )
         .init();
 
