@@ -18,5 +18,7 @@ tracing-error = "0.2"
 dotenv = "0.15.0"
 axum = "0.7.4"
 tower = "0.4"
-indicatif="0.17.8"
-jemallocator="0.5.4"
+indicatif = "0.17.8"
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+jemallocator = "0.5.4"
