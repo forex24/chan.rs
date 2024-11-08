@@ -153,20 +153,20 @@ impl Analyzer {
             .cal(self.bi_list.as_slice(), &self.seg_list);
 
         if let Some(last) = self.bs_point_lst.last() {
-            if let Some(saved) = self.last_bsp.as_ref() {
-                if last.borrow().klu.time != saved.borrow().klu.time {
-                    self.last_bsp = Some(last.clone());
-                    self.record_last_bs_points();
-                }
+            if self.last_bsp.as_ref().map_or(true, |saved| {
+                last.borrow().klu.time != saved.borrow().klu.time
+            }) {
+                self.last_bsp = Some(last.clone());
+                self.record_last_bs_points();
             }
         }
 
         if let Some(last) = self.seg_bs_point_lst.last() {
-            if let Some(saved) = self.last_seg_bsp.as_ref() {
-                if last.borrow().klu.time != saved.borrow().klu.time {
-                    self.last_seg_bsp = Some(last.clone());
-                    self.record_last_seg_bs_points();
-                }
+            if self.last_seg_bsp.as_ref().map_or(true, |saved| {
+                last.borrow().klu.time != saved.borrow().klu.time
+            }) {
+                self.last_seg_bsp = Some(last.clone());
+                self.record_last_seg_bs_points();
             }
         }
     }
