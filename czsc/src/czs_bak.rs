@@ -1,8 +1,3 @@
-use std::{
-    f64::{INFINITY, NEG_INFINITY},
-    fmt::Display,
-};
-
 use crate::{
     has_overlap, AsHandle, Bar, CPivotCombineMode, CPointConfig, CSeg, Handle, ICalcMetric,
     IParent, LineType, ToHandle,
@@ -10,11 +5,14 @@ use crate::{
 
 #[derive(Debug)]
 pub struct CZs<T> {
+    // begin/end：永远指向 klu
+    // low/high: 中枢的范围
+    // peak_low/peak_high: 中枢所涉及到的笔的最大值，最小值
     handle: Handle<Self>,
     pub is_sure: bool,
-    pub sub_zs_lst: Vec<CZs<T>>,
+    pub sub_zs_lst: Vec<Handle<CZs<T>>>,
     pub begin: Handle<Bar>,
-    pub begin_bi: Handle<T>,
+    pub begin_bi: Handle<T>, // 中枢内部的笔
     pub low: f64,
     pub high: f64,
     pub end: Option<Handle<Bar>>,
@@ -48,9 +46,9 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
             low: 0.0,
             peak_high: f64::NEG_INFINITY,
             peak_low: f64::INFINITY,
-            bi_in: None,        //进中枢那一笔
-            bi_out: None,       //出中枢那一笔
-            bi_lst: Vec::new(), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
+            bi_in: None,                      //进中枢那一笔
+            bi_out: None,                     //出中枢那一笔
+            bi_lst: Vec::with_capacity(1024), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
         };
 
         zs.update_zs_range(lst);
@@ -68,18 +66,18 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
             .iter()
             .map(|bi| bi.low())
             .reduce(f64::max)
-            .unwrap_or(NEG_INFINITY);
+            .unwrap_or(f64::NEG_INFINITY);
         self.high = lst
             .iter()
             .map(|bi| bi.high())
             .reduce(f64::min)
-            .unwrap_or(INFINITY);
+            .unwrap_or(f64::INFINITY);
     }
 
     // 已完备
     fn update_zs_end(&mut self, item: Handle<T>) {
-        self.end = Some(item.get_end_klu().as_handle());
-        self.end_bi = Some(item.to_handle());
+        self.end = Some(item.get_end_klu());
+        self.end_bi = Some(item);
         if item.low() < self.peak_low {
             self.peak_low = item.low();
         }
@@ -96,6 +94,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         if self.begin_bi.seg_idx() != zs2.begin_bi.seg_idx() {
             return false;
         }
+
         match combine_mode {
             CPivotCombineMode::Zs => {
                 if !has_overlap(self.low, self.high, zs2.low, zs2.high, true) {
@@ -117,7 +116,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         Self {
             handle: Handle {
                 ptr: self.handle.ptr,
-                index: 0,
+                index: self.handle.index + 1,
             },
             is_sure: self.is_sure,
             sub_zs_lst: Vec::new(),
@@ -129,17 +128,19 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
             low: self.low,
             peak_high: self.peak_high,
             peak_low: self.peak_low,
-            bi_in: self.bi_in,                       //进中枢那一笔
-            bi_out: self.bi_out,                     //出中枢那一笔
-            bi_lst: self.bi_lst.as_slice().to_vec(), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
+            bi_in: self.bi_in,                //进中枢那一笔
+            bi_out: self.bi_out,              //出中枢那一笔
+            bi_lst: Vec::with_capacity(1024), // begin_bi~end_bi之间的笔，在update_zs_in_seg函数中更新
         }
     }
 
     // TODO: self.__sub_zs_lst.append(self.make_copy())
-    pub(crate) fn do_combine(&mut self, mut rhs: CZs<T>) {
+    pub(crate) fn do_combine(&mut self, rhs: &CZs<T>) {
         if self.sub_zs_lst.is_empty() {
-            self.sub_zs_lst.push(self.make_copy());
+            self.sub_zs_lst.push(self.make_copy().as_handle());
         }
+
+        self.sub_zs_lst.push(rhs.handle);
 
         self.low = self.low.min(rhs.low);
         self.high = self.high.max(rhs.high);
@@ -148,9 +149,6 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         self.end = rhs.end;
         self.bi_out = rhs.bi_out;
         self.end_bi = rhs.end_bi;
-
-        rhs.handle.index = self.sub_zs_lst.len();
-        self.sub_zs_lst.push(rhs);
     }
 
     // 已完备
@@ -202,7 +200,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     }
 
     // TODO:zs 有deepcopy，这里需要特别注意
-    /*pub fn init_from_zs(&mut self, zs: &CZS<T>) {
+    /*pub fn init_from_zs(&mut self, zs: &CZs<T>) {
         self.begin = zs.begin.clone();
         self.end = zs.end.clone();
         self.low = zs.low;
@@ -218,6 +216,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     // 已完备
     fn end_bi_break(&self, end_bi: Option<&T>) -> bool {
         let end_bi = end_bi.unwrap_or_else(|| self.get_bi_out());
+
         (end_bi.is_down() && end_bi.low() < self.low)
             || (end_bi.is_up() && end_bi.high() > self.high)
     }
@@ -226,8 +225,9 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     pub fn out_bi_is_peak(&self, end_bi_idx: usize) -> (bool, Option<f64>) {
         //返回 (是否最低点，bi_out与中枢里面尾部最接近它的差距比例)
         assert!(!self.bi_lst.is_empty());
+
         if let Some(bi_out) = self.bi_out {
-            let mut peak_rate = INFINITY;
+            let mut peak_rate = f64::INFINITY;
             for bi in &self.bi_lst {
                 if bi.index() > end_bi_idx {
                     break;
@@ -251,12 +251,14 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     // 已完备
     pub fn get_bi_in(&self) -> &T {
         assert!(self.bi_in.is_some());
+
         self.bi_in.as_ref().unwrap()
     }
 
     // 已完备
     pub fn get_bi_out(&self) -> &T {
         assert!(self.bi_out.is_some());
+
         self.bi_out.as_ref().unwrap()
     }
 
@@ -280,11 +282,12 @@ impl<T> CZs<T> {
     // 已完备
     pub fn is_one_bi_zs(&self) -> bool {
         assert!(self.end_bi.is_some());
+
         self.begin_bi.index() == self.end_bi.unwrap().index()
     }
 }
 
-impl<T> Display for CZs<T> {
+impl<T> std::fmt::Display for CZs<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,

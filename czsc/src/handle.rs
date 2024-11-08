@@ -23,8 +23,8 @@ pub trait AsHandle {
 // TODO: 今后考虑用Pin
 #[derive(Debug, PartialEq, Eq)]
 pub struct Handle<T> {
-    ptr: *const Vec<T>, // * const 没有所有权/借用/生命周期,因此不会被Drop
-    index: usize,
+    pub(crate) ptr: *const Vec<T>, // * const 没有所有权/借用/生命周期,因此不会被Drop
+    pub(crate) index: usize,
 }
 
 impl<T> Handle<T> {

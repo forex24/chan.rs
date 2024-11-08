@@ -42,13 +42,15 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     fn add_to_free_lst(&mut self, item: Handle<T>, is_sure: bool, zs_algo: CPivotAlgo) {
-        if !self.free_item_lst.is_empty()
-            && item.index() == self.free_item_lst.last().unwrap().index()
-        {
-            // 防止笔新高或新低的更新带来bug
-            self.free_item_lst.pop();
+        if let Some(last_item) = self.free_item_lst.last() {
+            if item.index() == last_item.index() {
+                // 防止笔新高或新低的更新带来bug
+                self.free_item_lst.pop();
+            }
         }
+
         self.free_item_lst.push(item);
+
         let res = self.try_construct_zs(is_sure, zs_algo);
         if let Some(res) = res {
             if res.begin_bi.index() > 0 {
@@ -75,6 +77,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         self.add_to_free_lst(bi, is_sure, CPivotAlgo::Normal);
     }
 
+    // 已完备
     fn try_add_to_end(&mut self, bi: Handle<T>) -> bool {
         if self.zs_lst.is_empty() {
             return false;
@@ -82,8 +85,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         self.zs_lst.last_mut().unwrap().try_add_to_end(bi)
     }
 
+    // 已完备
     fn add_zs_from_bi_range(&mut self, seg_bi_lst: &[T], seg_dir: Direction, seg_is_sure: bool) {
         let mut deal_bi_cnt = 0;
+
         for bi in seg_bi_lst {
             if bi.direction() == seg_dir {
                 continue;
@@ -100,44 +105,44 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     fn try_construct_zs(&mut self, is_sure: bool, zs_algo: CPivotAlgo) -> Option<CZs<T>> {
-        //let mut lst = &mut ;
-        if zs_algo == CPivotAlgo::Normal {
-            if !self.config.one_bi_zs {
-                if self.free_item_lst.len() == 1 {
+        let lst = &self.free_item_lst;
+
+        let lst = match zs_algo {
+            CPivotAlgo::Normal => {
+                if !self.config.one_bi_zs {
+                    if lst.len() == 1 {
+                        return None;
+                    }
+                    &lst[lst.len() - 2..]
+                } else {
+                    lst
+                }
+            }
+            CPivotAlgo::OverSeg => {
+                if lst.len() < 3 {
                     return None;
                 }
-                self.free_item_lst = self.free_item_lst[self.free_item_lst.len() - 2..].to_vec();
+                let lst = &lst[lst.len() - 3..];
+                if lst[0].direction() == lst[0].parent_seg_dir().unwrap() {
+                    return None;
+                }
+                &lst[1..]
             }
-        } else if zs_algo == CPivotAlgo::OverSeg {
-            if self.free_item_lst.len() < 3 {
-                return None;
-            }
-            let lst = self.free_item_lst[self.free_item_lst.len() - 3..].to_vec();
-            if lst[0].direction() == lst[0].parent_seg_dir().unwrap() {
-                //let lst = &lst[1..];
-                self.free_item_lst = lst[1..].to_vec();
-                return None;
-            }
-        }
-        let min_high = self
-            .free_item_lst
+            _ => return None,
+        };
+
+        let min_high = lst
             .iter()
             .map(|item| item.high())
-            .reduce(f64::min)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
-        let max_low: f64 = self
-            .free_item_lst
+        let max_low = lst
             .iter()
             .map(|item| item.low())
-            .reduce(f64::max)
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
         if min_high > max_low {
-            Some(CZs::new(
-                &self.zs_lst,
-                self.zs_lst.len(),
-                &self.free_item_lst,
-                is_sure,
-            ))
+            Some(CZs::new(&self.zs_lst, self.zs_lst.len(), lst, is_sure))
         } else {
             None
         }
@@ -145,13 +150,18 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>) {
-        let last_sure_pos = self.last_sure_pos;
+        //TODO:
+        //let last_sure_pos = self.last_sure_pos;
+        //self.zs_lst
+        //    .retain(|zs| (zs.begin_bi.index() as isize) < last_sure_pos);
 
-        //while self.zs_lst and self.zs_lst[-1].begin_bi.idx >= self.last_sure_pos:
-        //    self.zs_lst.pop()
-
-        self.zs_lst
-            .retain(|zs| (zs.begin_bi.index() as isize) < last_sure_pos);
+        while let Some(last) = self.zs_lst.last() {
+            if (last.begin_bi.index() as isize) < self.last_sure_pos {
+                self.zs_lst.pop();
+            } else {
+                break;
+            }
+        }
 
         match self.config.zs_algo {
             CPivotAlgo::Normal => {
@@ -174,30 +184,40 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                     );
                 }
             }
+
             CPivotAlgo::OverSeg => {
                 assert!(!self.config.one_bi_zs);
+
                 self.clear_free_lst();
+
                 let begin_bi_idx = if let Some(zs) = self.zs_lst.last() {
                     zs.end_bi.unwrap().index() + 1
                 } else {
                     0
                 };
+
                 for bi in &bi_lst[begin_bi_idx..] {
                     self.update_overseg_zs(bi.to_handle());
                 }
             }
+
             CPivotAlgo::Auto => {
                 let mut sure_seg_appear = false;
+
                 let exist_sure_seg = seg_lst.iter().any(|seg| seg.is_sure); //seg_lst.exist_sure_seg()
+
                 for seg in seg_lst.iter() {
                     if seg.is_sure {
                         sure_seg_appear = true;
                     }
+
                     if !self.seg_need_cal(seg) {
                         continue;
                     }
+
                     if seg.is_sure || (!sure_seg_appear && exist_sure_seg) {
                         self.clear_free_lst();
+
                         self.add_zs_from_bi_range(
                             &bi_lst[seg.start_bi.index()..=seg.end_bi.index()],
                             seg.dir,
@@ -205,6 +225,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                         );
                     } else {
                         self.clear_free_lst();
+
                         for bi in &bi_lst[seg.start_bi.index()..] {
                             self.update_overseg_zs(bi.to_handle());
                         }
@@ -222,6 +243,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             if bi.to_handle().next().is_none() {
                 return;
             }
+
             if bi.to_handle().index() - self.zs_lst.last().unwrap().end_bi.unwrap().index() <= 1
                 && self
                     .zs_lst
@@ -233,6 +255,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                 return;
             }
         }
+
         if !self.zs_lst.is_empty()
             && self.free_item_lst.is_empty()
             && self.zs_lst.last().unwrap().in_range(bi)
@@ -245,16 +268,32 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     fn try_combine(&mut self) {
-        if self.config.need_combine {
+        if !self.config.need_combine {
             while self.zs_lst.len() >= 2
                 && self.zs_lst[self.zs_lst.len() - 2]
                     .can_combine(self.zs_lst.last().unwrap(), self.config.zs_combine_mode)
             {
                 // 合并后删除最后一个
                 let last = self.zs_lst.pop().unwrap();
-                self.zs_lst.last_mut().unwrap().do_combine(last);
+                self.zs_lst.last_mut().unwrap().do_combine(&last);
             }
         }
+        //if !self.config.need_combine {
+        //    return;
+        //}
+        //while self.zs_lst.len() >= 2 {
+        //    let last_idx = self.zs_lst.len() - 1;
+        //    let combine_result = {
+        //        let (first, second) = self.zs_lst.split_at_mut(last_idx);
+        //        first.last_mut().unwrap().do_combine(&second[0]) //, &self.config.zs_combine_mode)
+        //    };
+        //
+        //    if combine_result {
+        //        self.zs_lst.pop();
+        //    } else {
+        //        break;
+        //    }
+        //}
     }
 }
 
