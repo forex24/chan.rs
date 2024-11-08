@@ -28,6 +28,9 @@ pub struct Analyzer {
     pub segseg_list: CSegListChan<CBiSeg>,
     pub segzs_list: CZsList<CBiSeg>,
     pub seg_bs_point_lst: CBSPointList<CBiSeg>,
+    // history bsp
+    pub bs_point_history: Vec<IndexMap<String, String>>,
+    pub seg_bs_point_history: Vec<IndexMap<String, String>>,
 }
 
 pub type CBiSeg = CSeg<CBi>;
@@ -45,6 +48,8 @@ impl Analyzer {
             segzs_list: CZsList::new(conf.zs_conf),
             bs_point_lst: CBSPointList::new(conf.bs_point_conf),
             seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf),
+            bs_point_history: Vec::new(),
+            seg_bs_point_history: Vec::new(),
         }
     }
     // seg
@@ -142,6 +147,8 @@ impl Analyzer {
         // 再算笔买卖点
         self.bs_point_lst
             .cal(self.bi_list.as_slice(), &self.seg_list);
+
+        self.record_current_bs_points();
     }
 
     fn update_klc_in_bi(&mut self) {
@@ -385,6 +392,18 @@ impl Analyzer {
             .collect();
         dataframes.insert("seg_bs_point_lst".to_string(), seg_bs_point_list);
 
+        // Add historical bs_points
+        dataframes.insert(
+            "bs_point_history".to_string(),
+            self.bs_point_history.clone(),
+        );
+
+        // Add historical seg_bs_points
+        dataframes.insert(
+            "seg_bs_point_history".to_string(),
+            self.seg_bs_point_history.clone(),
+        );
+
         dataframes
     }
 
@@ -414,6 +433,61 @@ impl Analyzer {
         }
 
         Ok(())
+    }
+
+    fn record_current_bs_points(&mut self) {
+        if let Some(latest_bsp) = self.bs_point_lst.last() {
+            let latest_bsp = latest_bsp.borrow();
+            self.bs_point_history.push(IndexMap::from([
+                ("begin_time".to_string(), latest_bsp.klu.time.to_string()),
+                ("bsp_type".to_string(), latest_bsp.type2str()),
+                ("is_buy".to_string(), latest_bsp.is_buy.to_string()),
+                (
+                    "relate_bsp1".to_string(),
+                    latest_bsp
+                        .relate_bsp1
+                        .as_ref()
+                        .map_or("None".to_string(), |bsp| bsp.borrow().klu.time.to_string()),
+                ),
+                ("bi_idx".to_string(), latest_bsp.bi.index().to_string()),
+                (
+                    "bi_begin_time".to_string(),
+                    latest_bsp.bi.get_begin_klu().time.to_string(),
+                ),
+                (
+                    "bi_end_time".to_string(),
+                    latest_bsp.bi.get_end_klu().time.to_string(),
+                ),
+            ]));
+        }
+
+        if let Some(latest_seg_bsp) = self.seg_bs_point_lst.last() {
+            let latest_seg_bsp = latest_seg_bsp.borrow();
+            self.seg_bs_point_history.push(IndexMap::from([
+                (
+                    "begin_time".to_string(),
+                    latest_seg_bsp.klu.time.to_string(),
+                ),
+                ("bsp_type".to_string(), latest_seg_bsp.type2str()),
+                ("is_buy".to_string(), latest_seg_bsp.is_buy.to_string()),
+                (
+                    "relate_bsp1".to_string(),
+                    latest_seg_bsp
+                        .relate_bsp1
+                        .as_ref()
+                        .map_or("None".to_string(), |bsp| bsp.borrow().klu.time.to_string()),
+                ),
+                ("seg_idx".to_string(), latest_seg_bsp.bi.index().to_string()),
+                (
+                    "bi_begin_time".to_string(),
+                    latest_seg_bsp.bi.get_begin_klu().time.to_string(),
+                ),
+                (
+                    "bi_end_time".to_string(),
+                    latest_seg_bsp.bi.get_end_klu().time.to_string(),
+                ),
+            ]));
+        }
     }
 }
 
