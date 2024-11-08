@@ -296,6 +296,95 @@ impl Analyzer {
             .collect();
         dataframes.insert("bs_point_lst".to_string(), bs_point_list);
 
+        // SegSeg List
+        let seg_seg_list = self
+            .segseg_list
+            .iter()
+            .map(|seg| {
+                let mut map = IndexMap::new();
+                map.insert(
+                    "begin_time".to_string(),
+                    seg.get_begin_klu().time.to_string(),
+                );
+                map.insert("end_time".to_string(), seg.get_end_klu().time.to_string());
+                map.insert("idx".to_string(), seg.index().to_string());
+                map.insert("dir".to_string(), seg.dir.to_string());
+                map.insert("high".to_string(), seg._high().to_string());
+                map.insert("low".to_string(), seg._low().to_string());
+                map.insert("is_sure".to_string(), seg.is_sure.to_string());
+                map.insert("start_bi_idx".to_string(), seg.start_bi.index().to_string());
+                map.insert("end_bi_idx".to_string(), seg.end_bi.index().to_string());
+                map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
+                map.insert("bi_count".to_string(), seg.bi_list.len().to_string());
+                map.insert("reason".to_string(), seg.reason.clone());
+                map
+            })
+            .collect();
+        dataframes.insert("seg_seg_list".to_string(), seg_seg_list);
+
+        // SegZS List
+        let seg_zs_list = self
+            .segzs_list
+            .iter()
+            .map(|zs| {
+                let mut map = IndexMap::new();
+                map.insert(
+                    "begin_time".to_string(),
+                    zs.begin_bi.get_begin_klu().time.to_string(),
+                );
+                map.insert(
+                    "end_time".to_string(),
+                    zs.end_bi.unwrap()._get_end_klu().time.to_string(),
+                );
+                map.insert("high".to_string(), zs.high.to_string());
+                map.insert("low".to_string(), zs.low.to_string());
+                map.insert("peak_high".to_string(), zs.peak_high.to_string());
+                map.insert("peak_low".to_string(), zs.peak_low.to_string());
+                map.insert("is_sure".to_string(), zs.is_sure.to_string());
+                map.insert("begin_bi_idx".to_string(), zs.begin_bi.index().to_string());
+                map.insert(
+                    "end_bi_idx".to_string(),
+                    zs.end_bi.unwrap().index().to_string(),
+                );
+                map.insert(
+                    "bi_in".to_string(),
+                    zs.bi_in
+                        .as_ref()
+                        .map_or("".to_string(), |bi| bi.index().to_string()),
+                );
+                map.insert(
+                    "bi_out".to_string(),
+                    zs.bi_out
+                        .as_ref()
+                        .map_or("".to_string(), |bi| bi.index().to_string()),
+                );
+                map
+            })
+            .collect();
+        dataframes.insert("seg_zs_list".to_string(), seg_zs_list);
+
+        // Seg BS Point List
+        let seg_bs_point_list = self
+            .seg_bs_point_lst
+            .iter()
+            .map(|bsp| {
+                let mut map = IndexMap::new();
+                map.insert("begin_time".to_string(), bsp.borrow().klu.time.to_string());
+                map.insert("bsp_type".to_string(), bsp.borrow().type2str());
+                map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
+                map.insert(
+                    "bi_begin_time".to_string(),
+                    bsp.borrow().bi.get_begin_klu().time.to_string(),
+                );
+                map.insert(
+                    "bi_end_time".to_string(),
+                    bsp.borrow().bi.get_end_klu().time.to_string(),
+                );
+                map
+            })
+            .collect();
+        dataframes.insert("seg_bs_point_lst".to_string(), seg_bs_point_list);
+
         dataframes
     }
 
