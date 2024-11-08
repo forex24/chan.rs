@@ -31,6 +31,8 @@ pub struct Analyzer {
     // history bsp
     pub bs_point_history: Vec<IndexMap<String, String>>,
     pub seg_bs_point_history: Vec<IndexMap<String, String>>,
+    pub last_bsp: Option<Rc<RefCell<CBspPoint<CBi>>>>,
+    pub last_seg_bsp: Option<Rc<RefCell<CBspPoint<CSeg<CBi>>>>>,
 }
 
 pub type CBiSeg = CSeg<CBi>;
@@ -50,6 +52,8 @@ impl Analyzer {
             seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf),
             bs_point_history: Vec::new(),
             seg_bs_point_history: Vec::new(),
+            last_bsp: None,
+            last_seg_bsp: None,
         }
     }
     // seg
@@ -148,7 +152,23 @@ impl Analyzer {
         self.bs_point_lst
             .cal(self.bi_list.as_slice(), &self.seg_list);
 
-        self.record_current_bs_points();
+        if let Some(last) = self.bs_point_lst.last() {
+            if let Some(saved) = self.last_bsp.as_ref() {
+                if last.borrow().klu.time != saved.borrow().klu.time {
+                    self.last_bsp = Some(last.clone());
+                    self.record_last_bs_points();
+                }
+            }
+        }
+
+        if let Some(last) = self.seg_bs_point_lst.last() {
+            if let Some(saved) = self.last_seg_bsp.as_ref() {
+                if last.borrow().klu.time != saved.borrow().klu.time {
+                    self.last_seg_bsp = Some(last.clone());
+                    self.record_last_seg_bs_points();
+                }
+            }
+        }
     }
 
     fn update_klc_in_bi(&mut self) {
@@ -435,7 +455,7 @@ impl Analyzer {
         Ok(())
     }
 
-    fn record_current_bs_points(&mut self) {
+    fn record_last_bs_points(&mut self) {
         if let Some(latest_bsp) = self.bs_point_lst.last() {
             let latest_bsp = latest_bsp.borrow();
             self.bs_point_history.push(IndexMap::from([
@@ -460,7 +480,9 @@ impl Analyzer {
                 ),
             ]));
         }
+    }
 
+    fn record_last_seg_bs_points(&mut self) {
         if let Some(latest_seg_bsp) = self.seg_bs_point_lst.last() {
             let latest_seg_bsp = latest_seg_bsp.borrow();
             self.seg_bs_point_history.push(IndexMap::from([
