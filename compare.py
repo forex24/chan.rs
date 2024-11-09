@@ -26,9 +26,19 @@ def normalize_datetime(val):
         val = val.strip()
         try:
             # 尝试不同的时间格式
-            for fmt in ['%Y-%m-%d %H:%M', '%Y/%m/%d %H:%M']:
+            formats = [
+                '%Y-%m-%d %H:%M',  # 2024-01-08 00:00
+                '%Y/%m/%d %H:%M',  # 2024/01/08 00:00
+                '%Y-%m-%d',        # 2024-01-08
+                '%Y/%m/%d'         # 2024/01/08
+            ]
+            
+            for fmt in formats:
                 try:
                     dt = datetime.strptime(val, fmt)
+                    # 如果原始字符串没有时间部分，或者时间是00:00，则只返回日期部分
+                    if fmt in ['%Y-%m-%d', '%Y/%m/%d'] or dt.strftime('%H:%M') == '00:00':
+                        return dt.strftime('%Y-%m-%d')
                     return dt.strftime('%Y-%m-%d %H:%M')
                 except ValueError:
                     continue
