@@ -16,14 +16,6 @@ pub enum TestSegError {
     SegLenErr,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EigenFxEvent {
-    Continue(usize), // 线段延续，参数是下一个线段的搜索起点
-    Found(usize),    // 当前线段成立，参数是下一个线段的搜索起点
-    ReCalc(usize),   // 第一个线段首尾异常，重新计算
-    None,            // 当前线段未完成，
-}
-
 pub struct CSegListChan<T> {
     pub lst: Box<Vec<CSeg<T>>>,
     pub lv: SegType,
@@ -43,9 +35,8 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     fn do_init(&mut self, bi_lst: &[T]) {
         // 删除末尾不确定的线段
         while !self.lst.is_empty() && !self.lst.last().unwrap().is_sure {
-            // FIXME: index out of bounds: the len is 16 but the index is 16
-            let seg = self.lst.last().unwrap();
-            for bi in &seg.bi_list {
+            let last_seg = self.lst.last().unwrap();
+            for bi in &last_seg.bi_list {
                 if bi.index() < bi_lst.len() {
                     // 这里检查的原因是，如果是虚笔，最后一笔可能失效
                     bi.as_mut().set_parent_seg_dir(None);
@@ -56,7 +47,6 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         }
 
         if !self.lst.is_empty() {
-            assert!(self.lst.last().is_some());
             assert!(self.lst.last().unwrap().eigen_fx.is_some());
             assert!(self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2].is_some());
 
@@ -69,6 +59,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
             if !last_bi_index.is_sure() {
                 {
                     // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
+                    // TODO:是否要向该线段包含的笔，设置parent_seg_dir & parent_seg_idx为None
                     self.lst.pop();
                 }
             }
@@ -78,12 +69,15 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     // 已完备
     pub fn update(&mut self, bi_lst: &[T]) {
         self.do_init(bi_lst);
+
         let begin_idx = if self.lst.is_empty() {
             0
         } else {
             self.lst.last().unwrap().end_bi.index() + 1
         };
+
         self.cal_seg_sure(bi_lst, begin_idx);
+
         self.collect_left_seg(bi_lst);
     }
 
@@ -224,6 +218,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                 }
                 self.collect_left_as_seg(bi_lst);
             }
+
             LeftSegMethod::All => {
                 let _dir = if bi_lst[bi_lst.len() - 1].get_end_val() >= bi_lst[0].get_begin_val() {
                     Direction::Up

@@ -228,31 +228,31 @@ impl CBiList {
     }
 
     // 已完备
-    fn add_new_bi(&mut self, pre_klc: Handle<Candle>, cur_klc: Handle<Candle>, is_sure: bool) {
+    fn add_new_bi(&mut self, start_fx: Handle<Candle>, end_fx: Handle<Candle>, is_sure: bool) {
         self.bi_list.push(CBi::new(
             &self.bi_list,
-            pre_klc,
-            cur_klc,
+            start_fx,
+            end_fx,
             self.bi_list.len(),
             is_sure,
         ));
     }
 
     // 已完备
-    fn satisfy_bi_span(&self, klc: Handle<Candle>, last_end: Handle<Candle>) -> bool {
-        let bi_span = self.get_klc_span(klc, last_end);
+    fn satisfy_bi_span(&self, end_fx: Handle<Candle>, start_fx: Handle<Candle>) -> bool {
+        let bi_span = self.get_klc_span(end_fx, start_fx);
         if self.config.is_strict {
             return bi_span >= 4;
         }
         let mut uint_kl_cnt = 0;
-        let mut tmp_klc = last_end.next();
+        let mut tmp_klc = start_fx.next();
         while let Some(current_klc) = tmp_klc {
             uint_kl_cnt += current_klc.lst.len();
             //  最后尾部虚笔的时候，可能klc.idx == last_end.idx+1
             if current_klc.next().is_none() {
                 return false;
             }
-            if current_klc.next().unwrap().index() < klc.index() {
+            if current_klc.next().unwrap().index() < end_fx.index() {
                 tmp_klc = current_klc.next();
             } else {
                 break;
@@ -262,21 +262,21 @@ impl CBiList {
     }
 
     // 已完备
-    fn get_klc_span(&self, klc: Handle<Candle>, last_end: Handle<Candle>) -> usize {
-        let mut span = klc.index() - last_end.index();
+    fn get_klc_span(&self, end_fx: Handle<Candle>, start_fx: Handle<Candle>) -> usize {
+        let mut span = end_fx.index() - start_fx.index();
 
         if !self.config.gap_as_kl {
             return span;
         }
 
+        // 加速运算，如果span需要真正精确的值，需要去掉这一行
         if span >= 4 {
-            // 加速运算，如果span需要真正精确的值，需要去掉这一行
             return span;
         }
 
-        let mut tmp_klc = Some(last_end);
+        let mut tmp_klc = Some(start_fx);
         while let Some(current_klc) = tmp_klc {
-            if current_klc.index() >= klc.index() {
+            if current_klc.index() >= end_fx.index() {
                 break;
             }
 
@@ -290,27 +290,29 @@ impl CBiList {
     }
 
     // 已完备
+    // klc:结束分型的k2
+    // last_end 起始分型的k2
     fn can_make_bi(
         &self,
-        klc: Handle<Candle>,
-        last_end: Handle<Candle>,
+        end_fx: Handle<Candle>,
+        start_fx: Handle<Candle>,
         for_virtual: bool,
     ) -> bool {
         let satisify_span = if self.config.bi_algo == "fx" {
             true
         } else {
-            self.satisfy_bi_span(klc, last_end)
+            self.satisfy_bi_span(end_fx, start_fx)
         };
 
         if !satisify_span {
             return false;
         }
 
-        if !Candle::check_fx_valid(last_end, klc, self.config.bi_fx_check, for_virtual) {
+        if !Candle::check_fx_valid(start_fx, end_fx, self.config.bi_fx_check, for_virtual) {
             return false;
         }
 
-        if self.config.bi_end_is_peak && !end_is_peak(last_end, klc) {
+        if self.config.bi_end_is_peak && !end_is_peak(start_fx, end_fx) {
             return false;
         }
         true
