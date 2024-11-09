@@ -82,10 +82,11 @@ pub async fn parse(opt: &Opt) {
     // 比较同名文件
     for entry in files1 {
         let file_name = entry.file_name().unwrap().to_str().unwrap();
-        if files2_set.contains(&file_name.to_string()) {
+        if files2_set.contains(file_name) {
             let path1 = entry.clone();
             let path2 = Path::new(&dir2).join(file_name);
 
+            println!("Comapred file:{}", file_name);
             // 根据文件名获取要比较的字段列表
             let compare_fields = field_map
                 .get(file_name)
@@ -100,6 +101,7 @@ pub async fn parse(opt: &Opt) {
             }
         }
     }
+    println!("Compare Ok");
 }
 
 // 比较两个文件的内容
