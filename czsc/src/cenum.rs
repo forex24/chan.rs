@@ -33,10 +33,10 @@ pub enum KlineDir {
 impl Display for KlineDir {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KlineDir::Up => f.write_str("Up"),
-            KlineDir::Down => f.write_str("Down"),
-            KlineDir::Combine => f.write_str("Combine"),
-            KlineDir::Included => f.write_str("Include"),
+            KlineDir::Up => f.write_str("KLINE_DIR.Up"),
+            KlineDir::Down => f.write_str("KLINE_DIR.Down"),
+            KlineDir::Combine => f.write_str("KLINE_DIR.Combine"),
+            KlineDir::Included => f.write_str("KLINE_DIR.Include"),
         }
     }
 }
@@ -51,9 +51,9 @@ pub enum FxType {
 impl Display for FxType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            FxType::Top => f.write_str("Top"),
-            FxType::Bottom => f.write_str("Bottom"),
-            FxType::Unknown => f.write_str("None"),
+            FxType::Top => f.write_str("FX_TYPE.TOP"),
+            FxType::Bottom => f.write_str("FX_TYPE.BOTTOM"),
+            FxType::Unknown => f.write_str("FX_TYPE.UNKNOWN"),
         }
     }
 }
@@ -66,8 +66,8 @@ pub enum Direction {
 impl Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Direction::Up => f.write_str("Up"),
-            Direction::Down => f.write_str("Down"),
+            Direction::Up => f.write_str("BI_DIR.UP"),
+            Direction::Down => f.write_str("BI_DIR.DOWN"),
         }
     }
 }
@@ -96,14 +96,14 @@ pub enum BiType {
 impl ToString for BiType {
     fn to_string(&self) -> String {
         match self {
-            BiType::Unknown => "Unknown".to_string(),
-            BiType::Strict => "Strict".to_string(),
-            BiType::SubValue => "SubValue".to_string(),
-            BiType::TiaokongThred => "TiaokongThred".to_string(),
-            BiType::Daheng => "Daheng".to_string(),
-            BiType::Tuibi => "Tuibi".to_string(),
-            BiType::Unstrict => "Unstrict".to_string(),
-            BiType::TiaokongValue => "TiaokongValue".to_string()
+            BiType::Unknown => "BI_TYPE.UNKNOWN".to_string(),
+            BiType::Strict => "BI_TYPE.STRICT".to_string(),
+            BiType::SubValue => "BI_TYPE.SUBVALUE".to_string(),
+            BiType::TiaokongThred => "BI_TYPE.TIAOKONGTHRED".to_string(),
+            BiType::Daheng => "BI_TYPE.DAHENG".to_string(),
+            BiType::Tuibi => "BI_TYPE.TUIBI".to_string(),
+            BiType::Unstrict => "BI_TYPE.UNSTRICT".to_string(),
+            BiType::TiaokongValue => "BI_TYPE.TIAOKONGVALUE".to_string(),
         }
     }
 }

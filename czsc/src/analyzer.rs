@@ -189,8 +189,14 @@ impl Analyzer {
             .iter()
             .map(|kl| {
                 let mut map = IndexMap::new();
-                map.insert("begin_time".to_string(), kl.time_begin.to_string());
-                map.insert("end_time".to_string(), kl.time_end.to_string());
+                map.insert(
+                    "begin_time".to_string(),
+                    kl.time_begin.format("%Y-%m-%d %H:%M:%S").to_string(),
+                );
+                map.insert(
+                    "end_time".to_string(),
+                    kl.time_end.format("%Y-%m-%d %H:%M:%S").to_string(),
+                );
                 map.insert("idx".to_string(), kl.index().to_string());
                 map.insert("dir".to_string(), kl.dir.to_string());
                 map.insert("high".to_string(), kl.high.to_string());
@@ -209,15 +215,31 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    bi.get_begin_klu().time.to_string(),
+                    bi.get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
-                map.insert("end_time".to_string(), bi.get_end_klu().time.to_string());
+                map.insert(
+                    "end_time".to_string(),
+                    bi.get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
+                );
                 map.insert("idx".to_string(), bi.index().to_string());
                 map.insert("dir".to_string(), bi.dir.to_string());
                 map.insert("high".to_string(), bi._high().to_string());
                 map.insert("low".to_string(), bi._low().to_string());
                 map.insert("type".to_string(), bi.bi_type.to_string());
-                map.insert("is_sure".to_string(), bi.is_sure.to_string());
+                map.insert(
+                    "is_sure".to_string(),
+                    if bi.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                );
                 map.insert("seg_idx".to_string(), bi.seg_idx.unwrap_or(0).to_string());
                 map.insert(
                     "parent_seg".to_string(),
@@ -242,14 +264,30 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    seg.get_begin_klu().time.to_string(),
+                    seg.get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
-                map.insert("end_time".to_string(), seg.get_end_klu().time.to_string());
+                map.insert(
+                    "end_time".to_string(),
+                    seg.get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
+                );
                 map.insert("idx".to_string(), seg.index().to_string());
                 map.insert("dir".to_string(), seg.dir.to_string());
                 map.insert("high".to_string(), seg._high().to_string());
                 map.insert("low".to_string(), seg._low().to_string());
-                map.insert("is_sure".to_string(), seg.is_sure.to_string());
+                map.insert(
+                    "is_sure".to_string(),
+                    if seg.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                );
                 map.insert("start_bi_idx".to_string(), seg.start_bi.index().to_string());
                 map.insert("end_bi_idx".to_string(), seg.end_bi.index().to_string());
                 map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
@@ -268,17 +306,33 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    zs.begin_bi.get_begin_klu().time.to_string(),
+                    zs.begin_bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert(
                     "end_time".to_string(),
-                    zs.end_bi.unwrap()._get_end_klu().time.to_string(),
+                    zs.end_bi
+                        .unwrap()
+                        ._get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert("high".to_string(), zs.high.to_string());
                 map.insert("low".to_string(), zs.low.to_string());
                 map.insert("peak_high".to_string(), zs.peak_high.to_string());
                 map.insert("peak_low".to_string(), zs.peak_low.to_string());
-                map.insert("is_sure".to_string(), zs.is_sure.to_string());
+                map.insert(
+                    "is_sure".to_string(),
+                    if zs.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                );
                 map.insert("begin_bi_idx".to_string(), zs.begin_bi.index().to_string());
                 map.insert(
                     "end_bi_idx".to_string(),
@@ -307,16 +361,33 @@ impl Analyzer {
             .iter()
             .map(|bsp| {
                 let mut map = IndexMap::new();
-                map.insert("begin_time".to_string(), bsp.borrow().klu.time.to_string());
+                map.insert(
+                    "begin_time".to_string(),
+                    bsp.borrow()
+                        .klu
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
+                );
                 map.insert("bsp_type".to_string(), bsp.borrow().type2str());
                 map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
                 map.insert(
                     "bi_begin_time".to_string(),
-                    bsp.borrow().bi.get_begin_klu().time.to_string(),
+                    bsp.borrow()
+                        .bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert(
                     "bi_end_time".to_string(),
-                    bsp.borrow().bi.get_end_klu().time.to_string(),
+                    bsp.borrow()
+                        .bi
+                        .get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map
             })
@@ -331,14 +402,30 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    seg.get_begin_klu().time.to_string(),
+                    seg.get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
-                map.insert("end_time".to_string(), seg.get_end_klu().time.to_string());
+                map.insert(
+                    "end_time".to_string(),
+                    seg.get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
+                );
                 map.insert("idx".to_string(), seg.index().to_string());
                 map.insert("dir".to_string(), seg.dir.to_string());
                 map.insert("high".to_string(), seg._high().to_string());
                 map.insert("low".to_string(), seg._low().to_string());
-                map.insert("is_sure".to_string(), seg.is_sure.to_string());
+                map.insert(
+                    "is_sure".to_string(),
+                    if seg.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                );
                 map.insert("start_bi_idx".to_string(), seg.start_bi.index().to_string());
                 map.insert("end_bi_idx".to_string(), seg.end_bi.index().to_string());
                 map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
@@ -357,17 +444,33 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    zs.begin_bi.get_begin_klu().time.to_string(),
+                    zs.begin_bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert(
                     "end_time".to_string(),
-                    zs.end_bi.unwrap()._get_end_klu().time.to_string(),
+                    zs.end_bi
+                        .unwrap()
+                        ._get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert("high".to_string(), zs.high.to_string());
                 map.insert("low".to_string(), zs.low.to_string());
                 map.insert("peak_high".to_string(), zs.peak_high.to_string());
                 map.insert("peak_low".to_string(), zs.peak_low.to_string());
-                map.insert("is_sure".to_string(), zs.is_sure.to_string());
+                map.insert(
+                    "is_sure".to_string(),
+                    if zs.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                );
                 map.insert("begin_bi_idx".to_string(), zs.begin_bi.index().to_string());
                 map.insert(
                     "end_bi_idx".to_string(),
@@ -396,16 +499,33 @@ impl Analyzer {
             .iter()
             .map(|bsp| {
                 let mut map = IndexMap::new();
-                map.insert("begin_time".to_string(), bsp.borrow().klu.time.to_string());
+                map.insert(
+                    "begin_time".to_string(),
+                    bsp.borrow()
+                        .klu
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
+                );
                 map.insert("bsp_type".to_string(), bsp.borrow().type2str());
                 map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
                 map.insert(
                     "bi_begin_time".to_string(),
-                    bsp.borrow().bi.get_begin_klu().time.to_string(),
+                    bsp.borrow()
+                        .bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map.insert(
                     "bi_end_time".to_string(),
-                    bsp.borrow().bi.get_end_klu().time.to_string(),
+                    bsp.borrow()
+                        .bi
+                        .get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 );
                 map
             })
@@ -459,7 +579,10 @@ impl Analyzer {
         if let Some(latest_bsp) = self.bs_point_lst.last() {
             let latest_bsp = latest_bsp.borrow();
             self.bs_point_history.push(IndexMap::from([
-                ("begin_time".to_string(), latest_bsp.klu.time.to_string()),
+                (
+                    "begin_time".to_string(),
+                    latest_bsp.klu.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                ),
                 ("bsp_type".to_string(), latest_bsp.type2str()),
                 ("is_buy".to_string(), latest_bsp.is_buy.to_string()),
                 (
@@ -467,16 +590,32 @@ impl Analyzer {
                     latest_bsp
                         .relate_bsp1
                         .as_ref()
-                        .map_or("None".to_string(), |bsp| bsp.borrow().klu.time.to_string()),
+                        .map_or("None".to_string(), |bsp| {
+                            bsp.borrow()
+                                .klu
+                                .time
+                                .format("%Y-%m-%d %H:%M:%S")
+                                .to_string()
+                        }),
                 ),
                 ("bi_idx".to_string(), latest_bsp.bi.index().to_string()),
                 (
                     "bi_begin_time".to_string(),
-                    latest_bsp.bi.get_begin_klu().time.to_string(),
+                    latest_bsp
+                        .bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 ),
                 (
                     "bi_end_time".to_string(),
-                    latest_bsp.bi.get_end_klu().time.to_string(),
+                    latest_bsp
+                        .bi
+                        .get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 ),
             ]));
         }
@@ -488,7 +627,11 @@ impl Analyzer {
             self.seg_bs_point_history.push(IndexMap::from([
                 (
                     "begin_time".to_string(),
-                    latest_seg_bsp.klu.time.to_string(),
+                    latest_seg_bsp
+                        .klu
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 ),
                 ("bsp_type".to_string(), latest_seg_bsp.type2str()),
                 ("is_buy".to_string(), latest_seg_bsp.is_buy.to_string()),
@@ -497,16 +640,32 @@ impl Analyzer {
                     latest_seg_bsp
                         .relate_bsp1
                         .as_ref()
-                        .map_or("None".to_string(), |bsp| bsp.borrow().klu.time.to_string()),
+                        .map_or("None".to_string(), |bsp| {
+                            bsp.borrow()
+                                .klu
+                                .time
+                                .format("%Y-%m-%d %H:%M:%S")
+                                .to_string()
+                        }),
                 ),
                 ("seg_idx".to_string(), latest_seg_bsp.bi.index().to_string()),
                 (
                     "bi_begin_time".to_string(),
-                    latest_seg_bsp.bi.get_begin_klu().time.to_string(),
+                    latest_seg_bsp
+                        .bi
+                        .get_begin_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 ),
                 (
                     "bi_end_time".to_string(),
-                    latest_seg_bsp.bi.get_end_klu().time.to_string(),
+                    latest_seg_bsp
+                        .bi
+                        .get_end_klu()
+                        .time
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string(),
                 ),
             ]));
         }

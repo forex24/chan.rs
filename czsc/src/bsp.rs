@@ -102,11 +102,13 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
 
 impl<T> CBspPoint<T> {
     pub fn type2str(&self) -> String {
-        self.types
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join("_")
+        let types_str = self.types.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+
+        if self.types.len() == 1 {
+            types_str.join(",") // 单一值，不加引号
+        } else {
+            format!("\"{}\"", types_str.join(",")) // 多个值，加引号
+        }
     }
     // TODO:Add a feature
     //pub fn add_feat(&mut self, inp1: impl Into<FeaturesInput>, inp2: Option<f64>) {
