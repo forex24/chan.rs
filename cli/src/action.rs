@@ -4,7 +4,6 @@ use std::str::FromStr;
 pub enum Action {
     //Download,
     Parse,
-    Compare,
     //Check,
     //Fx,
     //Plot,
@@ -28,7 +27,6 @@ impl ToString for Action {
             //Self::Zs => "zs",
             //Self::Bsp => "bsp",
             Self::Parse => "parse",
-            Self::Compare => "compare",
         };
         action.to_string()
     }
@@ -59,7 +57,6 @@ impl FromStr for Action {
         use ActionParseError as E;
         match s {
             "parse" => Ok(Action::Parse),
-            "compare" => Ok(Action::Compare),
             //"download" => Ok(Action::Download),
             //"check" => Ok(Action::Check),
             //"fx" => Ok(Action::Fx),
@@ -70,7 +67,7 @@ impl FromStr for Action {
             //"zs" => Ok(Action::Zs),
             //"bsp" => Ok(Action::Bsp),
             _ => Err(E {
-                err: format!("expected `parse` | `compare` | `plot`, found \"{s}\""),
+                err: format!("expected `parse` | `plot`, found \"{s}\""),
             }),
         }
     }

@@ -33,10 +33,10 @@ pub enum KlineDir {
 impl Display for KlineDir {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KlineDir::Up => f.write_str("KLINE_DIR.Up"),
-            KlineDir::Down => f.write_str("KLINE_DIR.Down"),
-            KlineDir::Combine => f.write_str("KLINE_DIR.Combine"),
-            KlineDir::Included => f.write_str("KLINE_DIR.Include"),
+            KlineDir::Up => f.write_str("KLINE_DIR.UP"),
+            KlineDir::Down => f.write_str("KLINE_DIR.DOWN"),
+            KlineDir::Combine => f.write_str("KLINE_DIR.COMBINE"),
+            KlineDir::Included => f.write_str("KLINE_DIR.INCLUDED"),
         }
     }
 }
