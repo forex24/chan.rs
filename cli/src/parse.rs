@@ -34,10 +34,16 @@ fn czsc_parse(klines: &[Kline]) {
     pb.finish_with_message("done");
     let _ = ca.to_csv("./output");
     println!(
-        "parse time:{}s\nbsp count:{} seg count:{} bi count:{}",
+        "parse time:{}s\nbars:{} candles:{} bis:{} segs:{} zss:{} bsp:{}\n seg seg:{} seg zs:{} seg bsp:{}",
         duration.as_secs(),
-        ca.bi_bsp_list().len(),
+        ca.bar_list().len(),
+        ca.candle_list().len(),
+        ca.bi_list().len(),
         ca.seg_list().len(),
-        ca.bi_list().len()
+        ca.bi_zs_list().len(),
+        ca.bi_bsp_list().len(),
+        ca.seg_seg_list().len(),
+        ca.seg_zs_list().len(),
+        ca.seg_bsp_list().len(),
     );
 }
