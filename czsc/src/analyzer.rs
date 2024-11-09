@@ -154,7 +154,12 @@ impl Analyzer {
         self.bs_point_lst
             .cal(self.bi_list.as_slice(), &self.seg_list);
 
-        if let Some(last) = self.bs_point_lst.last() {
+        self.record_last_bs_points();
+        self.record_last_seg_bs_points();
+
+        // 这里有点问题，是因为klu.time是相同的，但是bsp_type不同
+        // 同时也是不改python代码
+        /*if let Some(last) = self.bs_point_lst.last() {
             if self.last_bsp.as_ref().map_or(true, |saved| {
                 last.borrow().klu.time != saved.borrow().klu.time
             }) {
@@ -170,7 +175,7 @@ impl Analyzer {
                 self.last_seg_bsp = Some(last.clone());
                 self.record_last_seg_bs_points();
             }
-        }
+        }*/
     }
 
     fn update_klc_in_bi(&mut self) {
