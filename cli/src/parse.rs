@@ -34,8 +34,10 @@ fn czsc_parse(klines: &[Kline]) {
     pb.finish_with_message("done");
     let _ = ca.to_csv("./output");
     println!(
-        "parse time:{}s\nbars:{} candles:{} bis:{} segs:{} zss:{} bsp:{} seg_seg:{} seg_zs:{} seg_bsp:{}",
+        "parse time:{}s start:{} end:{}\nbar:{} candle:{} bi:{} seg:{} zs:{} bsp:{} seg_seg:{} seg_zs:{} seg_bsp:{}",
         duration.as_secs(),
+        ca.bar_list().first().unwrap().time,
+        ca.bar_list().last().unwrap().time,
         ca.bar_list().len(),
         ca.candle_list().len(),
         ca.bi_list().len(),
