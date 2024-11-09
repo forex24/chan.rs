@@ -8,8 +8,8 @@ use czsc::Kline;
 use indicatif::{ProgressBar, ProgressStyle};
 
 pub async fn parse(opt: &Opt) {
-    let mut fname = opt.input.clone().unwrap_or(PathBuf::from(&opt.symbol));
-    fname.set_extension("csv");
+    let fname = opt.input.clone().unwrap_or(PathBuf::from(&opt.symbol));
+    //fname.set_extension("csv");
     let klines = read_kline_from_csv(&fname);
     println!("csv loaded");
     czsc_parse(&klines)
@@ -34,7 +34,7 @@ fn czsc_parse(klines: &[Kline]) {
     pb.finish_with_message("done");
     let _ = ca.to_csv("./output");
     println!(
-        "parse time:{}s\nbars:{} candles:{} bis:{} segs:{} zss:{} bsp:{}\n seg seg:{} seg zs:{} seg bsp:{}",
+        "parse time:{}s\nbars:{} candles:{} bis:{} segs:{} zss:{} bsp:{} seg_seg:{} seg_zs:{} seg_bsp:{}",
         duration.as_secs(),
         ca.bar_list().len(),
         ca.candle_list().len(),
