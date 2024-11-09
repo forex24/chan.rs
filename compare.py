@@ -11,9 +11,11 @@ COMPARE_COLS = {
     'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
     'seg_list.csv': ['begin_time', 'dir', 'high', 'low', 'is_sure', 'zs_count', 'bi_count'],
     'zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure'],
+    'bs_point_history.csv':['begin_time', 'bsp_type'],
     'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
     'seg_seg_list.csv': ['begin_time', 'dir', 'high', 'low', 'is_sure', 'zs_count', 'bi_count'],
     'seg_zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure'],
+    'seg_bs_point_history.csv':['begin_time', 'bsp_type'],
 }
 
 def get_compare_columns(filename: str) -> List[str]:
