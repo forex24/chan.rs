@@ -15,6 +15,7 @@ use action::Action;
 mod csv_util;
 //mod download;
 //mod fx;
+mod compare;
 mod parse;
 mod period;
 //mod plot;
@@ -57,6 +58,12 @@ struct Opt {
 
     #[structopt(long)]
     days: Option<u64>,
+
+    #[structopt(long, parse(from_os_str))]
+    from: Option<PathBuf>,
+
+    #[structopt(long, parse(from_os_str))]
+    to: Option<PathBuf>,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -96,6 +103,7 @@ async fn main() {
 
     match opt.action {
         Action::Parse => parse::parse(&opt).await,
+        Action::Compare => compare::parse(&opt).await,
         //Action::Download => download::download(&opt).await,
         //Action::Check => check::parse(&opt).await,
         //Action::Plot => plot::parse(&opt).await,
