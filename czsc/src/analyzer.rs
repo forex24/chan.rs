@@ -143,7 +143,7 @@ impl Analyzer {
         );
 
         // 计算每一笔里面的 klc列表
-        self.update_klc_in_bi();
+        //self.update_klc_in_bi();
 
         // 计算买卖点
         // 线段线段买卖点
