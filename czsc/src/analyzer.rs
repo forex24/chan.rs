@@ -178,11 +178,11 @@ impl Analyzer {
         }*/
     }
 
-    fn update_klc_in_bi(&mut self) {
-        for bi in self.bi_list.iter_mut() {
-            bi.set_klc_lst(&self.candle_list[bi.begin_klc.index()..=bi.end_klc.index()]);
-        }
-    }
+    //fn update_klc_in_bi(&mut self) {
+    //    for bi in self.bi_list.iter_mut() {
+    //        bi.set_klc_lst(&self.candle_list[bi.begin_klc.index()..=bi.end_klc.index()]);
+    //    }
+    //}
 }
 
 impl Analyzer {
