@@ -26,3 +26,8 @@ rustc-arena-modified = "0.1.1"
 hashmap_macro="*"
 micromap = "0.0.15"
 indexmap="2.6.0"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+debug = true
