@@ -10,7 +10,7 @@ pub struct CZsList<T> {
     pub zs_lst: Box<Vec<CZs<T>>>,
     pub config: CZsConfig,
     pub free_item_lst: Vec<Handle<T>>,
-    pub last_sure_pos: isize,
+    pub last_sure_pos: Option<usize>,
 }
 
 impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
@@ -19,17 +19,17 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             zs_lst: Box::<Vec<CZs<T>>>::default(),
             config: zs_config,
             free_item_lst: Vec::new(),
-            last_sure_pos: -1,
+            last_sure_pos: None,
         }
     }
 
     // 已完备
     fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
-        self.last_sure_pos = -1;
+        self.last_sure_pos = None;
 
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
-                self.last_sure_pos = seg.start_bi.index() as isize;
+                self.last_sure_pos = Some(seg.start_bi.index());
                 return;
             }
         }
@@ -37,7 +37,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
-        seg.start_bi.index() as isize >= self.last_sure_pos
+        match self.last_sure_pos {
+            Some(pos) => seg.start_bi.index() >= pos,
+            None => true,
+        }
     }
 
     // 已完备
@@ -89,7 +92,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                 continue;
             }
             if deal_bi_cnt < 1 {
-                // 防止try_add_to_end执行到上一个线段的中枢里面去
+                // 防止try_add_to_end执行到上一个线段���中枢里面去
                 self.add_to_free_lst(bi.to_handle(), seg_is_sure, CPivotAlgo::Normal);
                 deal_bi_cnt += 1;
             } else {
@@ -147,11 +150,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>) {
         let last_sure_pos = self.last_sure_pos;
 
-        //while self.zs_lst and self.zs_lst[-1].begin_bi.idx >= self.last_sure_pos:
-        //    self.zs_lst.pop()
-
-        self.zs_lst
-            .retain(|zs| (zs.begin_bi.index() as isize) < last_sure_pos);
+        self.zs_lst.retain(|zs| match last_sure_pos {
+            Some(pos) => zs.begin_bi.index() < pos,
+            None => true,
+        });
 
         match self.config.zs_algo {
             CPivotAlgo::Normal => {

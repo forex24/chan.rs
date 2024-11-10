@@ -20,35 +20,41 @@ use crate::LineType;
 use crate::ToHandle;
 
 pub struct CBSPointList<T> {
+    pub history: Box<Vec<CBspPoint<T>>>,
     pub lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
     //bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
     bsp1_lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
     pub config: CBSPointConfig,
-    pub last_sure_pos: isize,
+    pub last_sure_pos: Option<usize>,
 }
 
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
+            history: Box::new(Vec::with_capacity(10240)),
             lst: Vec::with_capacity(1024),
             //bsp_dict: HashMap::new(),
             bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
-            last_sure_pos: -1,
+            last_sure_pos: None,
         }
     }
 
     // 99% 完备
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
-        self.lst
-            .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
+        self.lst.retain(|bsp| match self.last_sure_pos {
+            Some(pos) => bsp.borrow().klu.index() <= pos,
+            None => false,
+        });
         //self.bsp_dict = self
         //    .lst
         //    .iter()
         //    .map(|bsp| (bsp.borrow().bi.get_end_klu().index(), bsp.clone()))
         //    .collect();
-        self.bsp1_lst
-            .retain(|bsp| bsp.borrow().klu.index() as isize <= self.last_sure_pos);
+        self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
+            Some(pos) => bsp.borrow().klu.index() <= pos,
+            None => false,
+        });
 
         self.cal_seg_bs1point(seg_list, bi_list);
         self.cal_seg_bs2point(seg_list, bi_list);
@@ -58,10 +64,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
-        self.last_sure_pos = -1;
+        self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
-                self.last_sure_pos = seg.end_bi.get_begin_klu().index() as isize;
+                self.last_sure_pos = Some(seg.end_bi.get_begin_klu().index());
                 return;
             }
         }
@@ -69,7 +75,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     pub fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
-        seg.end_bi.get_end_klu().index() as isize > self.last_sure_pos
+        match self.last_sure_pos {
+            Some(pos) => seg.end_bi.get_end_klu().index() > pos,
+            None => true,
+        }
     }
 
     // 80% 完备

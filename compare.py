@@ -6,16 +6,18 @@ from datetime import datetime
 
 # 定义要比较的列
 COMPARE_COLS = {
-    'kline_list.csv': ['begin_time', 'dir', 'high', 'low', 'fx'],
-    'bi_list.csv': ['begin_time', 'dir', 'high', 'low', 'is_sure'],
-    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
-    'seg_list.csv': ['begin_time', 'dir', 'high', 'low', 'is_sure', 'zs_count', 'bi_count'],
-    'zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure'],
+    'kline_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'fx'],
+    'bi_list.csv': ['begin_time', 'idx', 'dir', 'high', 'low', 'is_sure','seg_idx', 'parent_seg', 'begin_klc', 'end_klc', 'begin_val', 'end_val', 'klu_cnt', 'klc_cnt'],
+    'seg_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'is_sure','start_bi_idx','end_bi_idx', 'zs_count', 'bi_count','reason'],
+    'zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_bi_idx', 'bi_in', 'bi_out'],
+    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time'],
     'bs_point_history.csv':['begin_time', 'bsp_type'],
-    'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
-    'seg_seg_list.csv': ['begin_time', 'dir', 'high', 'low', 'is_sure', 'zs_count', 'bi_count'],
+    
+    'seg_seg_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'is_sure','zs_count', 'bi_count','reason'],
     'seg_zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure'],
+    'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
     'seg_bs_point_history.csv':['begin_time', 'bsp_type'],
+    
 }
 
 def get_compare_columns(filename: str) -> List[str]:

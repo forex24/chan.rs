@@ -9,13 +9,19 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 pub async fn parse(opt: &Opt) {
     let fname = opt.input.clone().unwrap_or(PathBuf::from(&opt.symbol));
-    //fname.set_extension("csv");
     let klines = read_kline_from_csv(&fname);
     println!("csv loaded");
-    czsc_parse(&klines)
+
+    let output_dir = PathBuf::from(&opt.symbol)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| format!("{}_output", s))
+        .unwrap_or_else(|| "output".to_string());
+
+    czsc_parse(&klines, &output_dir)
 }
 
-fn czsc_parse(klines: &[Kline]) {
+fn czsc_parse(klines: &[Kline], output_dir: &str) {
     let mut ca = Analyzer::default();
     println!("start parse");
     let pb = ProgressBar::new(klines.len() as u64);
@@ -32,7 +38,7 @@ fn czsc_parse(klines: &[Kline]) {
     });
     let duration = start_time.elapsed();
     pb.finish_with_message("done");
-    let _ = ca.to_csv("./output");
+    let _ = ca.to_csv(output_dir);
     println!(
         "parse time:{}s start:{} end:{}\nbar:{} candle:{} bi:{} seg:{} zs:{} bsp:{} seg_seg:{} seg_zs:{} seg_bsp:{}",
         duration.as_secs(),
