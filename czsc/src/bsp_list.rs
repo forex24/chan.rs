@@ -19,16 +19,19 @@ use crate::Indexable;
 use crate::LineType;
 use crate::ToHandle;
 
+// 基本思路：保存所有的历史买卖点
+/// 买卖点列表,用于管理和计算各类买卖点
 pub struct CBSPointList<T> {
-    pub history: Box<Vec<CBspPoint<T>>>,
-    pub lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
+    pub history: Box<Vec<CBspPoint<T>>>,     // 历史买卖点记录
+    pub lst: Vec<Rc<RefCell<CBspPoint<T>>>>, // 当前有效的买卖点列表
     //bsp_dict: HashMap<usize, Rc<RefCell<CBspPoint<T>>>>,
-    bsp1_lst: Vec<Rc<RefCell<CBspPoint<T>>>>,
-    pub config: CBSPointConfig,
-    pub last_sure_pos: Option<usize>,
+    bsp1_lst: Vec<Rc<RefCell<CBspPoint<T>>>>, // 一类买卖点列表
+    pub config: CBSPointConfig,              // 买卖点配置
+    pub last_sure_pos: Option<usize>,        // 最后确定位置的索引
 }
 
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
+    /// 创建新的买卖点列表实例
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
             history: Box::new(Vec::with_capacity(10240)),
@@ -41,6 +44,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 99% 完备
+    /// 计算所有买卖点
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
         self.lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.borrow().klu.index() <= pos,
@@ -63,6 +67,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 已完备
+    /// 更新最后确定位置
     pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
@@ -74,6 +79,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 已完备
+    /// 判断线段是否需要计算买卖点
     pub fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
         match self.last_sure_pos {
             Some(pos) => seg.end_bi.get_end_klu().index() > pos,
@@ -83,13 +89,14 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 80% 完备
     // TODO: 性能热点
+    /// 添加买卖点
     pub fn add_bs(
         &mut self,
-        bs_type: BspType,
-        bi: Handle<T>,
-        relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
-        is_target_bsp: bool,
-        feature_dict: Option<HashMap<String, Option<f64>>>,
+        bs_type: BspType,        // 买卖点类型
+        bi: Handle<T>,           // 笔
+        relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>, // 关联的一类买卖点
+        is_target_bsp: bool,     // 是否为目标买卖点
+        feature_dict: Option<HashMap<String, Option<f64>>>, // 特征字典
     ) {
         //let is_buy = bi.is_down();
         //let end_klu_idx = bi.get_end_klu().index();
@@ -174,7 +181,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         }
     }
 
+    // TODO: 性能热点
+    /// 获取一类买卖点索引字典
+    fn bsp1_idx_dict(&self) -> HashMap<isize, Rc<RefCell<CBspPoint<T>>>> {
+        self.bsp1_lst
+            .iter()
+            .map(|bsp| (bsp.borrow().bi.index() as isize, bsp.clone()))
+            .collect()
+    }
+
     // 已完备
+    /// 计算线段的一类买卖点
     pub fn cal_seg_bs1point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         for seg in seg_list.iter() {
             if !self.seg_need_cal(seg) {
@@ -238,7 +255,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         }
     }
 
-    // 已完备
+    /// 处理一类买卖点
     pub fn treat_bsp1(&mut self, seg: &CSeg<T>, is_buy: bool, is_target_bsp: bool) {
         let mut is_target_bsp = is_target_bsp;
         let bsp_conf = self.config.get_bs_config(is_buy);
@@ -264,7 +281,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         self.add_bs(BspType::T1, seg.end_bi, None, is_target_bsp, feature_dict);
     }
 
-    // 已完备
+    /// 处理盘整一类买卖点
     pub fn treat_pz_bsp1(
         &mut self,
         seg: &CSeg<T>,
@@ -329,21 +346,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         );
     }
 
-    // TODO: 性能热点
-    fn bsp1_idx_dict(&self) -> HashMap<isize, Rc<RefCell<CBspPoint<T>>>> {
-        self.bsp1_lst
-            .iter()
-            .map(|bsp| (bsp.borrow().bi.index() as isize, bsp.clone()))
-            .collect()
-    }
-
     // 已完备
+    /// 计算线段的二类买卖点
     pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
-        //let mut bsp1_bi_idx_dict = HashMap::new();
-        //for bsp in &self.bsp1_lst {
-        //    bsp1_bi_idx_dict.insert(bsp.borrow().bi.index() as isize, bsp.clone());
-        //}
 
         for seg in seg_list.iter() {
             let is_buy = seg.is_down();
@@ -359,12 +365,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 已完备
+    /// 处理二类买卖点
     pub fn treat_bsp2(
         &mut self,
-        seg: &CSeg<T>,
-        bsp1_bi_idx_dict: &HashMap<isize, Rc<RefCell<CBspPoint<T>>>>,
-        seg_list: &CSegListChan<T>,
-        bi_list: &[T],
+        seg: &CSeg<T>,                       // 当前线段
+        bsp1_bi_idx_dict: &HashMap<isize, Rc<RefCell<CBspPoint<T>>>>, // 一类买卖点索引字典
+        seg_list: &CSegListChan<T>,          // 线段列表
+        bi_list: &[T],                       // 笔列表
     ) {
         if !self.seg_need_cal(seg) {
             return;
@@ -445,14 +452,15 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 已完备
+    /// 处理类二买卖点
     pub fn treat_bsp2s(
         &mut self,
-        seg_list: &CSegListChan<T>,
-        bi_list: &[T],
-        bsp2_bi: &T,
-        break_bi: &T,
-        real_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
-        is_buy: bool,
+        seg_list: &CSegListChan<T>,         // 线段列表
+        bi_list: &[T],                      // 笔列表
+        bsp2_bi: &T,                        // 二类买卖点笔
+        break_bi: &T,                       // 突破笔
+        real_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>, // 关联的一类买卖点
+        is_buy: bool,                       // 是否为买点
     ) {
         //let bsp_conf = self.config.get_bs_config(is_buy);
         let mut bias = 2;
@@ -530,6 +538,8 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         }
     }
 
+    // 已完备
+    /// 计算线段的三类买卖点
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
 
@@ -757,20 +767,25 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }*/
 }
 
+/// 判断类二买卖点是否突破一类买卖点
 fn bsp2s_break_bsp1<T: LineType>(bsp2s_bi: &T, bsp2_break_bi: &T) -> bool {
     (bsp2s_bi.is_down() && bsp2s_bi.low() < bsp2_break_bi.low())
         || (bsp2s_bi.is_up() && bsp2s_bi.high() > bsp2_break_bi.high())
 }
 
+/// 判断三类买卖点是否回中枢
 fn bsp3_back2zs<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
-    (bsp3_bi.is_down() && bsp3_bi.low() < zs.high) || (bsp3_bi.is_up() && bsp3_bi.high() > zs.low)
+    (bsp3_bi.is_down() && bsp3_bi.low() < zs.high) 
+        || (bsp3_bi.is_up() && bsp3_bi.high() > zs.low)
 }
 
+/// 判断三类买卖点是否突破中枢顶底
 fn bsp3_break_zspeak<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
     (bsp3_bi.is_down() && bsp3_bi.high() >= zs.peak_high)
         || (bsp3_bi.is_up() && bsp3_bi.low() <= zs.peak_low)
 }
 
+/// 计算三类买卖点的笔结束索引
 fn cal_bsp3_bi_end_idx<T: LineType>(seg: Option<Handle<CSeg<T>>>) -> usize {
     if seg.is_none() {
         return usize::MAX;
@@ -791,6 +806,7 @@ fn cal_bsp3_bi_end_idx<T: LineType>(seg: Option<Handle<CSeg<T>>>) -> usize {
     end_bi_idx
 }
 
+/// 实现 Deref trait,允许直接访问内部的买卖点列表
 impl<T> std::ops::Deref for CBSPointList<T> {
     type Target = Vec<Rc<RefCell<CBspPoint<T>>>>;
 
@@ -799,6 +815,7 @@ impl<T> std::ops::Deref for CBSPointList<T> {
     }
 }
 
+/// 实现 DerefMut trait,允许直接修改内部的买卖点列表
 impl<T> std::ops::DerefMut for CBSPointList<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.lst
