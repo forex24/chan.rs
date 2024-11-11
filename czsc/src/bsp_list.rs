@@ -17,13 +17,14 @@ use crate::IParent;
 use crate::Indexable;
 use crate::LineType;
 use crate::ToHandle;
+use rustc_hash::FxHashMap;
 
 // 基本思路：保存所有的历史买卖点
 /// 买卖点列表,用于管理和计算各类买卖点
 pub struct CBSPointList<T> {
     pub history: Box<Vec<CBspPoint<T>>>, // 历史买卖点记录
     pub lst: Vec<Handle<CBspPoint<T>>>,  // 当前有效的买卖点列表
-    //bsp_dict: HashMap<usize, Handle<CBspPoint<T>>>,
+    bsp_dict: FxHashMap<usize, Handle<CBspPoint<T>>>,
     bsp1_lst: Vec<Handle<CBspPoint<T>>>, // 一类买卖点列表
     pub config: CBSPointConfig,          // 买卖点配置
     pub last_sure_pos: Option<usize>,    // 最后确定位置的索引
@@ -35,7 +36,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         CBSPointList {
             history: Box::new(Vec::with_capacity(10240)),
             lst: Vec::with_capacity(1024),
-            //bsp_dict: HashMap::new(),
+            bsp_dict: FxHashMap::default(),
             bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
             last_sure_pos: None,
@@ -47,11 +48,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             Some(pos) => bsp.klu.index() <= pos,
             None => false,
         });
-        //self.bsp_dict = self
-        //    .lst
-        //    .iter()
-        //    .map(|bsp| (bsp.bi.get_end_klu().index(), bsp.clone()))
-        //    .collect();
+        
+        self.bsp_dict = self
+            .lst
+            .iter()
+            .map(|bsp| (bsp.bi.get_end_klu().index(), bsp.clone()))
+            .collect();
+        
         self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.klu.index() <= pos,
             None => false,
@@ -101,53 +104,6 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_target_bsp: bool,                                // 是否为目标买卖点
         feature_dict: Option<HashMap<String, Option<f64>>>, // 特征字典
     ) {
-        //let is_buy = bi.is_down();
-        //let end_klu_idx = bi.get_end_klu().index();
-        //
-        //if let Some(exist_bsp) = self.bsp_dict.get(&end_klu_idx) {
-        //    assert_eq!(exist_bsp.is_buy, is_buy);
-        //    exist_bsp
-        //        .borrow_mut()
-        //        .add_another_bsp_prop(bs_type, relate_bsp1);
-        //    //if let Some(features) = feature_dict {
-        //    //    exist_bsp.borrow_mut().add_feat(features, None);
-        //    //}
-        //    return;
-        //}
-        //
-        //let is_target_bsp = if !self
-        //    .config
-        //    .get_bs_config(is_buy)
-        //    .target_types
-        //    .contains(&bs_type)
-        //{
-        //    false
-        //} else {
-        //    is_target_bsp
-        //};
-        //
-        //if is_target_bsp || matches!(bs_type, BspType::T1 | BspType::T1P) {
-        //    let bsp = CBspPoint::new(bi, is_buy, bs_type, relate_bsp1, feature_dict);
-        //
-        //    if is_target_bsp {
-        //        self.lst.push(bsp.clone());
-        //        self.bsp_dict.insert(end_klu_idx, bsp.clone());
-        //    }
-        //    if matches!(bs_type, BspType::T1 | BspType::T1P) {
-        //        self.bsp1_lst.push(bsp.clone());
-        //    }
-        //}
-
-        //for exist_bsp in self.lst.iter() {
-        //    if exist_bsp.klu.index() == bi.get_end_klu().index() {
-        //        assert_eq!(exist_bsp.is_buy, is_buy);
-        //        exist_bsp
-        //            .borrow_mut()
-        //            .add_another_bsp_prop(bs_type, relate_bsp1);
-        //        return;
-        //    }
-        //}
-
         let is_buy = bi.is_down();
         for exist_bsp in self.lst.iter() {
             if exist_bsp.klu.index() == bi.get_end_klu().index() {
@@ -196,7 +152,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // TODO: 性能热点
     /// 获取一类买卖点索引字典
-    fn bsp1_idx_dict(&self) -> HashMap<isize, Handle<CBspPoint<T>>> {
+    fn bsp1_idx_dict(&self) -> FxHashMap<isize, Handle<CBspPoint<T>>> {
         self.bsp1_lst
             .iter()
             .map(|bsp| (bsp.bi.index() as isize, *bsp))
@@ -382,7 +338,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn treat_bsp2(
         &mut self,
         seg: &CSeg<T>,                                           // 当前线段
-        bsp1_bi_idx_dict: &HashMap<isize, Handle<CBspPoint<T>>>, // 一类买卖点索引字典
+        bsp1_bi_idx_dict: &FxHashMap<isize, Handle<CBspPoint<T>>>, // 一类买卖点索引字典
         seg_list: &CSegListChan<T>,                              // 线段列表
         bi_list: &[T],                                           // 笔列表
     ) {
