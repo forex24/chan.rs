@@ -502,7 +502,7 @@ impl Analyzer {
         dataframes.insert("seg_bs_point_lst".to_string(), seg_bs_point_list);
 
         let bs_point_history_no_dup = self
-            .seg_bs_point_lst
+            .bs_point_lst
             .history
             .iter()
             .map(|bsp| {
@@ -511,6 +511,7 @@ impl Analyzer {
                     "begin_time".to_string(),
                     bsp.klu.time.format(TIME_FORMAT).to_string(),
                 );
+                map.insert("idx".to_string(), bsp.index().to_string());
                 map.insert("bsp_type".to_string(), bsp.type2str());
                 map.insert("is_buy".to_string(), bsp.is_buy.to_string());
                 map.insert(
@@ -542,6 +543,7 @@ impl Analyzer {
                     "begin_time".to_string(),
                     bsp.klu.time.format(TIME_FORMAT).to_string(),
                 );
+                map.insert("idx".to_string(), bsp.index().to_string());
                 map.insert("bsp_type".to_string(), bsp.type2str());
                 map.insert("is_buy".to_string(), bsp.is_buy.to_string());
                 map.insert(

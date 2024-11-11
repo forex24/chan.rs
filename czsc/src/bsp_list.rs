@@ -48,13 +48,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             Some(pos) => bsp.klu.index() <= pos,
             None => false,
         });
-        
+
         self.bsp_dict = self
             .lst
             .iter()
-            .map(|bsp| (bsp.bi.get_end_klu().index(), bsp.clone()))
+            .map(|bsp| (bsp.bi.get_end_klu().index(), *bsp))
             .collect();
-        
+
         self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.klu.index() <= pos,
             None => false,
@@ -104,28 +104,29 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_target_bsp: bool,                                // 是否为目标买卖点
         feature_dict: Option<HashMap<String, Option<f64>>>, // 特征字典
     ) {
-        let is_buy = bi.is_down();
-        for exist_bsp in self.lst.iter() {
-            if exist_bsp.klu.index() == bi.get_end_klu().index() {
-                assert_eq!(exist_bsp.is_buy, is_buy);
-                exist_bsp
-                    .as_mut()
-                    .add_another_bsp_prop(bs_type, relate_bsp1);
-                return;
-            }
-        }
-
-        // 使哈希表O(1)查找替代遍历
         //let is_buy = bi.is_down();
-        //let klu_index = bi.get_end_klu().index();
-        //
-        //// 使用哈希表O(1)查找替代遍历
-        //if let Some(exist_bsp) = self.bsp_dict.get_mut(&klu_index) {
-        //    assert_eq!(exist_bsp.is_buy, is_buy);
-        //    exist_bsp.as_mut().add_another_bsp_prop(bs_type, relate_bsp1);
-        //    return;
+        //for exist_bsp in self.lst.iter() {
+        //    if exist_bsp.klu.index() == bi.get_end_klu().index() {
+        //        assert_eq!(exist_bsp.is_buy, is_buy);
+        //        exist_bsp
+        //            .as_mut()
+        //            .add_another_bsp_prop(bs_type, relate_bsp1);
+        //        return;
+        //    }
         //}
 
+        // 使哈希表O(1)查找替代遍历
+        let is_buy = bi.is_down();
+        let klu_index = bi.get_end_klu().index();
+
+        // 使用哈希表O(1)查找替代遍历
+        if let Some(exist_bsp) = self.bsp_dict.get(&klu_index) {
+            assert_eq!(exist_bsp.is_buy, is_buy);
+            exist_bsp
+                .as_mut()
+                .add_another_bsp_prop(bs_type, relate_bsp1);
+            return;
+        }
 
         let is_target_bsp = if !self
             .config
@@ -153,18 +154,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
             if is_target_bsp {
                 self.lst.push(bsp_handle);
-                //self.bsp_dict.insert(bi.get_end_klu().index(), bsp.clone());
+                self.bsp_dict.insert(klu_index, bsp_handle);
             }
 
             if bs_type == BspType::T1 || bs_type == BspType::T1P {
                 self.bsp1_lst.push(bsp_handle);
             }
         }
-
-        // 更新哈希表
-        //if is_target_bsp {
-        //    self.bsp_dict.insert(klu_index, bsp_handle);
-        //}
     }
 
     // TODO: 性能热点
@@ -200,30 +196,6 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
         let is_target_bsp = bsp_conf.min_zs_cnt == 0 || zs_cnt >= bsp_conf.min_zs_cnt;
 
-        //if !seg.zs_lst.is_empty()
-        //    && !seg.zs_lst.iter().last().unwrap().is_one_bi_zs()
-        //    && ((seg.zs_lst.iter().last().unwrap().bi_out.is_some()
-        //        && seg.zs_lst.iter().last().unwrap().bi_out.unwrap().index() >= seg.end_bi.index())
-        //        || seg
-        //            .zs_lst
-        //            .iter()
-        //            .last()
-        //            .unwrap()
-        //            .bi_lst
-        //            .last()
-        //            .unwrap()
-        //            .index()
-        //            >= seg.end_bi.index())
-        //    && seg.end_bi.index()
-        //        - seg
-        //            .zs_lst
-        //            .iter()
-        //            .last()
-        //            .unwrap()
-        //            .get_bi_in()
-        //            .to_handle()
-        //            .index()
-        //        > 2
         if !seg.zs_lst.is_empty() {
             let last_zs = &seg.zs_lst.back().unwrap();
 
@@ -354,10 +326,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// 处理二类买卖点
     pub fn treat_bsp2(
         &mut self,
-        seg: &CSeg<T>,                                           // 当前线段
+        seg: &CSeg<T>,                                             // 当前线段
         bsp1_bi_idx_dict: &FxHashMap<isize, Handle<CBspPoint<T>>>, // 一类买卖点索引字典
-        seg_list: &CSegListChan<T>,                              // 线段列表
-        bi_list: &[T],                                           // 笔列表
+        seg_list: &CSegListChan<T>,                                // 线段列表
+        bi_list: &[T],                                             // 笔列表
     ) {
         if !self.seg_need_cal(seg) {
             return;
@@ -366,8 +338,8 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         let (bsp1_bi_idx, bsp2_bi, break_bi, real_bsp1, bsp_conf, is_buy) = if seg_list.len() > 1 {
             let bsp_conf = self.config.get_bs_config(seg.is_down());
             let bsp1_bi = &seg.end_bi;
-            let bsp1_bi_idx = bsp1_bi.index() as isize;
-            let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi_idx).cloned();
+            let bsp1_bi_idx = Some(bsp1_bi.index());
+            let real_bsp1 = bsp1_bi_idx_dict.get(&(bsp1_bi.index() as isize)).cloned();
             if bsp1_bi.index() + 2 >= bi_list.len() {
                 return;
             }
@@ -383,7 +355,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             )
         } else {
             let bsp_conf = self.config.get_bs_config(seg.is_up());
-            let bsp1_bi_idx = -1;
+            let bsp1_bi_idx = None;
             let real_bsp1 = None;
             if bi_list.len() == 1 {
                 return;
@@ -400,8 +372,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             )
         };
 
-        if bsp_conf.bsp2_follow_1 && !bsp1_bi_idx_dict.contains_key(&bsp1_bi_idx) {
-            //  check bsp2_follow_1
+        if bsp_conf.bsp2_follow_1
+            && bsp1_bi_idx.map_or(true, |idx| !self.bsp_dict.contains_key(&idx))
+        {
             return;
         }
 
@@ -455,11 +428,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         let break_bi_end_val = break_bi.get_end_val();
         let break_bi_amp = break_bi.amp();
         let max_bs2_rate = bsp_conf.max_bs2_rate;
-        
+
         // 2. 提前计算bsp2_bi的high/low值
         let bsp2_bi_high = bsp2_bi.high();
         let bsp2_bi_low = bsp2_bi.low();
-        
+
         let mut bias = 2;
         let mut overlap_low = None;
         let mut overlap_high = None;
@@ -482,10 +455,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             }
 
             // 6. 合并段落索引检查条件
-            if bsp2s_bi_seg_idx != bsp2_bi_seg_idx 
+            if bsp2s_bi_seg_idx != bsp2_bi_seg_idx
                 && (bsp2s_bi_seg_idx < seg_list.len() - 1
                     || bsp2s_bi_seg_idx - bsp2_bi_seg_idx >= 2
-                    || seg_list[bsp2_bi_seg_idx].is_sure) {
+                    || seg_list[bsp2_bi_seg_idx].is_sure)
+            {
                 break;
             }
 
@@ -518,7 +492,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
             // 9. 提前计算回撤率
             let retrace_rate = (bsp2s_bi.get_end_val() - break_bi_end_val).abs() / break_bi_amp;
-            
+
             if bsp2s_break_bsp1(bsp2s_bi, break_bi) || retrace_rate > max_bs2_rate {
                 break;
             }
@@ -547,7 +521,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         // 1. 提前获取一类买卖点字典
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
-        
+
         // 2. 提前判断列表长度
         let seg_list_len = seg_list.len();
         let is_multi_seg = seg_list_len > 1;
@@ -561,9 +535,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             // 4. 提前获取买卖方向和配置
             let is_buy = seg.is_down();
             let config = self.config.get_bs_config(is_buy);
-            
+
             // 5. 提前检查目标类型
-            let has_target_types = config.target_types.contains(&BspType::T3A) 
+            let has_target_types = config.target_types.contains(&BspType::T3A)
                 || config.target_types.contains(&BspType::T3B);
             if !has_target_types {
                 continue;
@@ -573,19 +547,27 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             let (next_seg, next_seg_idx, bsp1_bi, real_bsp1, bsp1_bi_idx) = if is_multi_seg {
                 // 多段情况
                 let bsp1_bi = seg.end_bi;
-                let bsp1_bi_idx = bsp1_bi.index() as isize;
-                let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi_idx).cloned();
+                let bsp1_bi_idx = Some(bsp1_bi.index());
+                let real_bsp1 = bsp1_bi_idx_dict.get(&(bsp1_bi.index() as isize)).cloned();
                 let next_seg_idx = seg.index() + 1;
                 let next_seg = seg.to_handle().next();
-                (next_seg, next_seg_idx, Some(bsp1_bi), real_bsp1, bsp1_bi_idx)
+                (
+                    next_seg,
+                    next_seg_idx,
+                    Some(bsp1_bi),
+                    real_bsp1,
+                    bsp1_bi_idx,
+                )
             } else {
                 // 单段情况
                 let next_seg = Some(seg.to_handle());
-                (next_seg, seg.index(), None, None, -1)
+                (next_seg, seg.index(), None, None, None)
             };
 
             // 7. 检查一类买卖点关联
-            if config.bsp3_follow_1 && !bsp1_bi_idx_dict.contains_key(&bsp1_bi_idx) {
+            if config.bsp3_follow_1
+                && bsp1_bi_idx.map_or(true, |idx| !self.bsp_dict.contains_key(&idx))
+            {
                 continue;
             }
 
@@ -596,7 +578,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                     next_seg,
                     is_buy,
                     bi_list,
-                    real_bsp1.clone(), // 避免多次克隆，提前克隆一次
+                    real_bsp1,
                     bsp1_bi_idx,
                     next_seg_idx,
                 );
@@ -624,7 +606,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_buy: bool,
         bi_list: &[T],
         real_bsp1: Option<Handle<CBspPoint<T>>>,
-        bsp1_bi_idx: isize,
+        bsp1_bi_idx: Option<usize>,
         next_seg_idx: usize,
     ) {
         // 1. 提前获取并检查first_zs
@@ -635,11 +617,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
         // 2. 提前获取配置
         let bsp_conf = self.config.get_bs_config(is_buy);
-        
+
         // 3. 检查strict_bsp3条件
         if bsp_conf.strict_bsp3 {
             let bi_in_index = first_zs.get_bi_in().to_handle().index();
-            if bi_in_index != (bsp1_bi_idx + 1) as usize {
+            if bi_in_index != bsp1_bi_idx.unwrap_or(0) + 1 {
                 return;
             }
         }
@@ -649,7 +631,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             Some(bi_out) => bi_out.index(),
             None => return,
         };
-        
+
         if bi_out_index + 1 >= bi_list.len() {
             return;
         }
@@ -698,7 +680,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         // 9. 计算中枢高度和特征字典
         let zs_height = (first_zs.high - first_zs.low) / first_zs.low;
         let bsp3_bi_amp = bsp3_bi.amp();
-        
+
         let feature_dict = Some(hashmap! {
             "bsp3_zs_height".to_string() => Some(zs_height),
             "bsp3_bi_amp".to_string() => Some(bsp3_bi_amp),
@@ -787,7 +769,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 fn bsp2s_break_bsp1<T: LineType>(bsp2s_bi: &T, bsp2_break_bi: &T) -> bool {
     // 提前获取方向,避免重复调用
     let is_down = bsp2s_bi.is_down();
-    
+
     match is_down {
         true => bsp2s_bi.low() < bsp2_break_bi.low(),
         false => bsp2s_bi.high() > bsp2_break_bi.high(),
@@ -800,7 +782,7 @@ fn bsp3_back2zs<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
     let is_down = bsp3_bi.is_down();
     let zs_high = zs.high;
     let zs_low = zs.low;
-    
+
     match is_down {
         true => bsp3_bi.low() < zs_high,
         false => bsp3_bi.high() > zs_low,
@@ -813,7 +795,7 @@ fn bsp3_break_zspeak<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
     let is_down = bsp3_bi.is_down();
     let peak_high = zs.peak_high;
     let peak_low = zs.peak_low;
-    
+
     match is_down {
         true => bsp3_bi.high() >= peak_high,
         false => bsp3_bi.low() <= peak_low,
@@ -827,23 +809,25 @@ fn cal_bsp3_bi_end_idx<T: LineType>(seg: Option<Handle<CSeg<T>>>) -> usize {
         Some(s) => s,
         None => return usize::MAX,
     };
-    
+
     // 提前检查条件
     if seg.get_multi_bi_zs_cnt() == 0 && seg.next().is_none() {
         return usize::MAX;
     }
-    
+
     // 获取初始end_bi_idx
     let mut end_bi_idx = seg.end_bi.index() - 1;
-    
+
     // 使用迭代器方法查找合适的中枢
-    if let Some(valid_zs) = seg.zs_lst.iter()
+    if let Some(valid_zs) = seg
+        .zs_lst
+        .iter()
         .filter(|zs| !zs.is_one_bi_zs())
-        .find(|zs| zs.bi_out.is_some()) 
+        .find(|zs| zs.bi_out.is_some())
     {
         end_bi_idx = valid_zs.bi_out.unwrap().index();
     }
-    
+
     end_bi_idx
 }
 
