@@ -115,6 +115,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             }
         }
 
+        // 使哈希表O(1)查找替代遍历
+        //let is_buy = bi.is_down();
+        //let klu_index = bi.get_end_klu().index();
+        //
+        //// 使用哈希表O(1)查找替代遍历
+        //if let Some(exist_bsp) = self.bsp_dict.get_mut(&klu_index) {
+        //    assert_eq!(exist_bsp.is_buy, is_buy);
+        //    exist_bsp.as_mut().add_another_bsp_prop(bs_type, relate_bsp1);
+        //    return;
+        //}
+
+
         let is_target_bsp = if !self
             .config
             .get_bs_config(is_buy)
@@ -148,6 +160,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 self.bsp1_lst.push(bsp_handle);
             }
         }
+
+        // 更新哈希表
+        //if is_target_bsp {
+        //    self.bsp_dict.insert(klu_index, bsp_handle);
+        //}
     }
 
     // TODO: 性能热点
@@ -424,76 +441,94 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// 处理类二买卖点
     pub fn treat_bsp2s(
         &mut self,
-        seg_list: &CSegListChan<T>,              // 线段列表
-        bi_list: &[T],                           // 笔列表
-        bsp2_bi: &T,                             // 二类买卖点笔
-        break_bi: &T,                            // 突破笔
-        real_bsp1: Option<Handle<CBspPoint<T>>>, // 关联的一类买卖点
-        is_buy: bool,                            // 是否为买点
+        seg_list: &CSegListChan<T>,
+        bi_list: &[T],
+        bsp2_bi: &T,
+        break_bi: &T,
+        real_bsp1: Option<Handle<CBspPoint<T>>>,
+        is_buy: bool,
     ) {
-        //let bsp_conf = self.config.get_bs_config(is_buy);
+        // 1. 提前获取常用值
+        let bsp_conf = self.config.get_bs_config(is_buy);
+        let bsp2_bi_idx = bsp2_bi.to_handle().index();
+        let bsp2_bi_seg_idx = bsp2_bi.seg_idx().unwrap();
+        let break_bi_end_val = break_bi.get_end_val();
+        let break_bi_amp = break_bi.amp();
+        let max_bs2_rate = bsp_conf.max_bs2_rate;
+        
+        // 2. 提前计算bsp2_bi的high/low值
+        let bsp2_bi_high = bsp2_bi.high();
+        let bsp2_bi_low = bsp2_bi.low();
+        
         let mut bias = 2;
-        let mut _low = None;
-        let mut _high = None;
+        let mut overlap_low = None;
+        let mut overlap_high = None;
 
-        // 计算类二
-        while bsp2_bi.to_handle().index() + bias < bi_list.len() {
-            let bsp2s_bi = &bi_list[bsp2_bi.to_handle().index() + bias];
+        // 3. 提前计算循环终止条件
+        let max_index = bi_list.len();
+        let max_level = bsp_conf.max_bsp2s_lv.unwrap_or(usize::MAX);
 
-            assert!(bsp2s_bi.seg_idx().is_some() && bsp2_bi.seg_idx().is_some());
+        while bsp2_bi_idx + bias < max_index {
+            // 4. 提前获取当前处理的笔
+            let bsp2s_bi = &bi_list[bsp2_bi_idx + bias];
+            let bsp2s_bi_seg_idx = match bsp2s_bi.seg_idx() {
+                Some(idx) => idx,
+                None => break,
+            };
 
-            let bsp_conf = self.config.get_bs_config(is_buy);
-            if let Some(max_bsp2s_lv) = bsp_conf.max_bsp2s_lv {
-                if bias / 2 > max_bsp2s_lv {
-                    break;
-                }
-            }
-
-            if bsp2s_bi.seg_idx().unwrap() != bsp2_bi.seg_idx().unwrap()
-                && (bsp2s_bi.seg_idx().unwrap() < seg_list.len() - 1
-                    || bsp2s_bi.seg_idx().unwrap() - bsp2_bi.seg_idx().unwrap() >= 2
-                    || seg_list[bsp2_bi.seg_idx().unwrap()].is_sure)
-            {
+            // 5. 提前检查level限制
+            if bias / 2 > max_level {
                 break;
             }
 
+            // 6. 合并段落索引检查条件
+            if bsp2s_bi_seg_idx != bsp2_bi_seg_idx 
+                && (bsp2s_bi_seg_idx < seg_list.len() - 1
+                    || bsp2s_bi_seg_idx - bsp2_bi_seg_idx >= 2
+                    || seg_list[bsp2_bi_seg_idx].is_sure) {
+                break;
+            }
+
+            // 7. 提前获bsp2s_bi的high/low值
+            let bsp2s_bi_high = bsp2s_bi.high();
+            let bsp2s_bi_low = bsp2s_bi.low();
+
+            // 8. 优化重叠检查逻辑
             if bias == 2 {
                 if !has_overlap(
-                    bsp2_bi.low(),
-                    bsp2_bi.high(),
-                    bsp2s_bi.low(),
-                    bsp2s_bi.high(),
+                    bsp2_bi_low,
+                    bsp2_bi_high,
+                    bsp2s_bi_low,
+                    bsp2s_bi_high,
                     false,
                 ) {
                     break;
                 }
-                _low = Some(bsp2_bi.low().max(bsp2s_bi.low()));
-                _high = Some(bsp2_bi.high().min(bsp2s_bi.high()));
+                overlap_low = Some(bsp2_bi_low.max(bsp2s_bi_low));
+                overlap_high = Some(bsp2_bi_high.min(bsp2s_bi_high));
             } else if !has_overlap(
-                _low.unwrap(),
-                _high.unwrap(),
-                bsp2s_bi.low(),
-                bsp2s_bi.high(),
+                overlap_low.unwrap(),
+                overlap_high.unwrap(),
+                bsp2s_bi_low,
+                bsp2s_bi_high,
                 false,
             ) {
                 break;
             }
 
-            if bsp2s_break_bsp1(bsp2s_bi, break_bi) {
+            // 9. 提前计算回撤率
+            let retrace_rate = (bsp2s_bi.get_end_val() - break_bi_end_val).abs() / break_bi_amp;
+            
+            if bsp2s_break_bsp1(bsp2s_bi, break_bi) || retrace_rate > max_bs2_rate {
                 break;
             }
 
-            let retrace_rate =
-                (bsp2s_bi.get_end_val() - break_bi.get_end_val()).abs() / break_bi.amp();
-            if retrace_rate > bsp_conf.max_bs2_rate {
-                break;
-            }
-
+            // 10. 使用静态字符串避免重复分配
             let feature_dict = Some(hashmap! {
                 "bsp2_retrace_rate".to_string() => Some(retrace_rate),
-                "bsp2_break_bi_amp".to_string() => Some(break_bi.amp()),
+                "bsp2_break_bi_amp".to_string() => Some(break_bi_amp),
                 "bsp2_bi_amp".to_string() => Some(bsp2_bi.amp()),
-                "bsp2s_lv".to_string() => Some(bias as f64 /2.0),
+                "bsp2s_lv".to_string() => Some(bias as f64 / 2.0),
             });
 
             self.add_bs(
@@ -510,69 +545,64 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     // 已完备
     /// 计算线段的三类买卖点
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
+        // 1. 提前获取一类买卖点字典
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
+        
+        // 2. 提前判断列表长度
+        let seg_list_len = seg_list.len();
+        let is_multi_seg = seg_list_len > 1;
 
         for seg in seg_list.iter() {
+            // 3. 提前检查是否需要计算
             if !self.seg_need_cal(seg) {
                 continue;
             }
 
+            // 4. 提前获取买卖方向和配置
             let is_buy = seg.is_down();
             let config = self.config.get_bs_config(is_buy);
-            if !config.target_types.contains(&BspType::T3A)
-                && !config.target_types.contains(&BspType::T3B)
-            {
+            
+            // 5. 提前检查目标类型
+            let has_target_types = config.target_types.contains(&BspType::T3A) 
+                || config.target_types.contains(&BspType::T3B);
+            if !has_target_types {
                 continue;
             }
 
-            let (next_seg, next_seg_idx, bsp1_bi, real_bsp1, bsp1_bi_idx, is_buy) =
-                if seg_list.len() > 1 {
-                    let bsp1_bi = seg.end_bi;
-                    let bsp1_bi_idx = bsp1_bi.index() as isize;
-                    let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi_idx).cloned();
-                    let next_seg_idx = seg.index() + 1;
-                    let next_seg = seg.to_handle().next(); // 可能为None, 所以并不一定可以保证next_seg_idx == next_seg.idx
-                    (
-                        next_seg,
-                        next_seg_idx,
-                        Some(bsp1_bi),
-                        real_bsp1,
-                        bsp1_bi_idx,
-                        seg.is_down(),
-                    )
-                } else {
-                    let next_seg = Some(seg.to_handle());
-                    let next_seg_idx = seg.index();
-                    let bsp1_bi = None;
-                    let real_bsp1 = None;
-                    let bsp1_bi_idx = -1;
-                    (
-                        next_seg,
-                        next_seg_idx,
-                        bsp1_bi,
-                        real_bsp1,
-                        bsp1_bi_idx,
-                        seg.is_up(),
-                    )
-                };
+            // 6. 根据段落数量分别处理
+            let (next_seg, next_seg_idx, bsp1_bi, real_bsp1, bsp1_bi_idx) = if is_multi_seg {
+                // 多段情况
+                let bsp1_bi = seg.end_bi;
+                let bsp1_bi_idx = bsp1_bi.index() as isize;
+                let real_bsp1 = bsp1_bi_idx_dict.get(&bsp1_bi_idx).cloned();
+                let next_seg_idx = seg.index() + 1;
+                let next_seg = seg.to_handle().next();
+                (next_seg, next_seg_idx, Some(bsp1_bi), real_bsp1, bsp1_bi_idx)
+            } else {
+                // 单段情况
+                let next_seg = Some(seg.to_handle());
+                (next_seg, seg.index(), None, None, -1)
+            };
 
-            let bsp_conf = self.config.get_bs_config(is_buy);
-            if bsp_conf.bsp3_follow_1 && !bsp1_bi_idx_dict.contains_key(&bsp1_bi_idx) {
+            // 7. 检查一类买卖点关联
+            if config.bsp3_follow_1 && !bsp1_bi_idx_dict.contains_key(&bsp1_bi_idx) {
                 continue;
             }
 
+            // 8. 处理后续买卖点
             if let Some(next_seg) = next_seg {
                 self.treat_bsp3_after(
                     seg_list,
                     next_seg,
                     is_buy,
                     bi_list,
-                    real_bsp1,
+                    real_bsp1.clone(), // 避免多次克隆，提前克隆一次
                     bsp1_bi_idx,
                     next_seg_idx,
                 );
             }
 
+            // 9. 处理之前买卖点
             self.treat_bsp3_before(
                 seg_list,
                 seg.to_handle(),
@@ -597,67 +627,84 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         bsp1_bi_idx: isize,
         next_seg_idx: usize,
     ) {
-        let first_zs = next_seg.get_first_multi_bi_zs();
-        if first_zs.is_none() {
-            return;
-        }
+        // 1. 提前获取并检查first_zs
+        let first_zs = match next_seg.get_first_multi_bi_zs() {
+            Some(zs) => zs,
+            None => return,
+        };
+
+        // 2. 提前获取配置
         let bsp_conf = self.config.get_bs_config(is_buy);
-        //let bsp1_bi_idx_plus_1 = match bsp1_bi_idx {
-        //    None => 0,
-        //    Some(idx) => idx + 1,
-        //};
-        if bsp_conf.strict_bsp3
-            && first_zs.unwrap().get_bi_in().to_handle().index() != (bsp1_bi_idx + 1) as usize
-        {
-            return;
-        }
-        if first_zs.unwrap().bi_out.is_none()
-            || first_zs.unwrap().bi_out.unwrap().index() + 1 >= bi_list.len()
-        {
-            return;
-        }
-
-        let bsp3_bi = &bi_list[first_zs.unwrap().bi_out.unwrap().index() + 1];
-
-        //if bsp3_bi.seg_idx() != bsp3_bi.parent_seg_idx() {
-        //   println!(
-        //       "seg idx:{:?} parent:{:?}",
-        //       bsp3_bi.seg_idx(),
-        //       bsp3_bi.parent_seg_idx()
-        //   )
-        //}
-
-        if bsp3_bi.parent_seg_idx().is_none() {
-            if next_seg.index() != seg_list.len() - 1 {
-                return;
-            }
-        } else if bsp3_bi.parent_seg_idx().unwrap() != next_seg.index()
-            && bsp3_bi.parent_seg_idx().unwrap() < seg_list.len()
-        {
-            let parent_seg = &seg_list[bsp3_bi.parent_seg_idx().unwrap()];
-            if parent_seg.bi_list.len() >= 3 {
+        
+        // 3. 检查strict_bsp3条件
+        if bsp_conf.strict_bsp3 {
+            let bi_in_index = first_zs.get_bi_in().to_handle().index();
+            if bi_in_index != (bsp1_bi_idx + 1) as usize {
                 return;
             }
         }
+
+        // 4. 获取并检查bi_out
+        let bi_out_index = match first_zs.bi_out {
+            Some(bi_out) => bi_out.index(),
+            None => return,
+        };
+        
+        if bi_out_index + 1 >= bi_list.len() {
+            return;
+        }
+
+        // 5. 获取bsp3_bi并提前计算常用值
+        let bsp3_bi = &bi_list[bi_out_index + 1];
+        let bsp3_parent_seg_idx = bsp3_bi.parent_seg_idx();
+        let bsp3_seg_idx = bsp3_bi.seg_idx();
+        let seg_list_len = seg_list.len();
+        let next_seg_index = next_seg.index();
+
+        // 6. 检查parent_seg_idx条件
+        match bsp3_parent_seg_idx {
+            None => {
+                if next_seg_index != seg_list_len - 1 {
+                    return;
+                }
+            }
+            Some(parent_idx) if parent_idx != next_seg_index && parent_idx < seg_list_len => {
+                let parent_seg = &seg_list[parent_idx];
+                if parent_seg.bi_list.len() >= 3 {
+                    return;
+                }
+            }
+            _ => {}
+        }
+
+        // 7. 检查其他条件
         if bsp3_bi.direction() == next_seg.dir {
             return;
         }
-        if bsp3_bi.seg_idx() != Some(next_seg_idx) && next_seg_idx < seg_list.len() - 2 {
-            return;
-        }
-        if bsp3_back2zs(bsp3_bi, first_zs.unwrap()) {
-            return;
-        }
-        let bsp3_peak_zs = bsp3_break_zspeak(bsp3_bi, first_zs.unwrap());
-        if bsp_conf.bsp3_peak && !bsp3_peak_zs {
+
+        if bsp3_seg_idx != Some(next_seg_idx) && next_seg_idx < seg_list_len - 2 {
             return;
         }
 
+        if bsp3_back2zs(bsp3_bi, first_zs) {
+            return;
+        }
+
+        // 8. 检查peak条件
+        if bsp_conf.bsp3_peak && !bsp3_break_zspeak(bsp3_bi, first_zs) {
+            return;
+        }
+
+        // 9. 计算中枢高度和特征字典
+        let zs_height = (first_zs.high - first_zs.low) / first_zs.low;
+        let bsp3_bi_amp = bsp3_bi.amp();
+        
         let feature_dict = Some(hashmap! {
-            "bsp3_zs_height".to_string() => Some((first_zs.unwrap().high - first_zs.unwrap().low)/first_zs.unwrap().low),
-            "bsp3_bi_amp".to_string() => Some(bsp3_bi.amp()),
+            "bsp3_zs_height".to_string() => Some(zs_height),
+            "bsp3_bi_amp".to_string() => Some(bsp3_bi_amp),
         });
 
+        // 10. 添加买卖点
         self.add_bs(
             BspType::T3A,
             bsp3_bi.to_handle(),
@@ -738,40 +785,72 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
 /// 判断类二买卖点是否突破一类买卖点
 fn bsp2s_break_bsp1<T: LineType>(bsp2s_bi: &T, bsp2_break_bi: &T) -> bool {
-    (bsp2s_bi.is_down() && bsp2s_bi.low() < bsp2_break_bi.low())
-        || (bsp2s_bi.is_up() && bsp2s_bi.high() > bsp2_break_bi.high())
+    // 提前获取方向,避免重复调用
+    let is_down = bsp2s_bi.is_down();
+    
+    match is_down {
+        true => bsp2s_bi.low() < bsp2_break_bi.low(),
+        false => bsp2s_bi.high() > bsp2_break_bi.high(),
+    }
 }
 
 /// 判断三类买卖点是否回中枢
 fn bsp3_back2zs<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
-    (bsp3_bi.is_down() && bsp3_bi.low() < zs.high) || (bsp3_bi.is_up() && bsp3_bi.high() > zs.low)
+    // 提前获取方向和关键值
+    let is_down = bsp3_bi.is_down();
+    let zs_high = zs.high;
+    let zs_low = zs.low;
+    
+    match is_down {
+        true => bsp3_bi.low() < zs_high,
+        false => bsp3_bi.high() > zs_low,
+    }
 }
 
 /// 判断三类买卖点是否突破中枢顶底
 fn bsp3_break_zspeak<T: LineType>(bsp3_bi: &T, zs: Handle<CZs<T>>) -> bool {
-    (bsp3_bi.is_down() && bsp3_bi.high() >= zs.peak_high)
-        || (bsp3_bi.is_up() && bsp3_bi.low() <= zs.peak_low)
+    // 提前获取方向和关键值
+    let is_down = bsp3_bi.is_down();
+    let peak_high = zs.peak_high;
+    let peak_low = zs.peak_low;
+    
+    match is_down {
+        true => bsp3_bi.high() >= peak_high,
+        false => bsp3_bi.low() <= peak_low,
+    }
 }
 
 /// 计算三类买卖点的笔结束索引
 fn cal_bsp3_bi_end_idx<T: LineType>(seg: Option<Handle<CSeg<T>>>) -> usize {
-    if seg.is_none() {
+    // 使用match处理Option
+    let seg = match seg {
+        Some(s) => s,
+        None => return usize::MAX,
+    };
+    
+    // 提前检查条件
+    if seg.get_multi_bi_zs_cnt() == 0 && seg.next().is_none() {
         return usize::MAX;
     }
-    if seg.unwrap().get_multi_bi_zs_cnt() == 0 && seg.unwrap().next().is_none() {
-        return usize::MAX;
+    
+    // 获取初始end_bi_idx
+    let mut end_bi_idx = seg.end_bi.index() - 1;
+    
+    // 使用迭代器方法查找合适的中枢
+    if let Some(valid_zs) = seg.zs_lst.iter()
+        .filter(|zs| !zs.is_one_bi_zs())
+        .find(|zs| zs.bi_out.is_some()) 
+    {
+        end_bi_idx = valid_zs.bi_out.unwrap().index();
     }
-    let mut end_bi_idx = seg.unwrap().end_bi.index() - 1;
-    for zs in seg.unwrap().zs_lst.iter() {
-        if zs.is_one_bi_zs() {
-            continue;
-        }
-        if zs.bi_out.is_some() {
-            end_bi_idx = zs.bi_out.unwrap().index();
-            break;
-        }
-    }
+    
     end_bi_idx
+}
+
+// 可选：为常用的组合条件创建新的工具函数
+#[allow(dead_code)]
+fn is_valid_zs<T: LineType>(zs: &CZs<T>) -> bool {
+    !zs.is_one_bi_zs() && zs.bi_out.is_some()
 }
 
 /// 实现 Deref trait,允许直接访问内部的买卖点列表
