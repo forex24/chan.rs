@@ -1,8 +1,7 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::option::Option;
-use std::rc::Rc;
+
 use std::vec::Vec;
 
 use crate::AsHandle;
@@ -17,12 +16,13 @@ use crate::LineType;
 // 买卖点
 #[derive(Debug)]
 pub struct CBspPoint<T> {
+    pub handle: Handle<Self>,
     pub bi: Handle<T>,
     pub klu: Handle<Bar>,
     pub is_buy: bool,
     pub types: Vec<BspType>,
 
-    pub relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
+    pub relate_bsp1: Option<Handle<CBspPoint<T>>>,
     pub features: CFeatures,
     pub is_segbsp: bool,
 }
@@ -31,13 +31,16 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::borrowed_box)]
     pub fn new(
+        boxed_vec: &Box<Vec<Self>>,
+        idx: usize,
         bi: Handle<T>,
         is_buy: bool,
         bs_type: BspType,
-        relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
+        relate_bsp1: Option<Handle<CBspPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
-    ) -> Rc<RefCell<Self>> {
-        let bsp = Rc::new(RefCell::new(Self {
+    ) -> Self {
+        let bsp = Self {
+            handle: Handle::new(boxed_vec, idx),
             bi,
             klu: bi.get_end_klu(),
             is_buy,
@@ -45,9 +48,9 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
             relate_bsp1,
             features: CFeatures::new(feature_dict),
             is_segbsp: false,
-        }));
+        };
 
-        bsp.borrow_mut().bi.as_mut().set_bsp(bsp.clone());
+        bsp.bi.as_mut().set_bsp(bsp.as_handle());
 
         //bsp.borrow_mut().init_common_feature();
 
@@ -63,7 +66,7 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
     pub(crate) fn add_another_bsp_prop(
         &mut self,
         bs_type: BspType,
-        relate_bsp1: Option<Rc<RefCell<CBspPoint<T>>>>,
+        relate_bsp1: Option<Handle<CBspPoint<T>>>,
     ) {
         self.add_type(bs_type);
 
@@ -71,14 +74,8 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
             self.relate_bsp1 = relate_bsp1;
         } else if let Some(ref relate_bsp1) = relate_bsp1 {
             assert_eq!(
-                self.relate_bsp1
-                    .as_ref()
-                    .unwrap()
-                    .borrow()
-                    .klu
-                    .as_handle()
-                    .index(),
-                relate_bsp1.borrow().klu.as_handle().index()
+                self.relate_bsp1.as_ref().unwrap().klu.as_handle().index(),
+                relate_bsp1.klu.as_handle().index()
             );
         }
     }
@@ -126,7 +123,9 @@ impl<T: LineType + IParent> Display for CBspPoint<T> {
             self.is_buy,
             self.is_segbsp,
             self.type2str(),
-            self.relate_bsp1.as_ref().map(|x| x.borrow().bi.index()),
+            self.relate_bsp1.as_ref().map(|x| x.bi.index()),
         )
     }
 }
+
+impl_handle!(CBspPoint<T>);

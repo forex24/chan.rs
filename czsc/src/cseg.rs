@@ -1,7 +1,5 @@
 // 已完备
-use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use crate::AsHandle;
 use crate::Bar;
@@ -34,7 +32,7 @@ pub struct CSeg<T> {
     pub seg_idx: Option<usize>,
     pub parent_seg_idx: Option<usize>,
     pub parent_seg_dir: Option<Direction>,
-    pub bsp: Option<Rc<RefCell<CBspPoint<Self>>>>,
+    pub bsp: Option<Handle<CBspPoint<Self>>>,
     pub bi_list: Vec<Handle<T>>, // 仅通过self.update_bi_list来更新
     pub reason: String,
     //pub support_trend_line: Option<CTrendLine>,
@@ -326,7 +324,7 @@ impl<T> IParent for CSeg<T> {
 }
 
 impl<T> IBspInfo for CSeg<T> {
-    fn set_bsp(&mut self, bsp: Rc<RefCell<CBspPoint<Self>>>) {
+    fn set_bsp(&mut self, bsp: Handle<CBspPoint<Self>>) {
         self.bsp = Some(bsp);
     }
 }

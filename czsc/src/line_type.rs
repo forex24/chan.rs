@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{Bar, CBspPoint, Direction, Handle, IHighLow, MacdAlgo};
 
 pub trait LineType: IHighLow {
@@ -36,7 +34,7 @@ pub trait IParent {
 }
 
 pub trait IBspInfo {
-    fn set_bsp(&mut self, bsp: Rc<RefCell<CBspPoint<Self>>>)
+    fn set_bsp(&mut self, bsp: Handle<CBspPoint<Self>>)
     where
         Self: std::marker::Sized;
 }

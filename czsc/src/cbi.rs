@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::{
     AsHandle, Bar, CBspPoint, Candle, Handle, IBspInfo, ICalcMetric, IHighLow, IParent, LineType,
@@ -21,7 +20,7 @@ pub struct CBi {
     pub seg_idx: Option<usize>,
     pub parent_seg_idx: Option<usize>, // 在哪个线段里面
     pub parent_seg_dir: Option<Direction>,
-    pub bsp: Option<Rc<RefCell<CBspPoint<CBi>>>>, // 尾部是不是买卖点
+    pub bsp: Option<Handle<CBspPoint<CBi>>>, // 尾部是不是买卖点
     //pub next: Option<Handle<CBi>>,
     //pub pre: Option<Handle<CBi>>,
     // 缓存相关字段
@@ -475,7 +474,7 @@ impl IParent for CBi {
 }
 
 impl IBspInfo for CBi {
-    fn set_bsp(&mut self, bsp: Rc<RefCell<CBspPoint<Self>>>) {
+    fn set_bsp(&mut self, bsp: Handle<CBspPoint<Self>>) {
         self.bsp = Some(bsp);
     }
 }
@@ -543,8 +542,8 @@ impl std::fmt::Display for CBi {
             self.seg_idx,
             self.parent_seg_idx,
             self.parent_seg_dir,
-            self.bsp.as_ref().map(|x| x.borrow().bi),
-            self.bsp.as_ref().map(|x| x.borrow().klu)
+            self.bsp.as_ref().map(|x| x.bi),
+            self.bsp.as_ref().map(|x| x.klu)
         )
     }
 }

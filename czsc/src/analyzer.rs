@@ -1,15 +1,13 @@
 use std::{
-    cell::RefCell,
     fs::{self, File},
     path::Path,
-    rc::Rc,
 };
 
 use indexmap::IndexMap;
 
 use crate::{
     AsHandle, Bar, CBSPointList, CBarList, CBi, CBiList, CBspPoint, CChanConfig, CSeg,
-    CSegListChan, CZs, CZsList, Candle, CandleList, ICalcMetric, IParent, Indexable, Kline,
+    CSegListChan, CZs, CZsList, Candle, CandleList, Handle, ICalcMetric, IParent, Indexable, Kline,
     LineType, SegType, ToHandle,
 };
 use std::io::Write;
@@ -33,8 +31,8 @@ pub struct Analyzer {
     // history bsp
     pub bs_point_history: Vec<IndexMap<String, String>>,
     pub seg_bs_point_history: Vec<IndexMap<String, String>>,
-    pub last_bsp: Option<Rc<RefCell<CBspPoint<CBi>>>>,
-    pub last_seg_bsp: Option<Rc<RefCell<CBspPoint<CSeg<CBi>>>>>,
+    pub last_bsp: Option<Handle<CBspPoint<CBi>>>,
+    pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
 }
 
 pub type CBiSeg = CSeg<CBi>;
@@ -59,7 +57,7 @@ impl Analyzer {
         }
     }
     // seg
-    pub fn seg_bsp_list(&self) -> &[Rc<RefCell<CBspPoint<CSeg<CBi>>>>] {
+    pub fn seg_bsp_list(&self) -> &[Handle<CBspPoint<CSeg<CBi>>>] {
         &self.seg_bs_point_lst.lst
     }
 
@@ -72,7 +70,7 @@ impl Analyzer {
     }
 
     // bi
-    pub fn bi_bsp_list(&self) -> &[Rc<RefCell<CBspPoint<CBi>>>] {
+    pub fn bi_bsp_list(&self) -> &[Handle<CBspPoint<CBi>>] {
         &self.bs_point_lst.lst
     }
 
@@ -115,7 +113,7 @@ impl Analyzer {
         }
     }
 
-    fn cal_seg_and_zs(&mut self) {
+    fn cal_bi_seg_and_zs(&mut self) {
         // bi
         cal_seg(self.bi_list.as_mut_slice(), &mut self.seg_list);
 
@@ -128,7 +126,9 @@ impl Analyzer {
             &mut self.seg_list,
             &mut self.zs_list,
         );
+    }
 
+    fn cal_seg_seg_and_zs(&mut self) {
         // seg
         cal_seg(self.seg_list.as_mut_slice(), &mut self.segseg_list);
 
@@ -141,10 +141,9 @@ impl Analyzer {
             &mut self.segseg_list,
             &mut self.segzs_list,
         );
+    }
 
-        // 计算每一笔里面的 klc列表
-        //self.update_klc_in_bi();
-
+    fn cal_bsp(&mut self) {
         // 计算买卖点
         // 线段线段买卖点
         self.seg_bs_point_lst
@@ -153,6 +152,15 @@ impl Analyzer {
         // 再算笔买卖点
         self.bs_point_lst
             .cal(self.bi_list.as_slice(), &self.seg_list);
+    }
+    fn cal_seg_and_zs(&mut self) {
+        self.cal_bi_seg_and_zs();
+
+        self.cal_seg_seg_and_zs();
+        // 计算每一笔里面的 klc列表
+        //self.update_klc_in_bi();
+
+        self.cal_bsp();
 
         self.record_last_bs_points();
         self.record_last_seg_bs_points();
@@ -161,7 +169,7 @@ impl Analyzer {
         // 同时也是不改python代码
         /*if let Some(last) = self.bs_point_lst.last() {
             if self.last_bsp.as_ref().map_or(true, |saved| {
-                last.borrow().klu.time != saved.borrow().klu.time
+                last.klu.time != saved.klu.time
             }) {
                 self.last_bsp = Some(last.clone());
                 self.record_last_bs_points();
@@ -170,7 +178,7 @@ impl Analyzer {
 
         if let Some(last) = self.seg_bs_point_lst.last() {
             if self.last_seg_bsp.as_ref().map_or(true, |saved| {
-                last.borrow().klu.time != saved.borrow().klu.time
+                last.klu.time != saved.klu.time
             }) {
                 self.last_seg_bsp = Some(last.clone());
                 self.record_last_seg_bs_points();
@@ -358,27 +366,17 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    bsp.borrow().klu.time.format(TIME_FORMAT).to_string(),
+                    bsp.klu.time.format(TIME_FORMAT).to_string(),
                 );
-                map.insert("bsp_type".to_string(), bsp.borrow().type2str());
-                map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
+                map.insert("bsp_type".to_string(), bsp.type2str());
+                map.insert("bi_idx".to_string(), bsp.bi.index().to_string());
                 map.insert(
                     "bi_begin_time".to_string(),
-                    bsp.borrow()
-                        .bi
-                        .get_begin_klu()
-                        .time
-                        .format(TIME_FORMAT)
-                        .to_string(),
+                    bsp.bi.get_begin_klu().time.format(TIME_FORMAT).to_string(),
                 );
                 map.insert(
                     "bi_end_time".to_string(),
-                    bsp.borrow()
-                        .bi
-                        .get_end_klu()
-                        .time
-                        .format(TIME_FORMAT)
-                        .to_string(),
+                    bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
                 );
                 map
             })
@@ -486,32 +484,84 @@ impl Analyzer {
                 let mut map = IndexMap::new();
                 map.insert(
                     "begin_time".to_string(),
-                    bsp.borrow().klu.time.format(TIME_FORMAT).to_string(),
+                    bsp.klu.time.format(TIME_FORMAT).to_string(),
                 );
-                map.insert("bsp_type".to_string(), bsp.borrow().type2str());
-                map.insert("bi_idx".to_string(), bsp.borrow().bi.index().to_string());
+                map.insert("bsp_type".to_string(), bsp.type2str());
+                map.insert("bi_idx".to_string(), bsp.bi.index().to_string());
                 map.insert(
                     "bi_begin_time".to_string(),
-                    bsp.borrow()
-                        .bi
-                        .get_begin_klu()
-                        .time
-                        .format(TIME_FORMAT)
-                        .to_string(),
+                    bsp.bi.get_begin_klu().time.format(TIME_FORMAT).to_string(),
                 );
                 map.insert(
                     "bi_end_time".to_string(),
-                    bsp.borrow()
-                        .bi
-                        .get_end_klu()
-                        .time
-                        .format(TIME_FORMAT)
-                        .to_string(),
+                    bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
                 );
                 map
             })
             .collect();
         dataframes.insert("seg_bs_point_lst".to_string(), seg_bs_point_list);
+
+        let bs_point_history_no_dup = self
+            .seg_bs_point_lst
+            .history
+            .iter()
+            .map(|bsp| {
+                let mut map = IndexMap::new();
+                map.insert(
+                    "begin_time".to_string(),
+                    bsp.klu.time.format(TIME_FORMAT).to_string(),
+                );
+                map.insert("bsp_type".to_string(), bsp.type2str());
+                map.insert("is_buy".to_string(), bsp.is_buy.to_string());
+                map.insert(
+                    "relate_bsp1".to_string(),
+                    bsp.relate_bsp1.as_ref().map_or("None".to_string(), |bsp| {
+                        bsp.klu.time.format(TIME_FORMAT).to_string()
+                    }),
+                );
+                map.insert("bi_idx".to_string(), bsp.bi.index().to_string());
+                map.insert(
+                    "bi_begin_time".to_string(),
+                    bsp.bi.get_begin_klu().time.format(TIME_FORMAT).to_string(),
+                );
+                map.insert(
+                    "bi_end_time".to_string(),
+                    bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
+                );
+                map
+            })
+            .collect();
+
+        let seg_bs_point_history_no_dup = self
+            .seg_bs_point_lst
+            .history
+            .iter()
+            .map(|bsp| {
+                let mut map = IndexMap::new();
+                map.insert(
+                    "begin_time".to_string(),
+                    bsp.klu.time.format(TIME_FORMAT).to_string(),
+                );
+                map.insert("bsp_type".to_string(), bsp.type2str());
+                map.insert("is_buy".to_string(), bsp.is_buy.to_string());
+                map.insert(
+                    "relate_bsp1".to_string(),
+                    bsp.relate_bsp1.as_ref().map_or("None".to_string(), |bsp| {
+                        bsp.klu.time.format(TIME_FORMAT).to_string()
+                    }),
+                );
+                map.insert("bi_idx".to_string(), bsp.bi.index().to_string());
+                map.insert(
+                    "bi_begin_time".to_string(),
+                    bsp.bi.get_begin_klu().time.format(TIME_FORMAT).to_string(),
+                );
+                map.insert(
+                    "bi_end_time".to_string(),
+                    bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
+                );
+                map
+            })
+            .collect();
 
         // Add historical bs_points
         dataframes.insert(
@@ -523,6 +573,17 @@ impl Analyzer {
         dataframes.insert(
             "seg_bs_point_history".to_string(),
             self.seg_bs_point_history.clone(),
+        );
+
+        dataframes.insert(
+            "bs_point_history_no_dup".to_string(),
+            bs_point_history_no_dup,
+        );
+
+        // Add historical seg_bs_points
+        dataframes.insert(
+            "seg_bs_point_history_no_dup".to_string(),
+            seg_bs_point_history_no_dup,
         );
 
         dataframes
@@ -558,7 +619,7 @@ impl Analyzer {
 
     fn record_last_bs_points(&mut self) {
         if let Some(latest_bsp) = self.bs_point_lst.last() {
-            let latest_bsp = latest_bsp.borrow();
+            //let latest_bsp = latest_bsp;
             self.bs_point_history.push(IndexMap::from([
                 (
                     "begin_time".to_string(),
@@ -572,7 +633,7 @@ impl Analyzer {
                         .relate_bsp1
                         .as_ref()
                         .map_or("None".to_string(), |bsp| {
-                            bsp.borrow().klu.time.format(TIME_FORMAT).to_string()
+                            bsp.klu.time.format(TIME_FORMAT).to_string()
                         }),
                 ),
                 ("bi_idx".to_string(), latest_bsp.bi.index().to_string()),
@@ -600,7 +661,7 @@ impl Analyzer {
 
     fn record_last_seg_bs_points(&mut self) {
         if let Some(latest_seg_bsp) = self.seg_bs_point_lst.last() {
-            let latest_seg_bsp = latest_seg_bsp.borrow();
+            //let latest_seg_bsp = latest_seg_bsp;
             self.seg_bs_point_history.push(IndexMap::from([
                 (
                     "begin_time".to_string(),
@@ -614,7 +675,7 @@ impl Analyzer {
                         .relate_bsp1
                         .as_ref()
                         .map_or("None".to_string(), |bsp| {
-                            bsp.borrow().klu.time.format(TIME_FORMAT).to_string()
+                            bsp.klu.time.format(TIME_FORMAT).to_string()
                         }),
                 ),
                 ("seg_idx".to_string(), latest_seg_bsp.bi.index().to_string()),
