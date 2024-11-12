@@ -734,31 +734,33 @@ impl Analyzer {
     }
 }
 
+#[allow(dead_code)]
 fn update_bi_seg_idx<T: LineType + IParent>(bi_list: &mut [T], seg_list: &mut CSegListChan<T>) {
-    if !seg_list.is_empty() {
-        //计算每一笔属于哪个线段
-        for seg in seg_list.iter() {
-            for bi in bi_list[seg.start_bi.index()..=seg.end_bi.index()].iter_mut() {
-                bi.set_seg_idx(seg.index());
-            }
-        }
-
-        // 最后一个线段最后一笔之后的笔都算是最后一个线段的
-        for bi in bi_list
-            .iter_mut()
-            .skip(seg_list.last().unwrap().end_bi.index() + 1)
-        {
-            bi.set_seg_idx(seg_list.len());
-        }
-
-        //第一个线段起始笔之前的笔都算是第一个线段的
-        for bi in bi_list[0..seg_list.lst[0].start_bi.index()].iter_mut() {
-            bi.set_seg_idx(0);
-        }
-    } else {
+    if seg_list.is_empty() {
         for bi in bi_list.iter_mut() {
             bi.set_seg_idx(0);
         }
+        return;
+    }
+
+    //计算每一笔属于哪个线段
+    for seg in seg_list.iter() {
+        for bi in bi_list[seg.start_bi.index()..=seg.end_bi.index()].iter_mut() {
+            bi.set_seg_idx(seg.index());
+        }
+    }
+
+    // 最后一个线段最后一笔之后的笔都算是最后一个线段的
+    for bi in bi_list
+        .iter_mut()
+        .skip(seg_list.last().unwrap().end_bi.index() + 1)
+    {
+        bi.set_seg_idx(seg_list.len());
+    }
+
+    //第一个线段起始笔之前的笔都算是第一个线段的
+    for bi in bi_list[0..seg_list.lst[0].start_bi.index()].iter_mut() {
+        bi.set_seg_idx(0);
     }
 }
 
@@ -768,22 +770,23 @@ fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
 ) {
     seg_list.update(bi_list);
 
-    update_bi_seg_idx2(bi_list, seg_list);
+    update_bi_seg_idx(bi_list, seg_list);
 }
 
+#[allow(dead_code)]
 fn update_bi_seg_idx2<T: LineType + IParent + ToHandle>(
     bi_list: &mut [T],
     seg_list: &mut CSegListChan<T>,
 ) {
-    let mut sure_seg_cnt = 0;
-
-    // Handle empty segment list case
+    // 处理空线段列表的情况
     if seg_list.is_empty() {
         for bi in bi_list.iter_mut() {
             bi.set_seg_idx(0);
         }
         return;
     }
+
+    let mut sure_seg_cnt = 0;
 
     // Find beginning segment
     let mut begin_seg = &seg_list[seg_list.len() - 1];

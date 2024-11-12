@@ -51,7 +51,9 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             // 防止笔新高或新低的更新带来bug
             self.free_item_lst.pop();
         }
+
         self.free_item_lst.push(item);
+
         let res = self.try_construct_zs(is_sure, zs_algo);
         if let Some(res) = res {
             if res.begin_bi.index() > 0 {
@@ -91,8 +93,9 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             if bi.direction() == seg_dir {
                 continue;
             }
+
             if deal_bi_cnt < 1 {
-                // 防止try_add_to_end执行到上一个线段���中枢里面去
+                // 防止try_add_to_end执行到上一个线段中枢里面去
                 self.add_to_free_lst(bi.to_handle(), seg_is_sure, CPivotAlgo::Normal);
                 deal_bi_cnt += 1;
             } else {
@@ -101,46 +104,49 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         }
     }
 
-    // 已完备
     fn try_construct_zs(&mut self, is_sure: bool, zs_algo: CPivotAlgo) -> Option<CZs<T>> {
-        //let mut lst = &mut ;
-        if zs_algo == CPivotAlgo::Normal {
-            if !self.config.one_bi_zs {
-                if self.free_item_lst.len() == 1 {
+        let lst = &self.free_item_lst;
+
+        let lst = match zs_algo {
+            CPivotAlgo::Normal => {
+                if !self.config.one_bi_zs {
+                    if lst.len() == 1 {
+                        return None;
+                    }
+                    &lst[lst.len() - 2..]
+                } else {
+                    lst
+                }
+            }
+            CPivotAlgo::OverSeg => {
+                if lst.len() < 3 {
                     return None;
                 }
-                self.free_item_lst = self.free_item_lst[self.free_item_lst.len() - 2..].to_vec();
+                let lst = &lst[lst.len() - 3..];
+                if lst[0].direction() == lst[0].parent_seg_dir().unwrap() {
+                    //self.free_item_lst = lst[1..].to_vec();
+                    return None;
+                } else {
+                    lst
+                }
             }
-        } else if zs_algo == CPivotAlgo::OverSeg {
-            if self.free_item_lst.len() < 3 {
-                return None;
-            }
-            let lst = self.free_item_lst[self.free_item_lst.len() - 3..].to_vec();
-            if lst[0].direction() == lst[0].parent_seg_dir().unwrap() {
-                //let lst = &lst[1..];
-                self.free_item_lst = lst[1..].to_vec();
-                return None;
-            }
-        }
-        let min_high = self
-            .free_item_lst
+            _ => lst,
+        };
+
+        let min_high = lst
             .iter()
             .map(|item| item.high())
-            .reduce(f64::min)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
-        let max_low: f64 = self
-            .free_item_lst
+
+        let max_low = lst
             .iter()
             .map(|item| item.low())
-            .reduce(f64::max)
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
+
         if min_high > max_low {
-            Some(CZs::new(
-                &self.zs_lst,
-                self.zs_lst.len(),
-                &self.free_item_lst,
-                is_sure,
-            ))
+            Some(CZs::new(&self.zs_lst, self.zs_lst.len(), lst, is_sure))
         } else {
             None
         }
@@ -148,12 +154,19 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
     // 已完备
     pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>) {
-        let last_sure_pos = self.last_sure_pos;
-
-        self.zs_lst.retain(|zs| match last_sure_pos {
-            Some(pos) => zs.begin_bi.index() < pos,
-            None => true,
-        });
+        while let Some(last) = self.zs_lst.last() {
+            // 检查 last_sure_pos 是否有值
+            if let Some(last_sure_pos) = self.last_sure_pos {
+                // 比较 last.begin_bi.idx 和 last_sure_pos
+                if last.begin_bi.index() >= last_sure_pos {
+                    self.zs_lst.pop();
+                } else {
+                    break; // 如果条件不满足，退出循环
+                }
+            } else {
+                self.zs_lst.clear(); // 如果 last_sure_pos 没有值，退出循环
+            }
+        }
 
         match self.config.zs_algo {
             CPivotAlgo::Normal => {

@@ -156,7 +156,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         //    .retain(|zs| (zs.begin_bi.index() as isize) < last_sure_pos);
 
         while let Some(last) = self.zs_lst.last() {
-            if (last.begin_bi.index() as isize) < self.last_sure_pos {
+            if (last.begin_bi.index() as isize) >= self.last_sure_pos {
                 self.zs_lst.pop();
             } else {
                 break;
@@ -275,7 +275,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             {
                 // 合并后删除最后一个
                 let last = self.zs_lst.pop().unwrap();
-                self.zs_lst.last_mut().unwrap().do_combine(&last);
+                self.zs_lst.last_mut().unwrap().do_combine(last);
             }
         }
         //if !self.config.need_combine {

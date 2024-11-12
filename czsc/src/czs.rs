@@ -1,7 +1,4 @@
-use std::{
-    f64::{INFINITY, NEG_INFINITY},
-    fmt::Display,
-};
+use std::fmt::Display;
 
 use crate::{
     has_overlap, AsHandle, Bar, CPivotCombineMode, CPointConfig, CSeg, Handle, ICalcMetric,
@@ -67,13 +64,14 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         self.low = lst
             .iter()
             .map(|bi| bi.low())
-            .reduce(f64::max)
-            .unwrap_or(NEG_INFINITY);
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
         self.high = lst
             .iter()
             .map(|bi| bi.high())
-            .reduce(f64::min)
-            .unwrap_or(INFINITY);
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
     }
 
     // 已完备
@@ -227,7 +225,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         //返回 (是否最低点，bi_out与中枢里面尾部最接近它的差距比例)
         assert!(!self.bi_lst.is_empty());
         if let Some(bi_out) = self.bi_out {
-            let mut peak_rate = INFINITY;
+            let mut peak_rate = f64::INFINITY;
             for bi in &self.bi_lst {
                 if bi.index() > end_bi_idx {
                     break;
