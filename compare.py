@@ -175,9 +175,14 @@ def main():
     parser = argparse.ArgumentParser(description='比较两个目录下的CSV文件')
     parser.add_argument('--dir1', default='output', help='第一个目录路径 (默认: output)')
     parser.add_argument('--dir2', default='python_result', help='第二个目录路径 (默认: python_result)')
+    parser.add_argument('--symbol', help='要比较的品种')
     
     args = parser.parse_args()
-    compare_files(args.dir1, args.dir2)
+
+    if args.symbol is not None:
+        compare_files(f'{args.symbol}_output', f'/opt/data/dump_data/{args.symbol}')
+    else:
+        compare_files(args.dir1, args.dir2)
 
 if __name__ == "__main__":
     main()

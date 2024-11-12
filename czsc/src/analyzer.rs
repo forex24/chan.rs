@@ -531,6 +531,7 @@ impl Analyzer {
             .collect();
         dataframes.insert("seg_bs_point_lst".to_string(), seg_bs_point_list);
 
+        /*
         let bs_point_history_no_dup = self
             .bs_point_lst
             .history
@@ -594,7 +595,7 @@ impl Analyzer {
                 map
             })
             .collect();
-
+        */
         // Add historical bs_points
         dataframes.insert(
             "bs_point_history".to_string(),
@@ -607,16 +608,16 @@ impl Analyzer {
             self.seg_bs_point_history.clone(),
         );
 
-        dataframes.insert(
-            "bs_point_history_no_dup".to_string(),
-            bs_point_history_no_dup,
-        );
-
-        // Add historical seg_bs_points
-        dataframes.insert(
-            "seg_bs_point_history_no_dup".to_string(),
-            seg_bs_point_history_no_dup,
-        );
+        //dataframes.insert(
+        //    "bs_point_history_no_dup".to_string(),
+        //    bs_point_history_no_dup,
+        //);
+        //
+        //// Add historical seg_bs_points
+        //dataframes.insert(
+        //    "seg_bs_point_history_no_dup".to_string(),
+        //    seg_bs_point_history_no_dup,
+        //);
 
         dataframes
     }
