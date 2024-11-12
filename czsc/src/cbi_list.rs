@@ -1,4 +1,5 @@
 use crate::AsHandle;
+use crate::BiAlgo;
 use crate::CBi;
 use crate::CBiConfig;
 use crate::Candle;
@@ -298,7 +299,7 @@ impl CBiList {
         start_fx: Handle<Candle>,
         for_virtual: bool,
     ) -> bool {
-        let satisify_span = if self.config.bi_algo == "fx" {
+        let satisify_span = if self.config.bi_algo == BiAlgo::Fx {
             true
         } else {
             self.satisfy_bi_span(end_fx, start_fx)

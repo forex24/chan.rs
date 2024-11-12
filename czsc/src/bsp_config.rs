@@ -1,6 +1,7 @@
 use crate::{BspType, MacdAlgo};
+use serde::{Deserialize, Serialize};
 
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CBSPointConfig {
     pub b_conf: CPointConfig,
     pub s_conf: CPointConfig,
@@ -14,9 +15,17 @@ impl CBSPointConfig {
             &self.s_conf
         }
     }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CPointConfig {
     pub divergence_rate: f64,        // 1类买卖点背驰比例
     pub min_zs_cnt: usize,           // 1类买卖点至少要经历几个中枢，默认为 1
@@ -37,21 +46,21 @@ impl Default for CPointConfig {
     fn default() -> Self {
         Self {
             divergence_rate: f64::INFINITY,
-            min_zs_cnt: 0,
+            min_zs_cnt: 1,
             bsp1_only_multibi_zs: true,
             max_bs2_rate: 0.9999,
-            macd_algo: MacdAlgo::Slope,
-            bs1_peak: false,
+            macd_algo: MacdAlgo::Peak,
+            bs1_peak: true,
             target_types: vec![
                 BspType::T1,
-                BspType::T2,
-                BspType::T3A,
                 BspType::T1P,
+                BspType::T2,
                 BspType::T2S,
+                BspType::T3A,
                 BspType::T3B,
             ],
-            bsp2_follow_1: false,
-            bsp3_follow_1: false,
+            bsp2_follow_1: true,
+            bsp3_follow_1: true,
             bsp3_peak: false,
             bsp2s_follow_2: false,
             max_bsp2s_lv: None, // 代表无限制
@@ -61,62 +70,11 @@ impl Default for CPointConfig {
 }
 
 impl CPointConfig {
-    /*pub fn new(args: HashMap<&str, String>) -> Self {
-        let divergence_rate = args.get("divergence_rate").unwrap().parse().unwrap();
-        let min_zs_cnt = args.get("min_zs_cnt").unwrap().parse().unwrap();
-        let bsp1_only_multibi_zs = args.get("bsp1_only_multibi_zs").unwrap().parse().unwrap();
-        let max_bs2_rate = args.get("max_bs2_rate").unwrap().parse().unwrap();
-        let macd_algo = args.get("macd_algo").unwrap();
-        let bs1_peak = args.get("bs1_peak").unwrap().parse().unwrap();
-        let bs_type = args.get("bs_type").unwrap();
-        let bsp2_follow_1 = args.get("bsp2_follow_1").unwrap().parse().unwrap();
-        let bsp3_follow_1 = args.get("bsp3_follow_1").unwrap().parse().unwrap();
-        let bsp3_peak = args.get("bsp3_peak").unwrap().parse().unwrap();
-        let bsp2s_follow_2 = args.get("bsp2s_follow_2").unwrap().parse().unwrap();
-        let max_bsp2s_lv = args.get("max_bsp2s_lv").map(|v| _parse_inf(v).unwrap());
-        let strict_bsp3 = args.get("strict_bsp3").unwrap().parse().unwrap();
-
-        assert!(max_bs2_rate <= 1.0);
-
-        let mut config = Self {
-            divergence_rate,
-            min_zs_cnt,
-            bsp1_only_multibi_zs,
-            max_bs2_rate,
-            macd_algo: MacdAlgo::from_str(macd_algo).unwrap(),
-            bs1_peak,
-            target_types: vec![],
-            bsp2_follow_1,
-            bsp3_follow_1,
-            bsp3_peak,
-            bsp2s_follow_2,
-            max_bsp2s_lv,
-            strict_bsp3,
-        };
-
-        config.parse_target_type(bs_type);
-        config
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
     }
 
-    pub fn parse_target_type(&mut self, tmp_target_types: &str) {
-        let d: HashMap<&str, BspType> = BspType::iter().map(|x| (x.as_ref(), x)).collect();
-        let tmp_target_types: Vec<&str> = tmp_target_types.split(',').map(str::trim).collect();
-
-        for target_t in &tmp_target_types {
-            assert!(["1", "2", "3a", "2s", "1p", "3b"].contains(target_t));
-        }
-
-        self.target_types = tmp_target_types.iter().map(|&t| d[t]).collect();
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
     }
-
-    pub fn set(&mut self, k: &str, v: String) {
-        let v = _parse_inf(&v).unwrap();
-        match k {
-            "macd_algo" => self.macd_algo = MacdAlgo::from_str(&v).unwrap(),
-            _ => {
-                // Use reflection or a match statement to set the appropriate field
-                // Rust does not support reflection, so you would need to manually match each field
-            }
-        }
-    }*/
 }

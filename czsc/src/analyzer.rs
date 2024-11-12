@@ -767,6 +767,7 @@ fn update_zs_in_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
             sure_seg_cnt += 1;
         }
         seg.clear_zs_lst();
+
         for zs in zs_list.iter_mut().rev() {
             assert!(zs.end.is_some());
             if zs.end.unwrap().index() < seg.start_bi.get_begin_klu().as_handle().index() {

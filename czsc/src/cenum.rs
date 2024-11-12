@@ -1,13 +1,15 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum DataSrc {
     BaoStock,
     Ccxt,
     Csv,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum KlType {
     K1M,
     KDay,
@@ -22,7 +24,7 @@ pub enum KlType {
     KQuarter,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum KlineDir {
     Up,
     Down,
@@ -41,7 +43,7 @@ impl Display for KlineDir {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum FxType {
     Bottom,
     Top,
@@ -58,7 +60,7 @@ impl Display for FxType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
     Up,
     Down,
@@ -81,7 +83,7 @@ impl Direction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum BiType {
     Unknown,
     Strict,
@@ -108,7 +110,7 @@ impl ToString for BiType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum BspType {
     T1,  // 一类买卖点
     T1P, //盘整背驰1类买卖点
@@ -131,33 +133,48 @@ impl ToString for BspType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum Autype {
     Qfq,
     Hfq,
     None,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum TrendType {
     Mean,
     Max,
     Min,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum TrendLineSide {
     Inside,
     Outside,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum LeftSegMethod {
     All,  // 收集至最后一个方向正确的笔，成为一段
     Peak, // 如果有个靠谱的新的极值，那么分成两段（默认）
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
+pub enum BiAlgo {
+    Normal,
+    Fx,
+}
+
+impl Display for BiAlgo {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            BiAlgo::Normal => f.write_str("normal"),
+            BiAlgo::Fx => f.write_str("fx"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum FxCheckMethod {
     Strict,  // 底分型的最低点必须比顶分型3元素最低点的最小值还低，顶分型反之
     Loss,    // 底分型的最低点比顶分型中间元素低点还低，顶分型反之
@@ -165,13 +182,13 @@ pub enum FxCheckMethod {
     Totally, // 底分型3元素的最高点必须必顶分型三元素的最低点还低
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum SegType {
     Bi,
     Seg,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum MacdAlgo {
     Area,
     Peak,
@@ -187,14 +204,14 @@ pub enum MacdAlgo {
     Rsi,*/
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum CPivotAlgo {
     Normal,
     OverSeg,
     Auto,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum CPivotCombineMode {
     Zs,   // 两中枢区间有重叠才合并（默认）
     Peak, //两中枢有K线重叠就合并
@@ -220,7 +237,7 @@ pub const TRADE_INFO_LST: [&str; 3] = [
 ];
 */
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq)]
 pub enum EqualMode {
     TopEqual,
     BottomEqual,

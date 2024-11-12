@@ -1,6 +1,7 @@
 use crate::{CPivotAlgo, CPivotCombineMode};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CZsConfig {
     pub need_combine: bool,
     pub zs_combine_mode: CPivotCombineMode,
@@ -16,5 +17,15 @@ impl Default for CZsConfig {
             one_bi_zs: false,
             zs_algo: CPivotAlgo::Normal,
         }
+    }
+}
+
+impl CZsConfig {
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
     }
 }
