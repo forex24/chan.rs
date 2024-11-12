@@ -16,6 +16,7 @@ pub const TIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
 pub struct Analyzer {
     pub kl_type: i32,
+    pub conf: CChanConfig,
 
     pub bar_list: CBarList,
     pub candle_list: CandleList,
@@ -41,6 +42,7 @@ impl Analyzer {
     pub fn new(kl_type: i32, conf: CChanConfig) -> Self {
         Self {
             kl_type,
+            conf: conf.clone(),
             bar_list: CBarList::new(),
             candle_list: CandleList::new(),
             bi_list: CBiList::new(conf.bi_conf),
@@ -55,6 +57,10 @@ impl Analyzer {
             last_bsp: None,
             last_seg_bsp: None,
         }
+    }
+
+    pub fn config(&self) -> &CChanConfig {
+        &self.conf
     }
     // seg
     pub fn seg_bsp_list(&self) -> &[Handle<CBspPoint<CSeg<CBi>>>] {
@@ -254,6 +260,12 @@ impl Analyzer {
                     "parent_seg".to_string(),
                     bi.parent_seg_idx().unwrap_or(0).to_string(),
                 );
+                /*FIXME:
+                                map.insert(
+                    "parent_seg".to_string(),
+                    bi.parent_seg_idx()
+                        .map_or("".to_string(), |idx| idx.to_string()),
+                ); */
                 map.insert("begin_klc".to_string(), bi.begin_klc.index().to_string());
                 map.insert("end_klc".to_string(), bi.end_klc.index().to_string());
                 map.insert("begin_val".to_string(), bi._get_begin_val().to_string());
@@ -353,6 +365,7 @@ impl Analyzer {
                         .as_ref()
                         .map_or("".to_string(), |bi| bi.index().to_string()),
                 );
+                map.insert("sub_zs_count".to_string(), zs.sub_zs_lst.len().to_string());
                 map
             })
             .collect();
@@ -477,6 +490,7 @@ impl Analyzer {
                         .as_ref()
                         .map_or("".to_string(), |bi| bi.index().to_string()),
                 );
+                map.insert("sub_zs_count".to_string(), zs.sub_zs_lst.len().to_string());
                 map
             })
             .collect();

@@ -1,5 +1,6 @@
 use crate::{BspType, MacdAlgo};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CBSPointConfig {
@@ -25,9 +26,11 @@ impl CBSPointConfig {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CPointConfig {
-    pub divergence_rate: f64,        // 1类买卖点背驰比例
+    #[serde_as(as = "DisplayFromStr")]
+    pub divergence_rate: f64, // 1类买卖点背驰比例
     pub min_zs_cnt: usize,           // 1类买卖点至少要经历几个中枢，默认为 1
     pub bsp1_only_multibi_zs: bool, // min_zs_cnt 计算的中枢至少 3 笔（少于 3 笔是因为开启了 one_bi_zs 参数），默认为 True
     pub max_bs2_rate: f64,          // 2类买卖点那一笔回撤最大比例，默认为 0.618

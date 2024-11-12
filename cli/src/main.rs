@@ -1,17 +1,26 @@
 use crate::csv_util::read_kline_from_csv;
 use clap::Parser;
-use czsc::Analyzer;
+use czsc::{Analyzer, CChanConfig};
 use std::path::PathBuf;
 use std::time::Instant;
 mod csv_util;
 
 use czsc::Kline;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::fs;
 
 fn parse(opt: &Opt) {
     let fname = PathBuf::from(&opt.csv);
     let klines = read_kline_from_csv(&fname);
     println!("csv loaded");
+
+    let mut analyzer = if let Some(config_path) = &opt.config {
+        let config_str = fs::read_to_string(config_path).expect("Failed to read config file");
+        let config = CChanConfig::from_json(&config_str).expect("Failed to parse config JSON");
+        Analyzer::new(0, config)
+    } else {
+        Analyzer::new(0, CChanConfig::default())
+    };
 
     let output_dir = PathBuf::from(&opt.csv)
         .file_stem()
@@ -19,18 +28,18 @@ fn parse(opt: &Opt) {
         .map(|s| format!("{}_output", s))
         .unwrap_or_else(|| "output".to_string());
 
-    czsc_parse(&klines, &output_dir)
+    czsc_parse(&mut analyzer, &klines, &output_dir)
 }
 
-fn czsc_parse(klines: &[Kline], output_dir: &str) {
-    let mut ca = Analyzer::default();
+fn czsc_parse(ca: &mut Analyzer, klines: &[Kline], output_dir: &str) {
     println!("start parse");
     let pb = ProgressBar::new(klines.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
-            .unwrap()
-            .progress_chars("##-"),
+            .template(
+                "[{elapsed_precise}] {percent_precise}% {wide_bar:.cyan/gray} {human_pos}/{human_len} {msg}",
+            )
+            .unwrap(), //.progress_chars("##-"),
     );
     let start_time = Instant::now();
     klines.iter().for_each(|k| {
@@ -39,6 +48,7 @@ fn czsc_parse(klines: &[Kline], output_dir: &str) {
     });
     let duration = start_time.elapsed();
     pb.finish_with_message("done");
+
     let _ = ca.to_csv(output_dir);
     println!(
         "parse time:{}s start:{} end:{}\nbar:{} candle:{} bi:{} seg:{} zs:{} bsp:{} seg_seg:{} seg_zs:{} seg_bsp:{}",
@@ -55,6 +65,11 @@ fn czsc_parse(klines: &[Kline], output_dir: &str) {
         ca.seg_zs_list().len(),
         ca.seg_bsp_list().len(),
     );
+
+    // 保存配置文件
+    let config_json = ca.config().to_json().expect("Failed to serialize config");
+    let config_path = format!("{}/config.json", output_dir);
+    fs::write(&config_path, config_json).expect("Failed to write config file");
 }
 
 #[cfg(not(target_env = "msvc"))]
@@ -70,6 +85,9 @@ static GLOBAL: Jemalloc = Jemalloc;
 struct Opt {
     #[arg(index = 1)]
     csv: String,
+
+    #[arg(short, long, help = "Path to JSON config file")]
+    config: Option<String>,
 }
 
 fn main() {

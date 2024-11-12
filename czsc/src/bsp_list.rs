@@ -24,7 +24,7 @@ use rustc_hash::FxHashMap;
 pub struct CBSPointList<T> {
     pub history: Box<Vec<CBspPoint<T>>>, // 历史买卖点记录
     pub lst: Vec<Handle<CBspPoint<T>>>,  // 当前有效的买卖点列表
-    bsp_dict: FxHashMap<usize, Handle<CBspPoint<T>>>,
+    //bsp_dict: FxHashMap<usize, Handle<CBspPoint<T>>>,
     bsp1_lst: Vec<Handle<CBspPoint<T>>>, // 一类买卖点列表
     pub config: CBSPointConfig,          // 买卖点配置
     pub last_sure_pos: Option<usize>,    // 最后确定位置的索引
@@ -36,7 +36,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         CBSPointList {
             history: Box::new(Vec::with_capacity(10240)),
             lst: Vec::with_capacity(1024),
-            bsp_dict: FxHashMap::default(),
+            //bsp_dict: FxHashMap::default(),
             bsp1_lst: Vec::with_capacity(1024),
             config: bs_point_config,
             last_sure_pos: None,
@@ -49,11 +49,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             None => false,
         });
 
-        self.bsp_dict = self
-            .lst
-            .iter()
-            .map(|bsp| (bsp.bi.get_end_klu().index(), *bsp))
-            .collect();
+        //self.bsp_dict = self
+        //    .lst
+        //    .iter()
+        //    .map(|bsp| (bsp.bi.get_end_klu().index(), *bsp))
+        //    .collect();
 
         self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.klu.index() <= pos,
@@ -104,29 +104,29 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_target_bsp: bool,                                // 是否为目标买卖点
         feature_dict: Option<HashMap<String, Option<f64>>>, // 特征字典
     ) {
-        //let is_buy = bi.is_down();
-        //for exist_bsp in self.lst.iter() {
-        //    if exist_bsp.klu.index() == bi.get_end_klu().index() {
-        //        assert_eq!(exist_bsp.is_buy, is_buy);
-        //        exist_bsp
-        //            .as_mut()
-        //            .add_another_bsp_prop(bs_type, relate_bsp1);
-        //        return;
-        //    }
-        //}
-
-        // 使哈希表O(1)查找替代遍历
         let is_buy = bi.is_down();
-        let klu_index = bi.get_end_klu().index();
-
-        // 使用哈希表O(1)查找替代遍历
-        if let Some(exist_bsp) = self.bsp_dict.get(&klu_index) {
-            assert_eq!(exist_bsp.is_buy, is_buy);
-            exist_bsp
-                .as_mut()
-                .add_another_bsp_prop(bs_type, relate_bsp1);
-            return;
+        for exist_bsp in self.lst.iter() {
+            if exist_bsp.klu.index() == bi.get_end_klu().index() {
+                assert_eq!(exist_bsp.is_buy, is_buy);
+                exist_bsp
+                    .as_mut()
+                    .add_another_bsp_prop(bs_type, relate_bsp1);
+                return;
+            }
         }
+
+        //// 使哈希表O(1)查找替代遍历
+        //let is_buy = bi.is_down();
+        //let klu_index = bi.get_end_klu().index();
+        //
+        //// 使用哈希表O(1)查找替代遍历
+        //if let Some(exist_bsp) = self.bsp_dict.get(&klu_index) {
+        //    assert_eq!(exist_bsp.is_buy, is_buy);
+        //    exist_bsp
+        //        .as_mut()
+        //        .add_another_bsp_prop(bs_type, relate_bsp1);
+        //    return;
+        //}
 
         let is_target_bsp = if !self
             .config
@@ -154,7 +154,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
             if is_target_bsp {
                 self.lst.push(bsp_handle);
-                self.bsp_dict.insert(klu_index, bsp_handle);
+                //self.bsp_dict.insert(klu_index, bsp_handle);
             }
 
             if bs_type == BspType::T1 || bs_type == BspType::T1P {
@@ -372,8 +372,8 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             )
         };
 
-        if bsp_conf.bsp2_follow_1
-            && bsp1_bi_idx.map_or(true, |idx| !self.bsp_dict.contains_key(&idx))
+        if bsp_conf.bsp2_follow_1 //&& !bsp1_bi_idx_dict.contains_key(&bsp1_bi_idx)
+        && bsp1_bi_idx.map_or(true, |idx| !bsp1_bi_idx_dict.contains_key(&(idx as isize)))
         {
             return;
         }
@@ -566,7 +566,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
             // 7. 检查一类买卖点关联
             if config.bsp3_follow_1
-                && bsp1_bi_idx.map_or(true, |idx| !self.bsp_dict.contains_key(&idx))
+                && bsp1_bi_idx.map_or(true, |idx| !bsp1_bi_idx_dict.contains_key(&(idx as isize)))
             {
                 continue;
             }

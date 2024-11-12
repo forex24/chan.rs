@@ -6,7 +6,7 @@ from datetime import datetime
 
 # 定义要比较的列
 COMPARE_COLS = {
-    'kline_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'fx'],
+    'kline_list.csv': ['begin_time', 'end_time', 'idx','dir', 'high', 'low', 'fx'],
     'bi_list.csv': ['begin_time', 'idx', 'dir', 'high', 'low', 'is_sure','seg_idx', 'parent_seg', 'begin_klc', 'end_klc', 'begin_val', 'end_val', 'klu_cnt', 'klc_cnt'],
     'seg_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'is_sure','start_bi_idx','end_bi_idx', 'zs_count', 'bi_count','reason'],
     'zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_bi_idx', 'bi_in', 'bi_out'],
@@ -64,6 +64,12 @@ def normalize_bsp_type(val):
     if isinstance(val, str):
         # 将逗号分隔改为下划线分隔
         return val.replace(',', '_')
+    return val
+
+def normalize_parent_seg_value(val):
+    """标准化parent_seg值，使得整数和浮点数可以比较"""
+    if isinstance(val, float) and val.is_integer():
+        return int(val)
     return val
 
 def compare_files(dir1: str, dir2: str):
@@ -125,14 +131,23 @@ def compare_files(dir1: str, dir2: str):
                 for col in compare_cols:
                     val1 = row1[col]
                     val2 = row2[col]
-                    # 对is_sure字段进行特殊处理
-                    if col == 'is_sure' and isinstance(val1, str) and isinstance(val2, str):
-                        val1 = val1.lower()
-                        val2 = val2.lower()
-                    # 对bsp_type字段进行特殊处理
-                    elif col == 'bsp_type' and isinstance(val1, str) and isinstance(val2, str):
-                        val1 = normalize_bsp_type(val1)
-                        val2 = normalize_bsp_type(val2)
+                    
+                    # 对不同类型的列进行特殊处理
+                    if col == 'parent_seg':  # 仅对parent_seg列进行特殊处理
+                        val1 = normalize_parent_seg_value(val1)
+                        val2 = normalize_parent_seg_value(val2)
+                    elif col == 'is_sure':
+                        if isinstance(val1, str) and isinstance(val2, str):
+                            val1 = val1.lower()
+                            val2 = val2.lower()
+                    elif col == 'bsp_type':
+                        if isinstance(val1, str) and isinstance(val2, str):
+                            val1 = normalize_bsp_type(val1)
+                            val2 = normalize_bsp_type(val2)
+                    else:
+                        val1 = clean_value(val1)
+                        val2 = clean_value(val2)
+                    
                     if val1 != val2:
                         row_different = True
                         diff_cols.append(col)
