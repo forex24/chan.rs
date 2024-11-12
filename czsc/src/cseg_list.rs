@@ -1,7 +1,9 @@
+use crate::CChanException;
 // 已完备
 use crate::CEigenFx;
 use crate::CSeg;
 use crate::CSegConfig;
+use crate::ErrCode;
 use crate::Handle;
 use crate::ICalcMetric;
 use crate::IParent;
@@ -9,12 +11,6 @@ use crate::LeftSegMethod;
 use crate::LineType;
 use crate::ToHandle;
 use crate::{Direction, SegType};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TestSegError {
-    SegEndValueErr,
-    SegLenErr,
-}
 
 pub struct CSegListChan<T> {
     pub lst: Box<Vec<CSeg<T>>>,
@@ -67,7 +63,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     }
 
     // 已完备
-    pub fn update(&mut self, bi_lst: &[T]) {
+    pub fn update(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
         self.do_init(bi_lst);
 
         let begin_idx = if self.lst.is_empty() {
@@ -76,17 +72,20 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
             self.lst.last().unwrap().end_bi.index() + 1
         };
 
-        self.cal_seg_sure(bi_lst, begin_idx);
+        self.cal_seg_sure(bi_lst, begin_idx)?;
 
-        self.collect_left_seg(bi_lst);
+        self.collect_left_seg(bi_lst)?;
+
+        Ok(())
     }
 
     // TODO:修改递归为loop
-    fn cal_seg_sure(&mut self, bi_lst: &[T], begin_idx: usize) {
+    fn cal_seg_sure(&mut self, bi_lst: &[T], begin_idx: usize) -> Result<(), CChanException> {
         let fx_eigen = self.cal_eigen_fx(bi_lst, begin_idx);
         if let Some(fx_eigen) = fx_eigen {
-            self.treat_fx_eigen(fx_eigen, bi_lst);
+            self.treat_fx_eigen(fx_eigen, bi_lst)?;
         }
+        Ok(())
     }
 
     // 99% 完备
@@ -149,7 +148,11 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         None
     }
 
-    fn treat_fx_eigen(&mut self, mut fx_eigen: CEigenFx<T>, bi_lst: &[T]) {
+    fn treat_fx_eigen(
+        &mut self,
+        mut fx_eigen: CEigenFx<T>,
+        bi_lst: &[T],
+    ) -> Result<(), CChanException> {
         let test = fx_eigen.can_be_end(bi_lst);
         let end_bi_idx = fx_eigen.get_peak_bi_idx();
 
@@ -164,81 +167,103 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
                     None,
                     true,
                     "normal",
-                ) {
+                )? {
+                    println!("首尾异常 time:{}", bi_lst[0].get_begin_klu().time);
                     // 防止第一根线段的方向与首尾值异常
-                    self.cal_seg_sure(bi_lst, end_bi_idx + 1);
-                    return;
+                    self.cal_seg_sure(bi_lst, end_bi_idx + 1)?;
+
+                    return Ok(());
                 }
 
                 self.lst.last_mut().unwrap().eigen_fx = Some(fx_eigen);
 
                 if is_true {
-                    self.cal_seg_sure(bi_lst, end_bi_idx + 1);
+                    self.cal_seg_sure(bi_lst, end_bi_idx + 1)?;
                 }
             }
             Some(false) => {
-                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].index());
+                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].index())?;
             }
         }
+
+        Ok(())
     }
 }
 
 impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
-    //100% 完备
-    fn collect_first_seg(&mut self, bi_lst: &[T]) {
+    pub fn collect_first_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
         if bi_lst.len() < 3 {
-            return;
+            return Ok(());
         }
+
         match self.config.left_method {
             LeftSegMethod::Peak => {
-                let _high = bi_lst.iter().map(|bi| bi.high()).reduce(f64::max).unwrap();
-                let _low = bi_lst.iter().map(|bi| bi.low()).reduce(f64::min).unwrap();
+                let _high = bi_lst
+                    .iter()
+                    .map(|bi| bi.high())
+                    .fold(f64::NEG_INFINITY, f64::max);
+                let _low = bi_lst
+                    .iter()
+                    .map(|bi| bi.low())
+                    .fold(f64::INFINITY, f64::min);
                 if (_high - bi_lst[0].get_begin_val()).abs()
                     >= (_low - bi_lst[0].get_begin_val()).abs()
                 {
-                    let peak_bi = Self::find_peak_bi(bi_lst, true).expect("Peak bi should exist");
-                    self.add_new_seg(
-                        bi_lst,
-                        peak_bi.index(),
-                        false,
-                        Some(Direction::Up),
-                        false,
-                        "0seg_find_high",
-                    );
+                    let peak_bi = Self::find_peak_bi(bi_lst, true);
+
+                    if let Some(peak_bi) = peak_bi {
+                        self.add_new_seg(
+                            bi_lst,
+                            peak_bi.index(),
+                            false,
+                            Some(Direction::Up),
+                            false,
+                            "0seg_find_high",
+                        )?;
+                    }
                 } else {
-                    let peak_bi = Self::find_peak_bi(bi_lst, false).expect("Peak bi sould exist");
-                    self.add_new_seg(
-                        bi_lst,
-                        peak_bi.index(),
-                        false,
-                        Some(Direction::Down),
-                        false,
-                        "0seg_find_low",
-                    );
+                    let peak_bi = Self::find_peak_bi(bi_lst, false);
+
+                    if let Some(peak_bi) = peak_bi {
+                        self.add_new_seg(
+                            bi_lst,
+                            peak_bi.index(),
+                            false,
+                            Some(Direction::Down),
+                            false,
+                            "0seg_find_low",
+                        )?;
+                    }
                 }
-                self.collect_left_as_seg(bi_lst);
+                self.collect_left_as_seg(bi_lst)?;
             }
 
             LeftSegMethod::All => {
-                let _dir = if bi_lst[bi_lst.len() - 1].get_end_val() >= bi_lst[0].get_begin_val() {
+                let _dir = if bi_lst.last().unwrap().get_end_val() >= bi_lst[0].get_begin_val() {
                     Direction::Up
                 } else {
                     Direction::Down
                 };
+
                 self.add_new_seg(
                     bi_lst,
-                    bi_lst.len() - 1,
+                    bi_lst.last().unwrap().to_handle().index(),
                     false,
                     Some(_dir),
                     false,
                     "0seg_collect_all",
-                );
+                )?;
             }
         }
+
+        Ok(())
     }
 
-    //99% 完备，见TODO
-    fn collect_left_seg_peak_method(&mut self, last_seg_end_bi: &Handle<T>, bi_lst: &[T]) {
+    pub fn collect_left_seg_peak_method(
+        &mut self,
+        last_seg_end_bi: &Handle<T>,
+        bi_lst: &[T],
+    ) -> Result<(), CChanException> {
         if last_seg_end_bi.is_down() {
             if let Some(peak_bi) = Self::find_peak_bi(&bi_lst[last_seg_end_bi.index() + 3..], true)
             {
@@ -250,7 +275,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(Direction::Up),
                         true,
                         "collectleft_find_high",
-                    );
+                    )?;
                 }
             }
         } else if let Some(peak_bi) =
@@ -264,21 +289,23 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Down),
                     true,
                     "collectleft_find_low",
-                );
+                )?;
             }
         }
-        // FIXME:这里修改了入参
-        let _last_seg_end_bi = &self.lst[self.lst.len() - 1].end_bi;
-        self.collect_left_as_seg(bi_lst);
+
+        let _last_seg_end_bi = self.lst.last().unwrap().end_bi;
+
+        self.collect_left_as_seg(bi_lst)?;
+
+        Ok(())
     }
 
-    // 已完备
-    fn collect_segs(&mut self, bi_lst: &[T]) {
-        let last_bi = bi_lst.last().unwrap();
+    pub fn collect_segs(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+        let last_bi = bi_lst.last().unwrap().to_handle();
         let last_seg_end_bi = self.lst.last().unwrap().end_bi;
 
-        if last_bi.to_handle().index() - last_seg_end_bi.index() < 3 {
-            return;
+        if last_bi.index() - last_seg_end_bi.index() < 3 {
+            return Ok(());
         }
 
         if last_seg_end_bi.is_down() && last_bi.get_end_val() <= last_seg_end_bi.get_end_val() {
@@ -291,8 +318,8 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Up),
                     true,
                     "collectleft_find_high_force",
-                );
-                self.collect_left_seg(bi_lst);
+                )?;
+                self.collect_left_seg(bi_lst)?;
             }
         } else if last_seg_end_bi.is_up() && last_bi.get_end_val() >= last_seg_end_bi.get_end_val()
         {
@@ -305,89 +332,53 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Down),
                     true,
                     "collectleft_find_low_force",
-                );
-                self.collect_left_seg(bi_lst);
+                )?;
+                self.collect_left_seg(bi_lst)?;
             }
-        }
-        // 剩下线段的尾部相比于最后一个线段的尾部，高低关系和最后一个虚线段的方向一致
-        else {
-            match self.config.left_method {
-                LeftSegMethod::All => {
-                    //容易找不到二类买卖点！！
-                    self.collect_left_as_seg(bi_lst);
-                }
-                LeftSegMethod::Peak => {
-                    self.collect_left_seg_peak_method(&last_seg_end_bi, bi_lst);
-                }
-            }
-        }
-    }
-
-    // 已完备
-    fn collect_left_seg(&mut self, bi_lst: &[T]) {
-        if self.lst.is_empty() {
-            self.collect_first_seg(bi_lst);
+        } else if self.config.left_method == LeftSegMethod::All {
+            self.collect_left_as_seg(bi_lst)?;
+        } else if self.config.left_method == LeftSegMethod::Peak {
+            self.collect_left_seg_peak_method(&last_seg_end_bi, bi_lst)?;
         } else {
-            self.collect_segs(bi_lst);
+            return Err(CChanException::new(
+                format!("unknown seg left_method = {:?}", self.config.left_method),
+                ErrCode::ParaError,
+            ));
         }
+        Ok(())
     }
 
-    // 已完备
-    fn collect_left_as_seg(&mut self, bi_lst: &[T]) {
-        let last_bi = bi_lst.last().unwrap();
-        let last_seg_end_bi = self.lst.last().unwrap().end_bi;
-
-        if last_seg_end_bi.index() + 1 >= bi_lst.len() {
-            return;
+    pub fn collect_left_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+        if self.lst.is_empty() {
+            self.collect_first_seg(bi_lst)?;
+        } else {
+            self.collect_segs(bi_lst)?;
         }
+        Ok(())
+    }
 
+    pub fn collect_left_as_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+        let last_bi = bi_lst.last().unwrap().to_handle();
+        let last_seg_end_bi = self.lst.last().unwrap().end_bi;
+        if last_seg_end_bi.index() + 1 >= bi_lst.len() {
+            return Ok(());
+        }
         if last_seg_end_bi.direction() == last_bi.direction() {
             self.add_new_seg(
                 bi_lst,
-                last_bi.to_handle().index() - 1,
+                last_bi.index() - 1,
                 false,
                 None,
                 true,
                 "collect_left_1",
-            );
+            )?;
         } else {
-            self.add_new_seg(
-                bi_lst,
-                last_bi.to_handle().index(),
-                false,
-                None,
-                true,
-                "collect_left_0",
-            );
+            self.add_new_seg(bi_lst, last_bi.index(), false, None, true, "collect_left_0")?;
         }
-    }
-
-    // 替代seg.check
-    fn check_seg_valid(&self, seg: &CSeg<T>) -> Result<(), TestSegError> {
-        if !seg.is_sure {
-            return Ok(());
-        }
-        let start_bi = seg.start_bi;
-        let end_bi = seg.end_bi;
-
-        if seg.is_down() {
-            if start_bi.get_begin_val() < end_bi.get_end_val() {
-                println!("下降线段起始点应该高于结束点! {}", seg.to_handle().index());
-                return Err(TestSegError::SegEndValueErr);
-            }
-        } else if start_bi.get_begin_val() > end_bi.get_end_val() {
-            println!("上升线段起始点应该低于结束点! {}", seg.to_handle().index());
-            return Err(TestSegError::SegEndValueErr);
-        }
-
-        if end_bi.index() - start_bi.index() < 2 {
-            return Err(TestSegError::SegLenErr);
-        }
-
         Ok(())
     }
 
-    fn try_add_new_seg(
+    pub fn try_add_new_seg(
         &mut self,
         bi_lst: &[T],
         end_bi_idx: usize,
@@ -395,7 +386,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         seg_dir: Option<Direction>,
         split_first_seg: bool,
         reason: &str,
-    ) -> Result<(), TestSegError> {
+    ) -> Result<(), CChanException> {
         if self.lst.is_empty() && split_first_seg && end_bi_idx >= 3 {
             if let Some(peak_bi) = Self::find_peak_bi(
                 bi_lst[0..end_bi_idx - 2].iter().rev(),
@@ -405,7 +396,6 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     || (peak_bi.is_up()
                         && (peak_bi.high() > bi_lst[0].high() || peak_bi.index() == 0))
                 {
-                    // 要比第一笔开头还高/低（因为没有比较到）
                     self.add_new_seg(
                         bi_lst,
                         peak_bi.index(),
@@ -413,8 +403,9 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(peak_bi.direction()),
                         true,
                         "split_first_1st",
-                    );
-                    self.add_new_seg(bi_lst, end_bi_idx, false, None, true, "split_first_2nd");
+                    )?;
+
+                    self.add_new_seg(bi_lst, end_bi_idx, false, None, true, "split_first_2nd")?;
                     return Ok(());
                 }
             }
@@ -422,7 +413,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         let bi1_idx = if self.lst.is_empty() {
             0
         } else {
-            self.lst[self.lst.len() - 1].end_bi.index() + 1
+            self.lst.last().unwrap().end_bi.index() + 1
         };
 
         let bi1 = &bi_lst[bi1_idx];
@@ -436,20 +427,24 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             is_sure,
             seg_dir,
             reason,
-        );
+        )?;
 
-        self.check_seg_valid(&new_seg)?;
-
+        //if self.lst.len() >= 2 {
+        //    let last_seg = self.lst.last().unwrap().clone();
+        //    last_seg.borrow_mut().next = Some(new_seg.clone());
+        //    new_seg.borrow_mut().pre = Some(last_seg);
+        //}
         self.lst.push(new_seg);
 
         self.lst
             .last_mut()
             .unwrap()
             .update_bi_list(bi_lst, bi1_idx, end_bi_idx);
+
         Ok(())
     }
 
-    fn add_new_seg(
+    pub fn add_new_seg(
         &mut self,
         bi_lst: &[T],
         end_bi_idx: usize,
@@ -457,7 +452,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         seg_dir: Option<Direction>,
         split_first_seg: bool,
         reason: &str,
-    ) -> bool {
+    ) -> Result<bool, CChanException> {
         match self.try_add_new_seg(
             bi_lst,
             end_bi_idx,
@@ -466,9 +461,19 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             split_first_seg,
             reason,
         ) {
-            Ok(_) => true,
-            Err(e) => !(e == TestSegError::SegEndValueErr && self.lst.is_empty()),
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.errcode == ErrCode::SegEndValueErr && self.lst.is_empty() {
+                    Ok(false)
+                } else {
+                    Err(e)
+                }
+            }
         }
+    }
+
+    pub fn exist_sure_seg(&self) -> bool {
+        self.lst.iter().any(|seg| seg.is_sure)
     }
 
     fn find_peak_bi<'a, I>(bi_iter: I, is_high: bool) -> Option<Handle<T>>
@@ -509,35 +514,6 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         peak_bi
     }
 }
-
-//fn find_peak_bi<T: LineType + ToHandle>(bi_lst: &[T], is_high: bool) -> Option<Handle<T>> {
-//    let mut peak_val = if is_high {
-//        f64::NEG_INFINITY
-//    } else {
-//        f64::INFINITY
-//    };
-//    let mut peak_bi = None;
-//    for bi in bi_lst.iter().map(|bi| bi.to_handle()) {
-//        if (is_high && bi.get_end_val() >= peak_val && bi.is_up())
-//            || (!is_high && bi.get_end_val() <= peak_val && bi.is_down())
-//        {
-//            if bi.prev().is_some()
-//                && bi.prev().as_ref().unwrap().prev().is_some()
-//                && ((is_high
-//                    && bi.prev().as_ref().unwrap().prev().unwrap().get_end_val()
-//                        > bi.get_end_val())
-//                    || (!is_high
-//                        && bi.prev().as_ref().unwrap().prev().unwrap().get_end_val()
-//                            < bi.get_end_val()))
-//            {
-//                continue;
-//            }
-//            peak_val = bi.get_end_val();
-//            peak_bi = Some(bi);
-//        }
-//    }
-//    peak_bi
-//}
 
 impl<T> std::ops::Deref for CSegListChan<T> {
     type Target = Box<Vec<CSeg<T>>>;

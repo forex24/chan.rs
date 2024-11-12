@@ -769,7 +769,10 @@ fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     bi_list: &mut [T],
     seg_list: &mut CSegListChan<T>,
 ) {
-    seg_list.update(bi_list);
+    match seg_list.update(bi_list) {
+        Ok(()) => {}
+        Err(_e) => panic!("seg_list.update"),
+    }
 
     update_bi_seg_idx(bi_list, seg_list);
 }
