@@ -227,7 +227,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                 };
                 self.add_new_seg(
                     bi_lst,
-                    bi_lst.len() - 1,
+                    bi_lst.last().unwrap().to_handle().index(),
                     false,
                     Some(_dir),
                     false,

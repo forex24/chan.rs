@@ -312,6 +312,16 @@ impl Analyzer {
                 map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
                 map.insert("bi_count".to_string(), seg.bi_list.len().to_string());
                 map.insert("reason".to_string(), seg.reason.clone());
+                map.insert(
+                    "parent_seg_idx".to_string(),
+                    seg.parent_seg_idx()
+                        .map_or("".to_string(), |idx| idx.to_string()),
+                );
+                map.insert(
+                    "parent_seg_dir".to_string(),
+                    seg.parent_seg_dir()
+                        .map_or("".to_string(), |dir| dir.to_string()),
+                );
                 map
             })
             .collect();
