@@ -255,17 +255,21 @@ impl Analyzer {
                         "False".to_string()
                     },
                 );
-                map.insert("seg_idx".to_string(), bi.seg_idx.unwrap_or(0).to_string());
+                //map.insert("seg_idx".to_string(), bi.seg_idx.unwrap_or(0).to_string());
                 map.insert(
-                    "parent_seg".to_string(),
-                    bi.parent_seg_idx().unwrap_or(0).to_string(),
+                    "seg_idx".to_string(),
+                    bi.seg_idx().map_or("".to_string(), |idx| idx.to_string()),
                 );
-                /*FIXME:
-                                map.insert(
+                //map.insert(
+                //    "parent_seg".to_string(),
+                //    bi.parent_seg_idx().unwrap_or(0).to_string(),
+                //);
+
+                map.insert(
                     "parent_seg".to_string(),
                     bi.parent_seg_idx()
                         .map_or("".to_string(), |idx| idx.to_string()),
-                ); */
+                );
                 map.insert("begin_klc".to_string(), bi.begin_klc.index().to_string());
                 map.insert("end_klc".to_string(), bi.end_klc.index().to_string());
                 map.insert("begin_val".to_string(), bi._get_begin_val().to_string());
@@ -764,7 +768,63 @@ fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
 ) {
     seg_list.update(bi_list);
 
-    update_bi_seg_idx(bi_list, seg_list);
+    update_bi_seg_idx2(bi_list, seg_list);
+}
+
+fn update_bi_seg_idx2<T: LineType + IParent + ToHandle>(
+    bi_list: &mut [T],
+    seg_list: &mut CSegListChan<T>,
+) {
+    let mut sure_seg_cnt = 0;
+
+    // Handle empty segment list case
+    if seg_list.is_empty() {
+        for bi in bi_list.iter_mut() {
+            bi.set_seg_idx(0);
+        }
+        return;
+    }
+
+    // Find beginning segment
+    let mut begin_seg = &seg_list[seg_list.len() - 1];
+    for seg in seg_list.iter().rev() {
+        if seg.is_sure {
+            sure_seg_cnt += 1;
+        } else {
+            sure_seg_cnt = 0;
+        }
+        begin_seg = seg;
+        if sure_seg_cnt > 2 {
+            break;
+        }
+    }
+
+    // Process bi_list in reverse
+    let mut cur_seg = seg_list[seg_list.len() - 1].to_handle();
+
+    for bi in bi_list.iter_mut().rev() {
+        // Break if we've processed all relevant bis
+        if bi.seg_idx().is_some() && bi.to_handle().index() < begin_seg.start_bi.index() {
+            break;
+        }
+
+        // Handle bi index greater than current segment end
+        if bi.to_handle().index() > cur_seg.end_bi.index() {
+            bi.set_seg_idx(cur_seg.index() + 1);
+            continue;
+        }
+
+        // Move to previous segment if necessary
+        if bi.to_handle().index() < cur_seg.start_bi.index() {
+            let pre = cur_seg
+                .to_handle()
+                .prev()
+                .expect("Previous segment should exist");
+            cur_seg = pre;
+        }
+
+        bi.set_seg_idx(cur_seg.to_handle().index());
+    }
 }
 
 fn update_zs_in_seg<T: LineType + IParent + ToHandle + ICalcMetric>(

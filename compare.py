@@ -68,6 +68,8 @@ def normalize_bsp_type(val):
 
 def normalize_parent_seg_value(val):
     """标准化parent_seg值，使得整数和浮点数可以比较"""
+    if pd.isna(val):  # 处理 nan 值
+        return val
     if isinstance(val, float) and val.is_integer():
         return int(val)
     return val
@@ -133,9 +135,12 @@ def compare_files(dir1: str, dir2: str):
                     val2 = row2[col]
                     
                     # 对不同类型的列进行特殊处理
-                    if col == 'parent_seg':  # 仅对parent_seg列进行特殊处理
+                    if col == 'parent_seg':
                         val1 = normalize_parent_seg_value(val1)
                         val2 = normalize_parent_seg_value(val2)
+                        # 特殊处理 nan 值的比较
+                        if pd.isna(val1) and pd.isna(val2):
+                            continue  # 两个 nan 值视为相同，跳过后续比较
                     elif col == 'is_sure':
                         if isinstance(val1, str) and isinstance(val2, str):
                             val1 = val1.lower()

@@ -37,7 +37,7 @@ fn czsc_parse(ca: &mut Analyzer, klines: &[Kline], output_dir: &str) {
     pb.set_style(
         ProgressStyle::default_bar()
             .template(
-                "[{elapsed_precise}] {percent_precise}% {wide_bar:.cyan/gray} {human_pos}/{human_len} {msg}",
+                "[{elapsed_precise}] {percent_precise}% {wide_bar:.cyan/gray} {human_pos}/{human_len} {msg}\t\t",
             )
             .unwrap(), //.progress_chars("##-"),
     );

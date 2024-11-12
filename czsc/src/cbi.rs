@@ -433,9 +433,9 @@ impl CBi {
         }
     }*/
 
-    pub fn set_klc_lst(&mut self, lst: &[Candle]) {
-        self.klc_lst = lst.iter().map(|x| x.as_handle()).collect();
-    }
+    //pub fn set_klc_lst(&mut self, lst: &[Candle]) {
+    //    self.klc_lst = lst.iter().map(|x| x.as_handle()).collect();
+    //}
 }
 
 impl IHighLow for CBi {
