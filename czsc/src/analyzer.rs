@@ -378,6 +378,12 @@ impl Analyzer {
                     "bi_end_time".to_string(),
                     bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
                 );
+                map.insert(
+                    "relate_bsp1_time".to_string(),
+                    bsp.relate_bsp1.as_ref().map_or("None".to_string(), |bsp| {
+                        bsp.klu.time.format(TIME_FORMAT).to_string()
+                    }),
+                );
                 map
             })
             .collect();
@@ -495,6 +501,12 @@ impl Analyzer {
                 map.insert(
                     "bi_end_time".to_string(),
                     bsp.bi.get_end_klu().time.format(TIME_FORMAT).to_string(),
+                );
+                map.insert(
+                    "relate_bsp1_time".to_string(),
+                    bsp.relate_bsp1.as_ref().map_or("None".to_string(), |bsp| {
+                        bsp.klu.time.format(TIME_FORMAT).to_string()
+                    }),
                 );
                 map
             })

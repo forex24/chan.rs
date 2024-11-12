@@ -28,13 +28,16 @@ def normalize_datetime(val):
     """标准化时间格式"""
     if isinstance(val, str):
         val = val.strip()
+        # 移除 UTC 后缀
+        val = val.replace(' UTC', '')
         try:
             # 尝试不同的时间格式
             formats = [
-                '%Y-%m-%d %H:%M',  # 2024-01-08 00:00
-                '%Y/%m/%d %H:%M',  # 2024/01/08 00:00
-                '%Y-%m-%d',        # 2024-01-08
-                '%Y/%m/%d'         # 2024/01/08
+                '%Y-%m-%d %H:%M:%S',  # 2024-01-08 00:00:00
+                '%Y-%m-%d %H:%M',     # 2024-01-08 00:00
+                '%Y/%m/%d %H:%M',     # 2024/01/08 00:00
+                '%Y-%m-%d',           # 2024-01-08
+                '%Y/%m/%d'            # 2024/01/08
             ]
             
             for fmt in formats:
@@ -54,6 +57,13 @@ def clean_value(val):
     """清理值，对字符串进行trim处理"""
     if isinstance(val, str):
         return val.strip()
+    return val
+
+def normalize_bsp_type(val):
+    """标准化 bsp_type 值，使得不同的分隔符表示相同的含义"""
+    if isinstance(val, str):
+        # 将逗号分隔改为下划线分隔
+        return val.replace(',', '_')
     return val
 
 def compare_files(dir1: str, dir2: str):
@@ -113,7 +123,17 @@ def compare_files(dir1: str, dir2: str):
                 row_different = False
                 diff_cols = []
                 for col in compare_cols:
-                    if row1[col] != row2[col]:
+                    val1 = row1[col]
+                    val2 = row2[col]
+                    # 对is_sure字段进行特殊处理
+                    if col == 'is_sure' and isinstance(val1, str) and isinstance(val2, str):
+                        val1 = val1.lower()
+                        val2 = val2.lower()
+                    # 对bsp_type字段进行特殊处理
+                    elif col == 'bsp_type' and isinstance(val1, str) and isinstance(val2, str):
+                        val1 = normalize_bsp_type(val1)
+                        val2 = normalize_bsp_type(val2)
+                    if val1 != val2:
                         row_different = True
                         diff_cols.append(col)
                 
