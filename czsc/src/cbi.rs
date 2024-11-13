@@ -132,8 +132,8 @@ impl CBi {
 
     // 已完备
     pub fn _get_begin_klu(&self) -> Handle<Bar> {
-        if let Some(ref klu) = self.cached_begin_klu.borrow().as_ref() {
-            return **klu;
+        if let Some(klu) = self.cached_begin_klu.borrow().as_ref() {
+            return *klu;
         }
         let bar = match self._is_up() {
             true => self.begin_klc.get_peak_klu(false),

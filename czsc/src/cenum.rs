@@ -95,17 +95,17 @@ pub enum BiType {
     TiaokongValue,
 }
 
-impl ToString for BiType {
-    fn to_string(&self) -> String {
+impl Display for BiType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            BiType::Unknown => "BI_TYPE.UNKNOWN".to_string(),
-            BiType::Strict => "BI_TYPE.STRICT".to_string(),
-            BiType::SubValue => "BI_TYPE.SUBVALUE".to_string(),
-            BiType::TiaokongThred => "BI_TYPE.TIAOKONGTHRED".to_string(),
-            BiType::Daheng => "BI_TYPE.DAHENG".to_string(),
-            BiType::Tuibi => "BI_TYPE.TUIBI".to_string(),
-            BiType::Unstrict => "BI_TYPE.UNSTRICT".to_string(),
-            BiType::TiaokongValue => "BI_TYPE.TIAOKONGVALUE".to_string(),
+            BiType::Unknown => f.write_str("BI_TYPE.UNKNOWN"),
+            BiType::Strict => f.write_str("BI_TYPE.STRICT"),
+            BiType::SubValue => f.write_str("BI_TYPE.SUBVALUE"),
+            BiType::TiaokongThred => f.write_str("BI_TYPE.TIAOKONGTHRED"),
+            BiType::Daheng => f.write_str("BI_TYPE.DAHENG"),
+            BiType::Tuibi => f.write_str("BI_TYPE.TUIBI"),
+            BiType::Unstrict => f.write_str("BI_TYPE.UNSTRICT"),
+            BiType::TiaokongValue => f.write_str("BI_TYPE.TIAOKONGVALUE"),
         }
     }
 }
@@ -120,15 +120,15 @@ pub enum BspType {
     T3B, //中枢在1类前面
 }
 
-impl ToString for BspType {
-    fn to_string(&self) -> String {
+impl Display for BspType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            BspType::T1 => "1".to_string(),
-            BspType::T1P => "1p".to_string(),
-            BspType::T2 => "2".to_string(),
-            BspType::T2S => "2s".to_string(),
-            BspType::T3A => "3a".to_string(),
-            BspType::T3B => "3b".to_string(),
+            BspType::T1 => f.write_str("1"),
+            BspType::T1P => f.write_str("1p"),
+            BspType::T2 => f.write_str("2"),
+            BspType::T2S => f.write_str("2s"),
+            BspType::T3A => f.write_str("3a"),
+            BspType::T3B => f.write_str("3b"),
         }
     }
 }
