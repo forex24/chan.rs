@@ -241,6 +241,7 @@ impl<T: LineType> CSeg<T> {
 }
 
 impl<T: LineType + IParent + ToHandle> CSeg<T> {
+    // 为什么会有这个方法？？原因是什么？？
     pub fn update_bi_list(&mut self, bi_lst: &[T], idx1: usize, idx2: usize) {
         assert!(idx2 < bi_lst.len());
         (idx1..=idx2).for_each(|bi_idx| {
