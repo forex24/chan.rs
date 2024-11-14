@@ -32,20 +32,23 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     }
 
     // 已完备
-    fn do_init(&mut self) {
+    fn do_init(&mut self, bi_lst: &[T]) {
         // 删除末尾不确定的线段
         while !self.lst.is_empty() && !self.lst.last().unwrap().is_sure {
             let last_seg = self.lst.last().unwrap();
-            println!("do_init");
+            //println!("do_init");
+            // 以下代码是 修复线段变量重置异常bug 新增的
             for bi in &last_seg.bi_list {
-                //if bi.index() < bi_lst.len() {
-                // 这里检查的原因是，如果是虚笔，最后一笔可能失效
-                bi.as_mut().set_parent_seg_dir(None);
-                bi.as_mut().set_parent_seg_idx(None);
-                //}
+                if bi.index() < bi_lst.len() {
+                    // 这里检查的原因是，如果是虚笔，最后一笔可能失效
+                    bi.as_mut().set_parent_seg_dir(None);
+                    bi.as_mut().set_parent_seg_idx(None);
+                }
             }
-            println!("pop1");
-            self.lst.pop();
+            // 结束
+            //println!("pop1");
+
+            if let Some(_seg) = self.lst.pop() {}
         }
 
         if !self.lst.is_empty() {
@@ -62,7 +65,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
                 {
                     // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                     // TODO:是否要向该线段包含的笔，设置parent_seg_dir & parent_seg_idx为None
-                    println!("pop2");
+                    //println!("pop2");
                     self.lst.pop();
                 }
             }
@@ -71,8 +74,8 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
 
     // 已完备
     pub fn update(&mut self, bi_lst: &[T]) {
-        //self.do_init(bi_lst);
-        self.do_init();
+        self.do_init(bi_lst);
+        //self.do_init();
 
         let begin_idx = if self.lst.is_empty() {
             0
@@ -428,6 +431,8 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         } else {
             self.lst[self.lst.len() - 1].end_bi.index() + 1
         };
+
+        assert!(bi1_idx < bi_lst.len());
 
         let bi1 = &bi_lst[bi1_idx];
         let bi2 = &bi_lst[end_bi_idx];
