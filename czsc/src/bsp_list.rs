@@ -96,6 +96,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     // 80% 完备
     // TODO: 性能热点
     /// 添加买卖点
+    /// 我知道了，我为什么bsp没有出错的原因就是应该不管是不是target_bsp,全部加入了history,
+    /// 这里是可以优化，只有target_bsp || T1 ||T1P,就加入history，否则就忽略
+    /// 另外用bsp_dict可以加快查找
     pub fn add_bs(
         &mut self,
         bs_type: BspType,                                   // 买卖点类型
