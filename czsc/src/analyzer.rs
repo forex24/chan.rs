@@ -264,18 +264,22 @@ impl Analyzer {
                 //    "parent_seg".to_string(),
                 //    bi.parent_seg_idx().unwrap_or(0).to_string(),
                 //);
-
-                map.insert(
-                    "parent_seg".to_string(),
-                    bi.parent_seg_idx()
-                        .map_or("".to_string(), |idx| idx.to_string()),
-                );
                 map.insert("begin_klc".to_string(), bi.begin_klc.index().to_string());
                 map.insert("end_klc".to_string(), bi.end_klc.index().to_string());
                 map.insert("begin_val".to_string(), bi._get_begin_val().to_string());
                 map.insert("end_val".to_string(), bi._get_end_val().to_string());
                 map.insert("klu_cnt".to_string(), bi._get_klu_cnt().to_string());
                 map.insert("klc_cnt".to_string(), bi._get_klc_cnt().to_string());
+                map.insert(
+                    "parent_seg_idx".to_string(),
+                    bi.parent_seg_idx()
+                        .map_or("".to_string(), |idx| idx.to_string()),
+                );
+                map.insert(
+                    "parent_seg_dir".to_string(),
+                    bi.parent_seg_dir()
+                        .map_or("".to_string(), |idx| idx.to_string()),
+                );
                 map
             })
             .collect();

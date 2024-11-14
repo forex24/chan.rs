@@ -32,17 +32,19 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     }
 
     // 已完备
-    fn do_init(&mut self, bi_lst: &[T]) {
+    fn do_init(&mut self) {
         // 删除末尾不确定的线段
         while !self.lst.is_empty() && !self.lst.last().unwrap().is_sure {
             let last_seg = self.lst.last().unwrap();
+            println!("do_init");
             for bi in &last_seg.bi_list {
-                if bi.index() < bi_lst.len() {
-                    // 这里检查的原因是，如果是虚笔，最后一笔可能失效
-                    bi.as_mut().set_parent_seg_dir(None);
-                    bi.as_mut().set_parent_seg_idx(None);
-                }
+                //if bi.index() < bi_lst.len() {
+                // 这里检查的原因是，如果是虚笔，最后一笔可能失效
+                bi.as_mut().set_parent_seg_dir(None);
+                bi.as_mut().set_parent_seg_idx(None);
+                //}
             }
+            println!("pop1");
             self.lst.pop();
         }
 
@@ -60,6 +62,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
                 {
                     // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                     // TODO:是否要向该线段包含的笔，设置parent_seg_dir & parent_seg_idx为None
+                    println!("pop2");
                     self.lst.pop();
                 }
             }
@@ -68,7 +71,8 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
 
     // 已完备
     pub fn update(&mut self, bi_lst: &[T]) {
-        self.do_init(bi_lst);
+        //self.do_init(bi_lst);
+        self.do_init();
 
         let begin_idx = if self.lst.is_empty() {
             0
@@ -476,37 +480,82 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         I: IntoIterator<Item = &'a T>,
         T: 'a,
     {
+        //bi_iter.into_iter().fold(None, |peak_bi, bi| {
+        //    let bi_val = bi.get_end_val();
+        //    let peak_val = peak_bi.map_or(
+        //        if is_high {
+        //            f64::NEG_INFINITY
+        //        } else {
+        //            f64::INFINITY
+        //        },
+        //        |b| b.get_end_val(),
+        //    );
+        //
+        //    if (is_high && bi_val >= peak_val && bi.is_up())
+        //        || (!is_high && bi_val <= peak_val && bi.is_down())
+        //    {
+        //        if let Some(pre) = bi.to_handle().prev() {
+        //            if let Some(pre_pre) = pre.to_handle().prev() {
+        //                let pre_pre_val = pre_pre.get_end_val();
+        //                if (is_high && pre_pre_val > bi_val) || (!is_high && pre_pre_val < bi_val) {
+        //                    return peak_bi;
+        //                }
+        //            }
+        //        }
+        //        return Some(bi.to_handle());
+        //    }
+        //    peak_bi
+        //})
         let mut peak_val = if is_high {
             f64::NEG_INFINITY
         } else {
             f64::INFINITY
         };
         let mut peak_bi = None;
-
         for bi in bi_iter {
-            let bi = bi.to_handle();
-            let should_update = if is_high {
-                bi.get_end_val() >= peak_val && bi.is_up()
-            } else {
-                bi.get_end_val() <= peak_val && bi.is_down()
-            };
-
-            if should_update {
-                if let (Some(_pre), Some(pre_pre)) = (bi.prev(), bi.prev().and_then(|b| b.prev())) {
-                    let should_skip = if is_high {
-                        pre_pre.get_end_val() > bi.get_end_val()
-                    } else {
-                        pre_pre.get_end_val() < bi.get_end_val()
-                    };
-                    if should_skip {
-                        continue;
+            let bi_ref = bi.to_handle();
+            if (is_high && bi_ref.get_end_val() >= peak_val && bi_ref.is_up())
+                || (!is_high && bi_ref.get_end_val() <= peak_val && bi_ref.is_down())
+            {
+                if let Some(pre) = &bi_ref.prev() {
+                    if let Some(pre_pre) = &pre.prev() {
+                        if (is_high && pre_pre.get_end_val() > bi_ref.get_end_val())
+                            || (!is_high && pre_pre.get_end_val() < bi_ref.get_end_val())
+                        {
+                            continue;
+                        }
                     }
                 }
-                peak_val = bi.get_end_val();
-                peak_bi = Some(bi);
+                peak_val = bi_ref.get_end_val();
+                peak_bi = Some(bi_ref);
             }
         }
         peak_bi
+
+        //for bi in bi_iter {
+        //    let bi = bi.to_handle();
+        //    let should_update = if is_high {
+        //        bi.get_end_val() >= peak_val && bi.is_up()
+        //    } else {
+        //        bi.get_end_val() <= peak_val && bi.is_down()
+        //    };
+        //
+        //    if should_update {
+        //        if let (Some(_pre), Some(pre_pre)) = (bi.prev(), bi.prev().and_then(|b| b.prev())) {
+        //            let should_skip = if is_high {
+        //                pre_pre.get_end_val() > bi.get_end_val()
+        //            } else {
+        //                pre_pre.get_end_val() < bi.get_end_val()
+        //            };
+        //            if should_skip {
+        //                continue;
+        //            }
+        //        }
+        //        peak_val = bi.get_end_val();
+        //        peak_bi = Some(bi);
+        //    }
+        //}
+        //peak_bi
     }
 }
 
