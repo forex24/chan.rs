@@ -99,4 +99,5 @@ pub use metric::*;
 mod kline;
 pub use kline::*;
 mod analyzer;
+mod storage;
 pub use analyzer::*;

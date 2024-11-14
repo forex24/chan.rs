@@ -67,6 +67,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         self.remove_unsure_bsp();
 
         self.cal_seg_bs1point(seg_list, bi_list);
+	// 可以优化的地方，bsp1_bi_idx_dict，2类和3类都需要，因此可以仅仅计算一次
         self.cal_seg_bs2point(seg_list, bi_list);
         self.cal_seg_bs3point(seg_list, bi_list);
         self.update_last_pos(seg_list);
