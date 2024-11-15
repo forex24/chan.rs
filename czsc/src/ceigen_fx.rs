@@ -1,9 +1,5 @@
 // 已完备
-use crate::CEigen;
-use crate::EqualMode;
-use crate::Handle;
-use crate::LineType;
-use crate::ToHandle;
+use crate::{CEigen, EqualMode, Handle, LineType, ToHandle};
 use crate::{Direction, FxType, KlineDir, SegType};
 use std::vec::Vec;
 
@@ -20,6 +16,15 @@ pub struct CEigenFx<T> {
 }
 
 impl<T: LineType + ToHandle> CEigenFx<T> {
+    /// 创建新的特征序列分型实例
+    ///
+    /// # Arguments
+    /// * `dir` - 线段方向
+    /// * `exclude_included` - 是否排除包含关系
+    /// * `lv` - 线段级别
+    ///
+    /// # Returns
+    /// 返回新的特征序列分型实例
     pub fn new(dir: Direction, exclude_included: bool, lv: SegType) -> Self {
         let kl_dir = if dir == Direction::Up {
             KlineDir::Up
@@ -38,11 +43,25 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         }
     }
 
+    /// 处理第一个特征序列元素
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
+    ///
+    /// # Returns
+    /// 返回false表示需要继续处理
     fn treat_first_ele(&mut self, bi: Handle<T>) -> bool {
         self.ele[0] = Some(CEigen::new(bi, self.kl_dir));
         false
     }
 
+    /// 处理第二个特征序列元素
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
+    ///
+    /// # Returns
+    /// 返回是否需要重置
     fn treat_second_ele(&mut self, bi: Handle<T>) -> bool {
         assert!(self.ele[0].is_some());
 
@@ -65,6 +84,13 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         false
     }
 
+    /// 处理第三个特征序列元素
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
+    ///
+    /// # Returns
+    /// 返回是否形成有效分型
     fn treat_third_ele(&mut self, bi: Handle<T>) -> bool {
         assert!(self.ele[0].is_some());
         assert!(self.ele[1].is_some());
@@ -108,6 +134,14 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     }
 
     // 已完备
+    /// 检查分型
+    ///
+    /// # Arguments
+    /// * `exclude_include` - 是否排除包含关系
+    /// * `allow_top_equal` - 允许的相等模式
+    ///
+    /// # Returns
+    /// 返回分型类型（顶分型、底分型或未知）
     fn check_fx(&self, exclude_include: bool, allow_top_equal: Option<EqualMode>) -> FxType {
         let k1 = self.ele[0].as_ref().unwrap();
         let k2 = self.ele[1].as_ref().unwrap();
@@ -138,6 +172,10 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     }
 
     // 已完备
+    /// 检查是否存在缺口
+    ///
+    /// # Returns
+    /// 返回是否存在缺口
     fn check_gap(&self) -> bool {
         let k1 = self.ele[0].as_ref().unwrap();
         let k2 = self.ele[1].as_ref().unwrap();
@@ -146,6 +184,10 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
             || (k2.fx_type == FxType::Bottom && k1.low > k2.high)
     }
     // 已完备
+    /// 更新分型
+    ///
+    /// # Arguments
+    /// * `allow_top_equal` - 允许的相等模式
     fn update_fx(&mut self, allow_top_equal: Option<EqualMode>) {
         let fx_type = self.check_fx(self.exclude_included, allow_top_equal);
         self.ele[1].as_mut().unwrap().fx_type = fx_type;
@@ -153,6 +195,13 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         self.ele[1].as_mut().unwrap().gap = gap;
     }
 
+    /// 添加新的笔
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
+    ///
+    /// # Returns
+    /// 返回是否形成有效分型
     pub fn add(&mut self, bi: Handle<T>) -> bool {
         assert_ne!(bi.direction(), self.dir);
 
@@ -169,6 +218,10 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         }
     }
 
+    /// 重置特征序列分型
+    ///
+    /// # Returns
+    /// 返回false表示重置成功，true表示形成有效分型
     fn reset(&mut self) -> bool {
         // TODO:
         let bi_tmp_list = self.lst[1..].to_vec();
@@ -196,6 +249,13 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         false
     }
 
+    /// 判断是否可以作为线段的结束
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    ///
+    /// # Returns
+    /// 返回是否可以作为线段的结束
     pub fn can_be_end(&mut self, bi_lst: &[T]) -> Option<bool> {
         assert!(self.ele[1].is_some());
 
@@ -216,20 +276,36 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         }
     }
 
+    /// 判断是否为向下方向
+    ///
+    /// # Returns
+    /// 返回是否为向下方向
     fn is_down(&self) -> bool {
         self.dir == Direction::Down
     }
 
+    /// 判断是否为向上方向
+    ///
+    /// # Returns
+    /// 返回是否为向上方向
     fn is_up(&self) -> bool {
         self.dir == Direction::Up
     }
 
+    /// 获取峰值笔的索引
+    ///
+    /// # Returns
+    /// 返回峰值笔的索引
     pub fn get_peak_bi_idx(&self) -> usize {
         assert!(self.ele[1].is_some());
 
         self.ele[1].as_ref().unwrap().get_peak_bi_idx()
     }
 
+    /// 判断所有笔是否确定
+    ///
+    /// # Returns
+    /// 返回是否所有笔都已确定
     pub fn all_bi_is_sure(&self) -> bool {
         assert!(self.last_evidence_bi.is_some());
 
@@ -243,11 +319,16 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         !self.lst.iter().any(|bi| !bi.is_sure()) && self.last_evidence_bi.unwrap().is_sure()
     }
 
+    /// 清空特征序列分型
     pub fn clear(&mut self) {
         self.ele = [None, None, None];
         self.lst = vec![];
     }
 
+    /// 判断是否实际突破
+    ///
+    /// # Returns
+    /// 返回是否发生实际突破
     fn actual_break(&mut self) -> bool {
         if !self.exclude_included {
             return true;
@@ -285,6 +366,16 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         false
     }
 
+    /// 查找反向分型
+    ///
+    /// # Arguments
+    /// * `bi_list` - 笔列表
+    /// * `begin_idx` - 开始索引
+    /// * `thred_value` - 阈值
+    /// * `break_thred` - 突破阈值
+    ///
+    /// # Returns
+    /// 返回是否找到有效的反向分型
     fn find_revert_fx(
         &mut self,
         bi_list: &[T],

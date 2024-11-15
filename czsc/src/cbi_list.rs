@@ -16,6 +16,13 @@ pub struct CBiList {
 }
 
 impl CBiList {
+    /// 创建新的笔列表实例
+    ///
+    /// # Arguments
+    /// * `bi_conf` - 笔的配置参数
+    ///
+    /// # Returns
+    /// 返回新的CBiList实例
     pub fn new(bi_conf: CBiConfig) -> Self {
         CBiList {
             bi_list: Box::new(Vec::with_capacity(10240)),
@@ -26,6 +33,13 @@ impl CBiList {
     }
 
     // 已完备
+    /// 尝试创建第一笔
+    ///
+    /// # Arguments
+    /// * `klc` - 当前K线
+    ///
+    /// # Returns
+    /// 返回是否成功创建第一笔
     fn try_create_first_bi(&mut self, klc: &Candle) -> bool {
         assert!(self.bi_list.is_empty());
         assert!(klc.fx_type != FxType::Unknown);
@@ -46,6 +60,15 @@ impl CBiList {
     }
 
     // 已完备
+    /// 更新笔
+    ///
+    /// # Arguments
+    /// * `klc` - 倒数第二根K线
+    /// * `last_klc` - 倒数第一根K线
+    /// * `cal_virtual` - 是否计算虚笔
+    ///
+    /// # Returns
+    /// 返回是否有新笔生成
     pub fn update_bi(&mut self, klc: &Candle, last_klc: &Candle, cal_virtual: bool) -> bool {
         // klc:倒数第二根klc
         // last_klc: 倒数第1根klc
@@ -58,6 +81,13 @@ impl CBiList {
         }
     }
 
+    /// 检查是否可以更新峰值
+    ///
+    /// # Arguments
+    /// * `klc` - 当前K线
+    ///
+    /// # Returns
+    /// 返回是否可以更新峰值
     fn can_update_peak(&self, klc: Handle<Candle>) -> bool {
         if self.config.bi_allow_sub_peak || self.bi_list.len() < 2 {
             return false;
@@ -94,6 +124,14 @@ impl CBiList {
     }
 
     // 已完备
+    /// 更新峰值
+    ///
+    /// # Arguments
+    /// * `klc` - 当前K线
+    /// * `for_virtual` - 是否为虚笔更新
+    ///
+    /// # Returns
+    /// 返回是否成功更新峰值
     fn update_peak(&mut self, klc: Handle<Candle>, for_virtual: bool) -> bool {
         if !self.can_update_peak(klc) {
             return false;
@@ -114,6 +152,13 @@ impl CBiList {
     }
 
     // 已完备
+    /// 更新确定的笔
+    ///
+    /// # Arguments
+    /// * `klc` - 倒数第二根K线
+    ///
+    /// # Returns
+    /// 返回是否有新笔生成
     fn update_bi_sure(&mut self, klc: &Candle) -> bool {
         // klc:倒数第二根klc
         let _tmp_end = self.get_last_klu_of_last_bi();
@@ -144,6 +189,9 @@ impl CBiList {
         _tmp_end != self.get_last_klu_of_last_bi()
     }
 
+    /// 删除虚笔
+    ///
+    /// 删除列表末尾的虚笔，并根据情况恢复或重置相关状态
     pub fn delete_virtual_bi(&mut self) {
         if !self.bi_list.is_empty() && !self.bi_list.last().unwrap().is_sure {
             let sure_end_list = self.bi_list.last().unwrap().sure_end.clone();
@@ -182,6 +230,14 @@ impl CBiList {
     }
 
     // 已完备
+    /// 尝试添加虚笔
+    ///
+    /// # Arguments
+    /// * `klc` - 当前K线
+    /// * `need_del_end` - 是否需要先删除末尾虚笔
+    ///
+    /// # Returns
+    /// 返回是否成功添加虚笔
     pub fn try_add_virtual_bi(&mut self, klc: &Candle, need_del_end: bool) -> bool {
         if need_del_end {
             self.delete_virtual_bi();
@@ -229,6 +285,12 @@ impl CBiList {
     }
 
     // 已完备
+    /// 添加新笔
+    ///
+    /// # Arguments
+    /// * `start_fx` - 起始分型
+    /// * `end_fx` - 结束分型
+    /// * `is_sure` - 是否为确定笔
     fn add_new_bi(&mut self, start_fx: Handle<Candle>, end_fx: Handle<Candle>, is_sure: bool) {
         self.bi_list.push(CBi::new(
             &self.bi_list,
@@ -240,6 +302,14 @@ impl CBiList {
     }
 
     // 已完备
+    /// 尝试更新笔的结束位置
+    ///
+    /// # Arguments
+    /// * `klc` - 当前K线
+    /// * `for_virtual` - 是否为虚笔更新
+    ///
+    /// # Returns
+    /// 返回是否成功更新结束位置
     fn try_update_end(&mut self, klc: Handle<Candle>, for_virtual: bool) -> bool {
         #[inline(always)]
         fn check_top(klc: Handle<Candle>, for_virtual: bool) -> bool {
@@ -282,6 +352,10 @@ impl CBiList {
     }
 
     // 已完备
+    /// 获取最后一笔的最后一根K线的索引
+    ///
+    /// # Returns
+    /// 返回最后一笔的最后一根K线的索引，如果没有笔则返回None
     fn get_last_klu_of_last_bi(&self) -> Option<usize> {
         self.bi_list.last().map(|bi| bi._get_end_klu().index())
     }
@@ -290,6 +364,14 @@ impl CBiList {
 impl CBiList {
     // 笔判断的代码
     // 已完备
+    /// 判断两个分型之间的K线数量是否满足笔的要求
+    ///
+    /// # Arguments
+    /// * `end_fx` - 结束分型
+    /// * `start_fx` - 起始分型
+    ///
+    /// # Returns
+    /// 返回是否满足笔的跨度要求
     fn satisfy_bi_span(&self, end_fx: Handle<Candle>, start_fx: Handle<Candle>) -> bool {
         let bi_span = self.get_klc_span(end_fx, start_fx);
         if self.config.is_strict {
@@ -313,6 +395,14 @@ impl CBiList {
     }
 
     // 已完备
+    /// 获取两个分型之间的K线跨度
+    ///
+    /// # Arguments
+    /// * `end_fx` - 结束分型
+    /// * `start_fx` - 起始分型
+    ///
+    /// # Returns
+    /// 返回K线跨度数量
     fn get_klc_span(&self, end_fx: Handle<Candle>, start_fx: Handle<Candle>) -> usize {
         let mut span = end_fx.index() - start_fx.index();
 
@@ -341,8 +431,15 @@ impl CBiList {
     }
 
     // 已完备
-    // klc:结束分型的k2
-    // last_end 起始分型的k2
+    /// 判断是否可以构成笔
+    ///
+    /// # Arguments
+    /// * `end_fx` - 结束分型的k2
+    /// * `start_fx` - 起始分型的k2
+    /// * `for_virtual` - 是否为虚笔判断
+    ///
+    /// # Returns
+    /// 返回是否可以构成笔
     fn can_make_bi(
         &self,
         end_fx: Handle<Candle>,
@@ -369,6 +466,14 @@ impl CBiList {
         true
     }
 
+    /// 判断是否为峰值
+    ///
+    /// # Arguments
+    /// * `last_end` - 上一个结束分型
+    /// * `cur_end` - 当前结束分型
+    ///
+    /// # Returns
+    /// 返回是否为峰值
     fn end_is_peak(last_end: Handle<Candle>, cur_end: Handle<Candle>) -> bool {
         if last_end.fx_type == FxType::Bottom {
             let cmp_thred = cur_end.high; // 或者严格点选择get_klu_max_high()

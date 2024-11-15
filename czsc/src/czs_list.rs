@@ -14,6 +14,13 @@ pub struct CZsList<T> {
 }
 
 impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
+    /// 创建新的中枢列表实例
+    ///
+    /// # Arguments
+    /// * `zs_config` - 中枢配置参数
+    ///
+    /// # Returns
+    /// 返回新的CZsList实例
     pub fn new(zs_config: CZsConfig) -> Self {
         CZsList {
             zs_lst: Box::<Vec<CZs<T>>>::default(),
@@ -24,6 +31,12 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 更新最后确定位置
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    ///
+    /// 从后向前查找第一个确定的线段，更新last_sure_pos
     fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = None;
 
@@ -36,6 +49,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 判断线段是否需要计算中枢
+    ///
+    /// # Arguments
+    /// * `seg` - 待判断的线段
+    ///
+    /// # Returns
+    /// 返回是否需要计算该线段的中枢
     fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
         match self.last_sure_pos {
             Some(pos) => seg.start_bi.index() >= pos,
@@ -44,6 +64,12 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 添加元素到自由列表并尝试构建中枢
+    ///
+    /// # Arguments
+    /// * `item` - 待添加的元素
+    /// * `is_sure` - 是否确定
+    /// * `zs_algo` - 中枢算法
     fn add_to_free_lst(&mut self, item: Handle<T>, is_sure: bool, zs_algo: CPivotAlgo) {
         if !self.free_item_lst.is_empty()
             && item.index() == self.free_item_lst.last().unwrap().index()
@@ -66,11 +92,17 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 清空自由列表
     fn clear_free_lst(&mut self) {
         self.free_item_lst.clear();
     }
 
     // 已完备
+    /// 更新中枢列表
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
+    /// * `is_sure` - 是否确定
     fn update(&mut self, bi: Handle<T>, is_sure: bool) {
         if self.free_item_lst.is_empty() && self.try_add_to_end(bi) {
             // zs_combine_mode=peak合并模式下会触发生效，=zs合并一定无效返回
@@ -80,6 +112,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         self.add_to_free_lst(bi, is_sure, CPivotAlgo::Normal);
     }
 
+    /// 尝试将笔添加到最后一个中枢
+    ///
+    /// # Arguments
+    /// * `bi` - 待添加的笔
+    ///
+    /// # Returns
+    /// 返回是否成功添加
     fn try_add_to_end(&mut self, bi: Handle<T>) -> bool {
         if self.zs_lst.is_empty() {
             return false;
@@ -87,6 +126,12 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         self.zs_lst.last_mut().unwrap().try_add_to_end(bi)
     }
 
+    /// 从笔范围添加中枢
+    ///
+    /// # Arguments
+    /// * `seg_bi_lst` - 线段包含的笔列表
+    /// * `seg_dir` - 线段方向
+    /// * `seg_is_sure` - 线段是否确定
     fn add_zs_from_bi_range(&mut self, seg_bi_lst: &[T], seg_dir: Direction, seg_is_sure: bool) {
         let mut deal_bi_cnt = 0;
         for bi in seg_bi_lst {
@@ -104,6 +149,14 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         }
     }
 
+    /// 尝试构建中枢
+    ///
+    /// # Arguments
+    /// * `is_sure` - 是否确定
+    /// * `zs_algo` - 中枢算法
+    ///
+    /// # Returns
+    /// 返回可能构建的中枢
     fn try_construct_zs(&mut self, is_sure: bool, zs_algo: CPivotAlgo) -> Option<CZs<T>> {
         let lst = &self.free_item_lst;
 
@@ -153,6 +206,11 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 计算笔中枢
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    /// * `seg_lst` - 线段列表
     pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>) {
         while let Some(last) = self.zs_lst.last() {
             // 检查 last_sure_pos 是否有值
@@ -232,6 +290,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 更新跨线段中枢
+    ///
+    /// # Arguments
+    /// * `bi` - 笔
     fn update_overseg_zs(&mut self, bi: Handle<T>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
             if bi.to_handle().next().is_none() {
@@ -259,6 +321,9 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     }
 
     // 已完备
+    /// 尝试合并中枢
+    ///
+    /// 根据配置的合并模式，尝试合并相邻的中枢
     fn try_combine(&mut self) {
         if self.config.need_combine {
             while self.zs_lst.len() >= 2
@@ -276,12 +341,14 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 impl<T> std::ops::Deref for CZsList<T> {
     type Target = Box<Vec<CZs<T>>>;
 
+    /// 实现Deref trait，允许直接访问内部的中枢列表
     fn deref(&self) -> &Self::Target {
         &self.zs_lst
     }
 }
 
 impl<T> std::ops::DerefMut for CZsList<T> {
+    /// 实现DerefMut trait，允许直接修改内部的中枢列表
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.zs_lst
     }

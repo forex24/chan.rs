@@ -31,6 +31,14 @@ pub struct Analyzer {
 pub type CBiSeg = CSeg<CBi>;
 
 impl Analyzer {
+    /// 创建新的分析器实例
+    ///
+    /// # Arguments
+    /// * `kl_type` - K线类型
+    /// * `conf` - 缠论配置
+    ///
+    /// # Returns
+    /// 返回新的分析器实例
     pub fn new(kl_type: i32, conf: CChanConfig) -> Self {
         Self {
             kl_type,
@@ -51,48 +59,92 @@ impl Analyzer {
         }
     }
 
+    /// 获取分析器配置
+    ///
+    /// # Returns
+    /// 返回分析器配置的引用
     pub fn config(&self) -> &CChanConfig {
         &self.conf
     }
-    // seg
+
+    /// 获取线段买卖点列表
+    ///
+    /// # Returns
+    /// 返回线段买卖点列表的切片
     pub fn seg_bsp_list(&self) -> &[Handle<CBspPoint<CSeg<CBi>>>] {
         &self.seg_bs_point_lst.lst
     }
 
+    /// 获取线段中枢列表
+    ///
+    /// # Returns
+    /// 返回线段中枢列表的切片
     pub fn seg_zs_list(&self) -> &[CZs<CSeg<CBi>>] {
         self.segzs_list.as_slice()
     }
 
+    /// 获取线段的线段列表
+    ///
+    /// # Returns
+    /// 返回线段的线段列表的切片
     pub fn seg_seg_list(&self) -> &[CSeg<CSeg<CBi>>] {
         self.segseg_list.as_slice()
     }
 
-    // bi
+    /// 获取笔买卖点列表
+    ///
+    /// # Returns
+    /// 返回笔买卖点列表的切片
     pub fn bi_bsp_list(&self) -> &[Handle<CBspPoint<CBi>>] {
         &self.bs_point_lst.lst
     }
 
+    /// 获取笔中枢列表
+    ///
+    /// # Returns
+    /// 返回笔中枢列表的切片
     pub fn bi_zs_list(&self) -> &[CZs<CBi>] {
         self.zs_list.as_slice()
     }
 
+    /// 获取笔的线段列表
+    ///
+    /// # Returns
+    /// 返回笔的线段列表的切片
     pub fn seg_list(&self) -> &[CSeg<CBi>] {
         self.seg_list.as_slice()
     }
 
+    /// 获取笔列表
+    ///
+    /// # Returns
+    /// 返回笔列表的切片
     pub fn bi_list(&self) -> &[CBi] {
         self.bi_list.as_slice()
     }
 
+    /// 获取K线列表
+    ///
+    /// # Returns
+    /// 返回K线列表的切片
     pub fn candle_list(&self) -> &[Candle] {
         self.candle_list.as_slice()
     }
 
+    /// 获取Bar列表
+    ///
+    /// # Returns
+    /// 返回Bar列表的切片
     pub fn bar_list(&self) -> &[Bar] {
         self.bar_list.as_slice()
     }
 
-    // main entry
+    /// 添加新的K线数据
+    ///
+    /// # Arguments
+    /// * `k` - 新的K线数据
+    ///
+    /// 主要入口方法，处理新的K线数据并更新所有分析结果
     pub fn add_k(&mut self, k: &Kline) {
         let klu = self.bar_list.add_kline(k);
         if self.candle_list.update_candle(klu) {
@@ -111,6 +163,9 @@ impl Analyzer {
         }
     }
 
+    /// 计算笔的线段和中枢
+    ///
+    /// 更新笔的线段列表和中枢列表
     fn cal_bi_seg_and_zs(&mut self) {
         // bi
         cal_seg(self.bi_list.as_mut_slice(), &mut self.seg_list);
@@ -126,6 +181,9 @@ impl Analyzer {
         );
     }
 
+    /// 计算线段的线段和中枢
+    ///
+    /// 更新线段的线段列表和中枢列表
     fn cal_seg_seg_and_zs(&mut self) {
         // seg
         cal_seg(self.seg_list.as_mut_slice(), &mut self.segseg_list);
@@ -141,6 +199,9 @@ impl Analyzer {
         );
     }
 
+    /// 计算买卖点
+    ///
+    /// 计算线段和笔的买卖点
     fn cal_bsp(&mut self) {
         // 计算买卖点
         // 线段线段买卖点
@@ -151,6 +212,10 @@ impl Analyzer {
         self.bs_point_lst
             .cal(self.bi_list.as_slice(), &self.seg_list);
     }
+
+    /// 计算线段和中枢
+    ///
+    /// 综合计算所有线段、中枢和买卖点
     fn cal_seg_and_zs(&mut self) {
         self.cal_bi_seg_and_zs();
 
@@ -222,6 +287,13 @@ fn update_bi_seg_idx<T: LineType + IParent>(bi_list: &mut [T], seg_list: &mut CS
     }
 }
 
+/// 计算线段
+///
+/// # Arguments
+/// * `bi_list` - 笔列表
+/// * `seg_list` - 线段列表
+///
+/// 根据笔列表更新线段列表
 fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     bi_list: &mut [T],
     seg_list: &mut CSegListChan<T>,
@@ -231,6 +303,13 @@ fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     update_bi_seg_idx2(bi_list, seg_list);
 }
 
+/// 更新笔的线段索引（优化版）
+///
+/// # Arguments
+/// * `bi_list` - 笔列表
+/// * `seg_list` - 线段列表
+///
+/// 性能优化版本的笔线段索引更新
 #[allow(dead_code)]
 fn update_bi_seg_idx2<T: LineType + IParent + ToHandle>(
     bi_list: &mut [T],
@@ -290,6 +369,14 @@ fn update_bi_seg_idx2<T: LineType + IParent + ToHandle>(
     }
 }
 
+/// 更新线段中的中枢
+///
+/// # Arguments
+/// * `bi_list` - 笔列表
+/// * `seg_list` - 线段列表
+/// * `zs_list` - 中枢列表
+///
+/// 更新线段中的中枢信息，包括中枢列表和相关笔的信息
 fn update_zs_in_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     bi_list: &[T],
     seg_list: &mut CSegListChan<T>,
@@ -328,6 +415,7 @@ fn update_zs_in_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
 }
 
 impl Default for Analyzer {
+    /// 实现Default trait，使用默认配置创建分析器
     fn default() -> Self {
         Self::new(1, CChanConfig::default())
     }

@@ -6,7 +6,7 @@ pub struct CZsConfig {
     pub need_combine: bool,
     pub zs_combine_mode: CPivotCombineMode,
     pub one_bi_zs: bool,
-    pub zs_algo: CPivotAlgo,
+    pub zs_algo: CPivotAlgo, //中枢算法，涉及到中枢是否允许跨段
 }
 
 impl Default for CZsConfig {

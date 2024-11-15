@@ -25,6 +25,16 @@ pub struct Candle {
 }
 
 impl Candle {
+    /// 创建新的K线实例
+    ///
+    /// # Arguments
+    /// * `box_vec` - K线列表的引用
+    /// * `bar` - 初始Bar数据
+    /// * `idx` - K线在列表中的索引
+    /// * `dir` - K线方向
+    ///
+    /// # Returns
+    /// 返回新创建的K线实例
     #[allow(clippy::borrowed_box)]
     pub fn new(box_vec: &Box<Vec<Self>>, bar: Handle<Bar>, idx: usize, dir: KlineDir) -> Candle {
         let c = Self {
@@ -34,12 +44,17 @@ impl Candle {
             lst: vec![bar],
             high: bar.high,
             low: bar.low,
-            dir,            fx_type: FxType::Unknown,
+            dir,
+            fx_type: FxType::Unknown,
         };
         bar.as_mut().set_klc(&c);
         c
     }
 
+    /// 获取子K线的迭代器
+    ///
+    /// # Returns
+    /// 返回一个迭代器，包含所有不重复的子K线
     pub fn get_sub_klc(&self) -> impl Iterator<Item = Handle<Self>> + '_ {
         // 可能会出现相邻的两个KLC的子KLC会有重复
         // 因为子KLU合并时正好跨过了父KLC的结束时间边界
@@ -60,14 +75,26 @@ impl Candle {
         })
     }
 
+    /// 获取K线中最高价
+    ///
+    /// # Returns
+    /// 返回K线中所有Bar的最高价
     fn get_klu_max_high(&self) -> f64 {
         self.lst.iter().map(|x| x.high).reduce(f64::max).unwrap()
     }
 
+    /// 获取K线中最低价
+    ///
+    /// # Returns
+    /// 返回K线中所有Bar的最低价
     fn get_klu_min_low(&self) -> f64 {
         self.lst.iter().map(|x| x.low).reduce(f64::min).unwrap()
     }
 
+    /// 检查与下一根K线是否有缺口
+    ///
+    /// # Returns
+    /// 返回是否存在缺口
     pub fn has_gap_with_next(&self) -> bool {
         let next = self.as_handle().next();
         assert!(next.is_some());
@@ -81,7 +108,16 @@ impl Candle {
         )
     }
 
-    // 已完备
+    /// 检查分型的有效性
+    ///
+    /// # Arguments
+    /// * `lhs` - 左侧K线
+    /// * `rhs` - 右侧K线
+    /// * `method` - 检查方法
+    /// * `for_virtual` - 是否为虚笔检查
+    ///
+    /// # Returns
+    /// 返回分型是否有效
     pub fn check_fx_valid(
         lhs: Handle<Candle>,
         rhs: Handle<Candle>,
@@ -189,6 +225,13 @@ impl Candle {
 }
 
 impl Candle {
+    /// 测试是否可以合并K线
+    ///
+    /// # Arguments
+    /// * `item` - 待合并的Bar
+    ///
+    /// # Returns
+    /// 返回合并方向（上涨、下跌或合并）
     fn test_combine(&self, item: &Bar) -> KlineDir {
         /*let high_cmp = f64::total_cmp(&self.high, &item.high);
         let low_cmp = f64::total_cmp(&self.low, &item.low);
@@ -218,6 +261,13 @@ impl Candle {
         }
     }
 
+    /// 尝试添加新的Bar到K线中
+    ///
+    /// # Arguments
+    /// * `bar` - 待添加的Bar
+    ///
+    /// # Returns
+    /// 返回合并方向
     pub(crate) fn try_add(&mut self, bar: Handle<Bar>) -> KlineDir {
         let _dir = self.test_combine(&bar);
         if _dir == KlineDir::Combine {
@@ -244,14 +294,29 @@ impl Candle {
         _dir
     }
 
+    /// 获取K线的第一个Bar
+    ///
+    /// # Returns
+    /// 返回K线的第一个Bar引用
     pub fn get_begin_klu(&self) -> &Bar {
         &self.lst[0]
     }
 
+    /// 获取K线的最后一个Bar
+    ///
+    /// # Returns
+    /// 返回K线的最后一个Bar引用
     pub fn get_end_klu(&self) -> &Bar {
         self.lst.last().unwrap()
     }
 
+    /// 获取K线的峰值
+    ///
+    /// # Arguments
+    /// * `is_high` - true获取最高价，false获取最低价
+    ///
+    /// # Returns
+    /// 返回对应的峰值价格
     pub fn get_peak_val(&self, is_high: bool) -> f64 {
         if is_high {
             self.get_high_peak_klu().high
@@ -260,6 +325,13 @@ impl Candle {
         }
     }
 
+    /// 获取峰值所在的Bar
+    ///
+    /// # Arguments
+    /// * `is_high` - true获取最高价的Bar，false获取最低价的Bar
+    ///
+    /// # Returns
+    /// 返回峰值所在的Bar引用
     pub fn get_peak_klu(&self, is_high: bool) -> &Bar {
         // 获取最大值 or 最小值所在klu/bi
         if is_high {
@@ -269,6 +341,10 @@ impl Candle {
         }
     }
 
+    /// 获取最高价所在的Bar
+    ///
+    /// # Returns
+    /// 返回最高价所在的Bar引用
     fn get_high_peak_klu(&self) -> &Bar {
         for kl in self.lst.iter().rev() {
             if kl.high == self.high {
@@ -278,6 +354,10 @@ impl Candle {
         panic!("can't find peak...");
     }
 
+    /// 获取最低价所在的Bar
+    ///
+    /// # Returns
+    /// 返回最低价所在的Bar引用
     fn get_low_peak_klu(&self) -> &Bar {
         for kl in self.lst.iter().rev() {
             if kl.low == self.low {
@@ -289,6 +369,7 @@ impl Candle {
 }
 
 impl Display for Candle {
+    /// 实现Display trait，提供K线的字符串表示
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -305,24 +386,29 @@ impl Display for Candle {
 }
 
 impl IHighLow for Candle {
+    /// 实现IHighLow trait的high方法
     fn high(&self) -> f64 {
         self.high
     }
 
+    /// 实现IHighLow trait的low方法
     fn low(&self) -> f64 {
         self.low
     }
 }
 
 impl ICandlestick for Candle {
+    /// 实现ICandlestick trait的unix_time方法
     fn unix_time(&self) -> i64 {
         self.time_begin.timestamp_millis()
     }
 
+    /// 实现ICandlestick trait的open方法
     fn open(&self) -> f64 {
         self.high
     }
 
+    /// 实现ICandlestick trait的close方法
     fn close(&self) -> f64 {
         self.low
     }

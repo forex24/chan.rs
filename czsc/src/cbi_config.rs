@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CBiConfig {
     pub bi_algo: BiAlgo,
-    pub is_strict: bool,
-    pub bi_fx_check: FxCheckMethod,
+    pub is_strict: bool, // 是否只用严格笔，默认为 Ture，其中这里的严格笔只考虑顶底分形之间相隔几个合并K线
+    pub bi_fx_check: FxCheckMethod, // 检查笔顶底分形是否成立的方法
     pub gap_as_kl: bool,
-    pub bi_end_is_peak: bool,
+    pub bi_end_is_peak: bool, // 笔的尾部是否是整笔中最低/最高, 默认为 True
     pub bi_allow_sub_peak: bool,
 }
 

@@ -32,6 +32,12 @@ pub struct CBSPointList<T> {
 
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
     /// 创建新的买卖点列表实例
+    ///
+    /// # Arguments
+    /// * `bs_point_config` - 买卖点配置参数
+    ///
+    /// # Returns
+    /// 返回新的CBSPointList实例
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
             history: Box::new(Vec::with_capacity(10240)),
@@ -43,6 +49,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         }
     }
 
+    /// 移除不确定的买卖点
+    ///
+    /// 根据last_sure_pos移除所有不确定的买卖点，包括lst和bsp1_lst中的点
     pub fn remove_unsure_bsp(&mut self) {
         self.lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.klu.index() <= pos,
@@ -63,11 +72,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 99% 完备
     /// 计算所有买卖点
+    ///
+    /// # Arguments
+    /// * `bi_list` - 笔列表
+    /// * `seg_list` - 线段列表
+    ///
+    /// 依次计算一类、二类、三类买卖点，并更新最后确定位置
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
         self.remove_unsure_bsp();
 
         self.cal_seg_bs1point(seg_list, bi_list);
-	// 可以优化的地方，bsp1_bi_idx_dict，2类和3类都需要，因此可以仅仅计算一次
+        // 可以优化的地方，bsp1_bi_idx_dict，2类和3类都需要，因此可以仅仅计算一次
         self.cal_seg_bs2point(seg_list, bi_list);
         self.cal_seg_bs3point(seg_list, bi_list);
         self.update_last_pos(seg_list);
@@ -75,6 +90,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 更新最后确定位置
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    ///
+    /// 从后向前查找第一个确定的线段，更新last_sure_pos
     pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
         self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
@@ -87,6 +107,12 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 判断线段是否需要计算买卖点
+    ///
+    /// # Arguments
+    /// * `seg` - 待判断的线段
+    ///
+    /// # Returns
+    /// 返回是否需要计算该线段的买卖点
     pub fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
         match self.last_sure_pos {
             Some(pos) => seg.end_bi.get_end_klu().index() > pos,
@@ -97,13 +123,20 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     // 80% 完备
     // TODO: 性能热点
     /// 添加买卖点
+    ///
+    /// # Arguments
+    /// * `bs_type` - 买卖点类型
+    /// * `bi` - 笔
+    /// * `relate_bsp1` - 关联的一类买卖点
+    /// * `is_target_bsp` - 是否为目标买卖点
+    /// * `feature_dict` - 特征字典
     pub fn add_bs(
         &mut self,
-        bs_type: BspType,                                   // 买卖点类型
-        bi: Handle<T>,                                      // 笔
-        relate_bsp1: Option<Handle<CBspPoint<T>>>,          // 关联的一类买卖点
-        is_target_bsp: bool,                                // 是否为目标买卖点
-        feature_dict: Option<HashMap<String, Option<f64>>>, // 特征字典
+        bs_type: BspType,
+        bi: Handle<T>,
+        relate_bsp1: Option<Handle<CBspPoint<T>>>,
+        is_target_bsp: bool,
+        feature_dict: Option<HashMap<String, Option<f64>>>,
     ) {
         let is_buy = bi.is_down();
         for exist_bsp in self.lst.iter() {
@@ -166,6 +199,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // TODO: 性能热点
     /// 获取一类买卖点索引字典
+    ///
+    /// # Returns
+    /// 返回一类买卖点的索引映射表
     fn bsp1_idx_dict(&self) -> FxHashMap<isize, Handle<CBspPoint<T>>> {
         self.bsp1_lst
             .iter()
@@ -175,6 +211,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 计算线段的一类买卖点
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `bi_list` - 笔列表
     pub fn cal_seg_bs1point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         for seg in seg_list.iter() {
             if !self.seg_need_cal(seg) {
@@ -185,6 +225,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     // 已完备
+    /// 计算单个线段的一类买卖点
+    ///
+    /// # Arguments
+    /// * `seg` - 待计算的线段
+    /// * `bi_list` - 笔列表
     pub fn cal_single_bs1point(&mut self, seg: &CSeg<T>, bi_list: &[T]) {
         let is_buy = seg.is_down();
         let bsp_conf = self.config.get_bs_config(is_buy);
@@ -215,6 +260,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     /// 处理一类买卖点
+    ///
+    /// # Arguments
+    /// * `seg` - 线段
+    /// * `is_buy` - 是否为买点
+    /// * `is_target_bsp` - 是否为目标买卖点
     pub fn treat_bsp1(&mut self, seg: &CSeg<T>, is_buy: bool, is_target_bsp: bool) {
         let mut is_target_bsp = is_target_bsp;
         let bsp_conf = self.config.get_bs_config(is_buy);
@@ -241,6 +291,12 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     }
 
     /// 处理盘整一类买卖点
+    ///
+    /// # Arguments
+    /// * `seg` - 线段
+    /// * `is_buy` - 是否为买点
+    /// * `bi_list` - 笔列表
+    /// * `is_target_bsp` - 是否为目标买卖点
     pub fn treat_pz_bsp1(
         &mut self,
         seg: &CSeg<T>,
@@ -307,6 +363,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 计算线段的二类买卖点
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `bi_list` - 笔列表
     pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
 
@@ -325,12 +385,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 处理二类买卖点
+    ///
+    /// # Arguments
+    /// * `seg` - 当前线段
+    /// * `bsp1_bi_idx_dict` - 一类买卖点索引字典
+    /// * `seg_list` - 线段列表
+    /// * `bi_list` - 笔列表
     pub fn treat_bsp2(
         &mut self,
-        seg: &CSeg<T>,                                             // 当前线段
-        bsp1_bi_idx_dict: &FxHashMap<isize, Handle<CBspPoint<T>>>, // 一类买卖点索引字典
-        seg_list: &CSegListChan<T>,                                // 线段列表
-        bi_list: &[T],                                             // 笔列表
+        seg: &CSeg<T>,
+        bsp1_bi_idx_dict: &FxHashMap<isize, Handle<CBspPoint<T>>>,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[T],
     ) {
         if !self.seg_need_cal(seg) {
             return;
@@ -413,6 +479,14 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 处理类二买卖点
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `bi_list` - 笔列表
+    /// * `bsp2_bi` - 二类买卖点笔
+    /// * `break_bi` - 突破笔
+    /// * `real_bsp1` - 实际的一类买卖点
+    /// * `is_buy` - 是否为买点
     pub fn treat_bsp2s(
         &mut self,
         seg_list: &CSegListChan<T>,
@@ -519,6 +593,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     /// 计算线段的三类买卖点
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `bi_list` - 笔列表
     pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         // 1. 提前获取一类买卖点字典
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
@@ -599,6 +677,16 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         }
     }
 
+    /// 处理三类买卖点（后续）
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `next_seg` - 下一个线段
+    /// * `is_buy` - 是否为买点
+    /// * `bi_list` - 笔列表
+    /// * `real_bsp1` - 实际的一类买卖点
+    /// * `bsp1_bi_idx` - 一类买卖点索引
+    /// * `next_seg_idx` - 下一个线段索引
     #[allow(clippy::too_many_arguments)]
     pub fn treat_bsp3_after(
         &mut self,
@@ -697,6 +785,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         );
     }
 
+    /// 处理三类买卖点（之前）
+    ///
+    /// # Arguments
+    /// * `seg_list` - 线段列表
+    /// * `seg` - 当前线段
+    /// * `next_seg` - 下一个线段
+    /// * `bsp1_bi` - 一类买卖点笔
+    /// * `is_buy` - 是否为买点
+    /// * `bi_list` - 笔列表
+    /// * `real_bsp1` - 实际的一类买卖点
+    /// * `next_seg_idx` - 下一个线段索引
     #[allow(clippy::too_many_arguments)]
     pub fn treat_bsp3_before(
         &mut self,

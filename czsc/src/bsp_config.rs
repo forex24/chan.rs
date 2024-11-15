@@ -30,12 +30,12 @@ impl CBSPointConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CPointConfig {
     #[serde_as(as = "DisplayFromStr")]
-    pub divergence_rate: f64, // 1类买卖点背驰比例
+    pub divergence_rate: f64, // 1类买卖点背驰比例，即离开中枢的笔的 MACD 指标相对于进入中枢的笔，默认为 0.9
     pub min_zs_cnt: usize,           // 1类买卖点至少要经历几个中枢，默认为 1
     pub bsp1_only_multibi_zs: bool, // min_zs_cnt 计算的中枢至少 3 笔（少于 3 笔是因为开启了 one_bi_zs 参数），默认为 True
-    pub max_bs2_rate: f64,          // 2类买卖点那一笔回撤最大比例，默认为 0.618
-    pub macd_algo: MacdAlgo,        // MACD指标算法
-    pub bs1_peak: bool,             // 1类买卖点位置是否必须是整个中枢最低点，默认为 True
+    pub max_bs2_rate: f64, // 2类买卖点那一笔回撤最大比例，默认为 0.618,注：如果是 1.0，那么相当于允许回测到1类买卖点的位置
+    pub macd_algo: MacdAlgo, // MACD指标算法
+    pub bs1_peak: bool,    // 1类买卖点位置是否必须是整个中枢最低点，默认为 True
     pub target_types: Vec<BspType>, // 关注的买卖点类型
     pub bsp2_follow_1: bool, // 2类买卖点是否必须跟在1类买卖点后面（用于小转大时1类买卖点因为背驰度不足没生成），默认为 True
     pub bsp3_follow_1: bool, // 3类买卖点是否必须跟在1类买卖点后面（用于小转大时1类买卖点因为背驰度不足没生成），默认为 True

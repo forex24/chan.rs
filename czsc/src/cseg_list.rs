@@ -23,6 +23,14 @@ pub struct CSegListChan<T> {
 }
 
 impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
+    /// 创建新的线段列表通道
+    ///
+    /// # Arguments
+    /// * `seg_config` - 线段配置参数
+    /// * `lv` - 线段级别
+    ///
+    /// # Returns
+    /// 返回新的CSegListChan实例
     pub fn new(seg_config: CSegConfig, lv: SegType) -> Self {
         Self {
             lst: Box::<Vec<CSeg<T>>>::default(),
@@ -31,24 +39,33 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         }
     }
 
+    /// 清理并弹出最后一个线段，同时重置相关笔的父线段信息
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表，用于检查索引范围
+    fn clear_and_pop(&mut self, bi_lst: &[T]) {
+        let last_seg = self.lst.last().unwrap();
+        // 以下代码是 修复线段变量重置异常bug 新增的
+        for bi in &last_seg.bi_list {
+            if bi.index() < bi_lst.len() {
+                // 这里检查的原因是，如果是虚笔，最后一笔可能失效
+                bi.as_mut().set_parent_seg_dir(None);
+                bi.as_mut().set_parent_seg_idx(None);
+            }
+        }
+        // 结束
+        self.lst.pop();
+    }
+
     // 已完备
+    /// 初始化处理，删除末尾不确定的线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表，用于重置笔的父线段信息
     fn do_init(&mut self, bi_lst: &[T]) {
         // 删除末尾不确定的线段
         while !self.lst.is_empty() && !self.lst.last().unwrap().is_sure {
-            let last_seg = self.lst.last().unwrap();
-            //println!("do_init");
-            // 以下代码是 修复线段变量重置异常bug 新增的
-            for bi in &last_seg.bi_list {
-                if bi.index() < bi_lst.len() {
-                    // 这里检查的原因是，如果是虚笔，最后一笔可能失效
-                    bi.as_mut().set_parent_seg_dir(None);
-                    bi.as_mut().set_parent_seg_idx(None);
-                }
-            }
-            // 结束
-            //println!("pop1");
-
-            if let Some(_seg) = self.lst.pop() {}
+            self.clear_and_pop(bi_lst);
         }
 
         if !self.lst.is_empty() {
@@ -65,14 +82,17 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
                 {
                     // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                     // TODO:是否要向该线段包含的笔，设置parent_seg_dir & parent_seg_idx为None
-                    //println!("pop2");
-                    self.lst.pop();
+                    self.clear_and_pop(bi_lst);
                 }
             }
         }
     }
 
     // 已完备
+    /// 更新线段列表，包括确定线段和处理剩余笔
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表，用于计算新的线段
     pub fn update(&mut self, bi_lst: &[T]) {
         self.do_init(bi_lst);
         //self.do_init();
@@ -88,7 +108,11 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         self.collect_left_seg(bi_lst);
     }
 
-    // TODO:修改递归为loop
+    /// 计算确定的线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    /// * `begin_idx` - 开始计算的笔索引
     fn cal_seg_sure(&mut self, bi_lst: &[T], begin_idx: usize) {
         let fx_eigen = self.cal_eigen_fx(bi_lst, begin_idx);
         if let Some(fx_eigen) = fx_eigen {
@@ -97,6 +121,14 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     }
 
     // 99% 完备
+    /// 计算特征分型
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    /// * `begin_idx` - 开始计算的笔索引
+    ///
+    /// # Returns
+    /// 返回可能的特征分型
     fn cal_eigen_fx(&mut self, bi_lst: &[T], begin_idx: usize) -> Option<CEigenFx<T>> {
         let mut up_eigen = CEigenFx::new(Direction::Up, true, self.lv); // 上升线段下降笔
         let mut down_eigen = CEigenFx::new(Direction::Down, true, self.lv); // 下降线段上升笔
@@ -156,6 +188,11 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         None
     }
 
+    /// 处理特征分型，确定是否可以构成线段
+    ///
+    /// # Arguments
+    /// * `fx_eigen` - 特征分型
+    /// * `bi_lst` - 笔列表
     fn treat_fx_eigen(&mut self, mut fx_eigen: CEigenFx<T>, bi_lst: &[T]) {
         let test = fx_eigen.can_be_end(bi_lst);
         let end_bi_idx = fx_eigen.get_peak_bi_idx();
@@ -192,6 +229,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
 
 impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     //100% 完备
+    /// 收集第一个线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
     fn collect_first_seg(&mut self, bi_lst: &[T]) {
         if bi_lst.len() < 3 {
             return;
@@ -245,6 +286,11 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     }
 
     //99% 完备，见TODO
+    /// 使用峰值方法收集剩余笔构成的线段
+    ///
+    /// # Arguments
+    /// * `last_seg_end_bi` - 最后一个线段的结束笔
+    /// * `bi_lst` - 笔列表
     fn collect_left_seg_peak_method(&mut self, last_seg_end_bi: &Handle<T>, bi_lst: &[T]) {
         if last_seg_end_bi.is_down() {
             if let Some(peak_bi) = Self::find_peak_bi(&bi_lst[last_seg_end_bi.index() + 3..], true)
@@ -280,6 +326,10 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     }
 
     // 已完备
+    /// 收集剩余笔构成线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
     fn collect_segs(&mut self, bi_lst: &[T]) {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().end_bi;
@@ -331,6 +381,10 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     }
 
     // 已完备
+    /// 收集剩余笔构成线段的主入口
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
     fn collect_left_seg(&mut self, bi_lst: &[T]) {
         if self.lst.is_empty() {
             self.collect_first_seg(bi_lst);
@@ -340,6 +394,10 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     }
 
     // 已完备
+    /// 将剩余笔直接构成一个线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
     fn collect_left_as_seg(&mut self, bi_lst: &[T]) {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().end_bi;
@@ -369,7 +427,13 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         }
     }
 
-    // 替代seg.check
+    /// 检查线段是否有效
+    ///
+    /// # Arguments
+    /// * `seg` - 待检查的线段
+    ///
+    /// # Returns
+    /// 返回检查结果，Ok(())表示有效，Err表示无效
     fn check_seg_valid(&self, seg: &CSeg<T>) -> Result<(), TestSegError> {
         if !seg.is_sure {
             return Ok(());
@@ -394,6 +458,18 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         Ok(())
     }
 
+    /// 尝试添加新线段
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    /// * `end_bi_idx` - 结束笔索引
+    /// * `is_sure` - 是否确定线段
+    /// * `seg_dir` - 线段方向
+    /// * `split_first_seg` - 是否分割第一个线段
+    /// * `reason` - 添加原因
+    ///
+    /// # Returns
+    /// 返回添加结果
     fn try_add_new_seg(
         &mut self,
         bi_lst: &[T],
@@ -458,6 +534,18 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         Ok(())
     }
 
+    /// 添加新线段的包装方法
+    ///
+    /// # Arguments
+    /// * `bi_lst` - 笔列表
+    /// * `end_bi_idx` - 结束笔索引
+    /// * `is_sure` - 是否确定线段
+    /// * `seg_dir` - 线段方向
+    /// * `split_first_seg` - 是否分割第一个线段
+    /// * `reason` - 添加原因
+    ///
+    /// # Returns
+    /// 返回是否添加成功
     fn add_new_seg(
         &mut self,
         bi_lst: &[T],
@@ -480,6 +568,14 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         }
     }
 
+    /// 查找峰值笔
+    ///
+    /// # Arguments
+    /// * `bi_iter` - 笔迭代器
+    /// * `is_high` - 是否查找高点
+    ///
+    /// # Returns
+    /// 返回可能的峰值笔
     fn find_peak_bi<'a, I>(bi_iter: I, is_high: bool) -> Option<Handle<T>>
     where
         I: IntoIterator<Item = &'a T>,
