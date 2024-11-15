@@ -72,7 +72,7 @@ impl CBiList {
         {
             return false;
         }
-        if !end_is_peak(
+        if !Self::end_is_peak(
             self.bi_list[self.bi_list.len() - 2].begin_klc,
             klc.as_handle(),
         ) {
@@ -240,6 +240,56 @@ impl CBiList {
     }
 
     // 已完备
+    fn try_update_end(&mut self, klc: Handle<Candle>, for_virtual: bool) -> bool {
+        #[inline(always)]
+        fn check_top(klc: Handle<Candle>, for_virtual: bool) -> bool {
+            if for_virtual {
+                klc.dir == KlineDir::Up
+            } else {
+                klc.fx_type == FxType::Top
+            }
+        }
+
+        #[inline(always)]
+        fn check_bottom(klc: Handle<Candle>, for_virtual: bool) -> bool {
+            if for_virtual {
+                klc.dir == KlineDir::Down
+            } else {
+                klc.fx_type == FxType::Bottom
+            }
+        }
+
+        if self.bi_list.is_empty() {
+            return false;
+        }
+
+        let last_bi = self.bi_list.last_mut().unwrap();
+        if (last_bi._is_up() && check_top(klc, for_virtual) && klc.high >= last_bi._get_end_val())
+            || (last_bi._is_down()
+                && check_bottom(klc, for_virtual)
+                && klc.low <= last_bi._get_end_val())
+        {
+            if for_virtual {
+                last_bi.update_virtual_end(klc);
+            } else {
+                last_bi.update_new_end(klc);
+            }
+            self.last_end = Some(klc);
+            true
+        } else {
+            false
+        }
+    }
+
+    // 已完备
+    fn get_last_klu_of_last_bi(&self) -> Option<usize> {
+        self.bi_list.last().map(|bi| bi._get_end_klu().index())
+    }
+}
+
+impl CBiList {
+    // 笔判断的代码
+    // 已完备
     fn satisfy_bi_span(&self, end_fx: Handle<Candle>, start_fx: Handle<Candle>) -> bool {
         let bi_span = self.get_klc_span(end_fx, start_fx);
         if self.config.is_strict {
@@ -313,85 +363,40 @@ impl CBiList {
             return false;
         }
 
-        if self.config.bi_end_is_peak && !end_is_peak(start_fx, end_fx) {
+        if self.config.bi_end_is_peak && !Self::end_is_peak(start_fx, end_fx) {
             return false;
         }
         true
     }
 
-    // 已完备
-    fn try_update_end(&mut self, klc: Handle<Candle>, for_virtual: bool) -> bool {
-        fn check_top(klc: Handle<Candle>, for_virtual: bool) -> bool {
-            if for_virtual {
-                klc.dir == KlineDir::Up
-            } else {
-                klc.fx_type == FxType::Top
+    fn end_is_peak(last_end: Handle<Candle>, cur_end: Handle<Candle>) -> bool {
+        if last_end.fx_type == FxType::Bottom {
+            let cmp_thred = cur_end.high; // 或者严格点选择get_klu_max_high()
+            let mut klc = last_end.next();
+            while let Some(k) = klc {
+                if k.index() >= cur_end.index() {
+                    return true;
+                }
+                if k.high > cmp_thred {
+                    return false;
+                }
+                klc = k.next();
+            }
+        } else if last_end.fx_type == FxType::Top {
+            let cmp_thred = cur_end.low; // 或者严格点选择get_klu_min_low()
+            let mut klc = last_end.next();
+            while let Some(k) = klc {
+                if k.index() >= cur_end.index() {
+                    return true;
+                }
+                if k.low < cmp_thred {
+                    return false;
+                }
+                klc = k.next();
             }
         }
-
-        fn check_bottom(klc: Handle<Candle>, for_virtual: bool) -> bool {
-            if for_virtual {
-                klc.dir == KlineDir::Down
-            } else {
-                klc.fx_type == FxType::Bottom
-            }
-        }
-
-        if self.bi_list.is_empty() {
-            return false;
-        }
-
-        let last_bi = self.bi_list.last_mut().unwrap();
-        if (last_bi._is_up() && check_top(klc, for_virtual) && klc.high >= last_bi._get_end_val())
-            || (last_bi._is_down()
-                && check_bottom(klc, for_virtual)
-                && klc.low <= last_bi._get_end_val())
-        {
-            if for_virtual {
-                last_bi.update_virtual_end(klc);
-            } else {
-                last_bi.update_new_end(klc);
-            }
-            self.last_end = Some(klc);
-            true
-        } else {
-            false
-        }
+        true
     }
-
-    // 已完备
-    fn get_last_klu_of_last_bi(&self) -> Option<usize> {
-        self.bi_list.last().map(|bi| bi._get_end_klu().index())
-    }
-}
-
-fn end_is_peak(last_end: Handle<Candle>, cur_end: Handle<Candle>) -> bool {
-    if last_end.fx_type == FxType::Bottom {
-        let cmp_thred = cur_end.high; // 或者严格点选择get_klu_max_high()
-        let mut klc = last_end.next();
-        while let Some(k) = klc {
-            if k.index() >= cur_end.index() {
-                return true;
-            }
-            if k.high > cmp_thred {
-                return false;
-            }
-            klc = k.next();
-        }
-    } else if last_end.fx_type == FxType::Top {
-        let cmp_thred = cur_end.low; // 或者严格点选择get_klu_min_low()
-        let mut klc = last_end.next();
-        while let Some(k) = klc {
-            if k.index() >= cur_end.index() {
-                return true;
-            }
-            if k.low < cmp_thred {
-                return false;
-            }
-            klc = k.next();
-        }
-    }
-    true
 }
 
 impl std::ops::Deref for CBiList {

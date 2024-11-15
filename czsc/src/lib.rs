@@ -32,9 +32,9 @@ pub use candle_list::*;
 pub use config::*;
 
 mod cbi;
+mod cbi_algo;
 mod cbi_config;
 mod cbi_list;
-
 pub use cbi::*;
 pub use cbi_config::*;
 pub use cbi_list::*;
@@ -99,4 +99,5 @@ pub use metric::*;
 mod kline;
 pub use kline::*;
 mod analyzer;
+mod storage;
 pub use analyzer::*;
