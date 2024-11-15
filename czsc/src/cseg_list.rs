@@ -70,13 +70,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
             assert!(self.lst.last().unwrap().eigen_fx.is_some());
             assert!(self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2].is_some());
 
-            let last_bi_index = self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2]
+            let last_bi = self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2]
                 .as_ref()
                 .unwrap()
                 .lst
                 .last()
                 .unwrap();
-            if !last_bi_index.is_sure() {
+            if !last_bi.is_sure() {
                 {
                     // 如果确定线段的分形的第三元素包含不确定笔，也需要重新算，不然线段分形元素的高低点可能不对
                     // TODO:是否要向该线段包含的笔，设置parent_seg_dir & parent_seg_idx为None
