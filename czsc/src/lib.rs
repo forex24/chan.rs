@@ -7,6 +7,8 @@ pub use common::*;
 
 mod cenum;
 pub use cenum::*;
+mod chan_exception;
+pub use chan_exception::*;
 
 mod func_util;
 mod handle;

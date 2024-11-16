@@ -261,7 +261,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             }
             CPivotAlgo::Auto => {
                 let mut sure_seg_appear = false;
-                let exist_sure_seg = seg_lst.iter().any(|seg| seg.is_sure); //seg_lst.exist_sure_seg()
+                let exist_sure_seg = seg_lst.exist_sure_seg(); //seg_lst.iter().any(|seg| seg.is_sure);
                 for seg in seg_lst.iter() {
                     if seg.is_sure {
                         sure_seg_appear = true;

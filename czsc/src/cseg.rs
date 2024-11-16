@@ -4,7 +4,9 @@ use std::collections::VecDeque;
 use crate::AsHandle;
 use crate::Bar;
 use crate::CBspPoint;
+use crate::CChanException;
 use crate::CEigenFx;
+use crate::ErrCode;
 //use crate::CTrendLine;
 use crate::Handle;
 use crate::IBspInfo;
@@ -50,15 +52,15 @@ impl<T: LineType> CSeg<T> {
         is_sure: bool,
         seg_dir: Option<Direction>,
         reason: &str,
-    ) -> Self {
-        assert!(
-            start_bi.index() == 0 || start_bi.direction() == end_bi.direction() || !is_sure,
-            "{} {} {} {}",
-            start_bi.index(),
-            end_bi.index(),
-            start_bi.direction(),
-            end_bi.direction()
-        );
+    ) -> Result<Self, CChanException> {
+        //assert!(
+        //    start_bi.index() == 0 || start_bi.direction() == end_bi.direction() || !is_sure,
+        //    "{} {} {} {}",
+        //    start_bi.index(),
+        //    end_bi.index(),
+        //    start_bi.direction(),
+        //    end_bi.direction()
+        //);
 
         let dir = match seg_dir.is_none() {
             true => end_bi.direction(),
@@ -86,8 +88,10 @@ impl<T: LineType> CSeg<T> {
         if end_bi.index() - start_bi.index() < 2 {
             seg.is_sure = false;
         }
-        seg.check();
-        seg
+
+        seg.check()?;
+
+        Ok(seg)
     }
 
     // 已完备
@@ -105,27 +109,36 @@ impl<T: LineType> CSeg<T> {
     //}
 
     // 已完备
-    fn check(&self) {
+    fn check(&self) -> Result<(), CChanException> {
         if !self.is_sure {
-            return;
+            return Ok(());
         }
 
         if self._is_down() {
             if self.start_bi.get_begin_val() < self.end_bi.get_end_val() {
-                panic!("下降线段起始点应该高于结束点! idx={}", self.index());
+                return Err(CChanException::new(
+                    format!("下降线段起始点应该高于结束点! idx={}", self.handle.index),
+                    ErrCode::SegEndValueErr,
+                ));
             }
         } else if self.start_bi.get_begin_val() > self.end_bi.get_end_val() {
-            panic!("上升线段起始点应该低于结束点! idx={}", self.index());
+            return Err(CChanException::new(
+                format!("上升线段起始点应该低于结束点! idx={}", self.handle.index),
+                ErrCode::SegEndValueErr,
+            ));
         }
 
         if self.end_bi.index() - self.start_bi.index() < 2 {
-            panic!(
-                "线段({}-{})长度不能小于2! idx={}",
-                self.start_bi.index(),
-                self.end_bi.index(),
-                self.index()
-            );
+            return Err(CChanException::new(
+                format!(
+                    "线段({}-{})长度不能小于2! idx={}",
+                    self.start_bi.index, self.end_bi.index, self.handle.index
+                ),
+                ErrCode::SegLenErr,
+            ));
         }
+
+        Ok(())
     }
 
     pub fn __cal_klu_slope(&self) -> f64 {
