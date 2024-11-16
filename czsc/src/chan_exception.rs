@@ -1,7 +1,6 @@
 // File: chan/src/common/chan_exception.rs
 
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use std::error::Error;
 use std::fmt;
 

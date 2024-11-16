@@ -1,21 +1,27 @@
 use crate::{
     CChanException, CSeg, CSegListChan, Direction, ErrCode, Handle, IParent, LeftSegMethod,
-    LineType, TestSegError, ToHandle,
+    LineType, ToHandle,
 };
 
 impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
-    pub fn left_bi_break(&self, bi_lst: &[T]) -> bool {
+    #[allow(dead_code)]
+    pub(crate) fn left_bi_break(&self, bi_lst: &[T]) -> bool {
         if self.lst.is_empty() {
             return false;
         }
+
         let last_seg_end_bi = &self.lst.last().unwrap().end_bi;
-        for bi in bi_lst.iter().skip(last_seg_end_bi.index() as usize + 1) {
+
+        for bi in bi_lst.iter().skip(last_seg_end_bi.index() + 1) {
             if last_seg_end_bi.is_up() && bi.high() > last_seg_end_bi.high() {
                 return true;
-            } else if last_seg_end_bi.is_down() && bi.low() < last_seg_end_bi.low() {
+            }
+
+            if last_seg_end_bi.is_down() && bi.low() < last_seg_end_bi.low() {
                 return true;
             }
         }
+
         false
     }
 

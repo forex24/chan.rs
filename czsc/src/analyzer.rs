@@ -298,7 +298,9 @@ fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     bi_list: &mut [T],
     seg_list: &mut CSegListChan<T>,
 ) {
-    seg_list.update(bi_list);
+    if seg_list.update(bi_list).is_err() {
+        panic!("seg_list update failed");
+    }
 
     update_bi_seg_idx2(bi_list, seg_list);
 }

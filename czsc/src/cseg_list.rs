@@ -9,12 +9,6 @@ use crate::LineType;
 use crate::ToHandle;
 use crate::{Direction, SegType};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TestSegError {
-    SegEndValueErr,
-    SegLenErr,
-}
-
 pub struct CSegListChan<T> {
     pub lst: Box<Vec<CSeg<T>>>,
     pub lv: SegType,
