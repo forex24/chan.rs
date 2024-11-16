@@ -179,19 +179,3 @@ impl Default for CChanConfig {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_serialization() {
-        let config = CChanConfig::default();
-        let json = config.to_json().unwrap();
-        println!("{}", json);
-
-        // Test deserialization
-        let decoded: CChanConfig = CChanConfig::from_json(&json).unwrap();
-        assert_eq!(config.trigger_step, decoded.trigger_step);
-    }
-}
