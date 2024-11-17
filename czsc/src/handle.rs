@@ -78,15 +78,18 @@ impl<T> Handle<T> {
         &mut self.get_vec_mut()[self.index]
     }
 
+    #[inline(always)]
     pub fn next(&self) -> Option<Handle<T>> {
         self.next_step_by(1)
     }
 
+    #[inline(always)]
     pub fn prev(&self) -> Option<Handle<T>> {
         self.prev_step_by(1)
     }
 
     // 向后查找相邻元素
+    #[inline(always)]
     pub fn next_step_by(&self, step: usize) -> Option<Handle<T>> {
         let vec: &Vec<T> = self.get_vec_ref();
         if self.index + step >= vec.len() {
@@ -100,6 +103,7 @@ impl<T> Handle<T> {
     }
 
     // 向前查找相邻元素
+    #[inline(always)]
     pub fn prev_step_by(&self, step: usize) -> Option<Handle<T>> {
         if step > self.index {
             None
