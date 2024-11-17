@@ -410,12 +410,12 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
                 return Some(false);
             }
 
-            if egien_fx.ele[1].is_some()
-                && ((bi.is_down() && egien_fx.ele[1].as_ref().unwrap().high > break_thred)
-                    || (bi.is_up() && egien_fx.ele[1].as_ref().unwrap().low < break_thred))
-            {
-                return Some(true);
-            }
+            //if egien_fx.ele[1].is_some()
+            //    && ((bi.is_down() && egien_fx.ele[1].as_ref().unwrap().high > break_thred)
+            //        || (bi.is_up() && egien_fx.ele[1].as_ref().unwrap().low < break_thred))
+            //{
+            //    return Some(true);
+            //}
         }
 
         None
