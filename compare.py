@@ -13,11 +13,10 @@ COMPARE_COLS = {
     'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time'],
     'bs_point_history.csv':['begin_time', 'bsp_type'],
     
-    'seg_seg_list.csv': ['begin_time', 'idx','dir', 'high', 'low', 'is_sure','zs_count', 'bi_count','reason'],
-    'seg_zs_list.csv': ['begin_time', 'high', 'low', 'peak_high', 'peak_low', 'is_sure'],
-    'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_begin_time', 'bi_end_time'],
-    'seg_bs_point_history.csv':['begin_time', 'bsp_type'],
-    
+    'seg_seg_list.csv':  ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_seg_idx','end_seg_idx', 'zs_count', 'bi_count','reason'],
+    'seg_zs_list.csv': ['begin_time', 'end_time','high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_seg_idx', 'end_seg_idx','bi_in', 'bi_out'],
+    'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'seg_idx', 'bi_begin_time', 'bi_end_time'],
+    'seg_bs_point_history.csv':['begin_time'] #, 'bsp_type'],
 }
 
 
@@ -74,6 +73,12 @@ def normalize_parent_seg_value(val):
     if isinstance(val, float) and val.is_integer():
         return int(val)
     return val
+
+def is_nan_equal(val1, val2):
+    """比较两个值，特殊处理 nan 值"""
+    if pd.isna(val1) and pd.isna(val2):
+        return True
+    return val1 == val2
 
 def compare_files(dir1: str, dir2: str):
     """比较两个目录下的同名文件"""
@@ -136,12 +141,9 @@ def compare_files(dir1: str, dir2: str):
                     val2 = row2[col]
                     
                     # 对不同类型的列进行特殊处理
-                    if col == 'parent_seg':
-                        val1 = normalize_parent_seg_value(val1)
-                        val2 = normalize_parent_seg_value(val2)
-                        # 特殊处理 nan 值的比较
-                        if pd.isna(val1) and pd.isna(val2):
-                            continue  # 两个 nan 值视为相同，跳过后续比较
+                    if col in ['parent_seg_idx', 'parent_seg_dir']:  # 添加这些特殊列
+                        if is_nan_equal(val1, val2):
+                            continue
                     elif col == 'is_sure':
                         if isinstance(val1, str) and isinstance(val2, str):
                             val1 = val1.lower()

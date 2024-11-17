@@ -18,3 +18,5 @@ o1/
 *_output
 profile.json
 *.tar.gz
+temp/
+tmp/

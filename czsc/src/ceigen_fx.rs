@@ -381,7 +381,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
         bi_list: &[T],
         begin_idx: usize,
         thred_value: f64,
-        break_thred: f64,
+        _break_thred: f64,
     ) -> Option<bool> {
         const COMMON_COMBINE: bool = true;
 

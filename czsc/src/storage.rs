@@ -257,8 +257,11 @@ impl Analyzer {
                         "False".to_string()
                     },
                 );
-                map.insert("start_bi_idx".to_string(), seg.start_bi.index().to_string());
-                map.insert("end_bi_idx".to_string(), seg.end_bi.index().to_string());
+                map.insert(
+                    "start_seg_idx".to_string(),
+                    seg.start_bi.index().to_string(),
+                );
+                map.insert("end_seg_idx".to_string(), seg.end_bi.index().to_string());
                 map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
                 map.insert("bi_count".to_string(), seg.bi_list.len().to_string());
                 map.insert("reason".to_string(), seg.reason.clone());
@@ -302,9 +305,9 @@ impl Analyzer {
                         "False".to_string()
                     },
                 );
-                map.insert("begin_bi_idx".to_string(), zs.begin_bi.index().to_string());
+                map.insert("begin_seg_idx".to_string(), zs.begin_bi.index().to_string());
                 map.insert(
-                    "end_bi_idx".to_string(),
+                    "end_seg_idx".to_string(),
                     zs.end_bi.unwrap().index().to_string(),
                 );
                 map.insert(
@@ -336,7 +339,7 @@ impl Analyzer {
                     bsp.klu.time.format(TIME_FORMAT).to_string(),
                 );
                 map.insert("bsp_type".to_string(), bsp.type2str());
-                map.insert("bi_idx".to_string(), bsp.bi.index().to_string());
+                map.insert("seg_idx".to_string(), bsp.bi.index().to_string());
                 map.insert(
                     "bi_begin_time".to_string(),
                     bsp.bi.get_begin_klu().time.format(TIME_FORMAT).to_string(),
