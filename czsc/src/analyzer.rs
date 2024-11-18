@@ -359,7 +359,7 @@ fn update_bi_seg_idx2<T: LineType + IParent + ToHandle>(
 
         // Move to previous segment if necessary
         if bi.to_handle().index() < cur_seg.start_bi.index() {
-            assert!(cur_seg.to_handle().prev().is_some());
+            debug_assert!(cur_seg.to_handle().prev().is_some());
             let pre = cur_seg
                 .to_handle()
                 .prev()
@@ -395,14 +395,14 @@ fn update_zs_in_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
         seg.clear_zs_lst();
 
         for zs in zs_list.iter_mut().rev() {
-            assert!(zs.end.is_some());
+            debug_assert!(zs.end.is_some());
             if zs.end.unwrap().index() < seg.start_bi.get_begin_klu().as_handle().index() {
                 break;
             }
             if zs.is_inside(seg) {
                 seg.add_zs(zs.as_handle());
             }
-            //assert!(zs.begin_bi.index() > 0);
+            //debug_assert!(zs.begin_bi.index() > 0);
             zs.set_bi_in(bi_list[zs.begin_bi.index() - 1].to_handle());
             if zs.end_bi.unwrap().index() + 1 < bi_list.len() {
                 zs.set_bi_out(bi_list[zs.end_bi.unwrap().index() + 1].to_handle());

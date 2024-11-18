@@ -320,7 +320,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             self.lst[self.lst.len() - 1].end_bi.index() + 1
         };
 
-        assert!(bi1_idx < bi_lst.len());
+        debug_assert!(bi1_idx < bi_lst.len());
 
         let bi1 = &bi_lst[bi1_idx];
         let bi2 = &bi_lst[end_bi_idx];

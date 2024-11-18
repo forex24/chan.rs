@@ -53,7 +53,7 @@ impl<T: LineType> CSeg<T> {
         seg_dir: Option<Direction>,
         reason: &str,
     ) -> Result<Self, CChanException> {
-        //assert!(
+        //debug_assert!(
         //    start_bi.index() == 0 || start_bi.direction() == end_bi.direction() || !is_sure,
         //    "{} {} {} {}",
         //    start_bi.index(),
@@ -142,7 +142,7 @@ impl<T: LineType> CSeg<T> {
     }
 
     pub fn __cal_klu_slope(&self) -> f64 {
-        assert!(self.end_bi.index() >= self.start_bi.index());
+        debug_assert!(self.end_bi.index() >= self.start_bi.index());
 
         (self._get_end_val() - self._get_begin_val())
             / (self._get_end_klu().index() as f64 - self._get_begin_klu().index() as f64)
@@ -256,7 +256,7 @@ impl<T: LineType> CSeg<T> {
 impl<T: LineType + IParent + ToHandle> CSeg<T> {
     // 为什么会有这个方法？？原因是什么？？
     pub fn update_bi_list(&mut self, bi_lst: &[T], idx1: usize, idx2: usize) {
-        assert!(idx2 < bi_lst.len());
+        debug_assert!(idx2 < bi_lst.len());
         (idx1..=idx2).for_each(|bi_idx| {
             bi_lst[bi_idx]
                 .to_handle()

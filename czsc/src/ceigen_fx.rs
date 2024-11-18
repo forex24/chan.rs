@@ -63,7 +63,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     /// # Returns
     /// 返回是否需要重置
     fn treat_second_ele(&mut self, bi: Handle<T>) -> bool {
-        assert!(self.ele[0].is_some());
+        debug_assert!(self.ele[0].is_some());
 
         let combine_dir = self.ele[0]
             .as_mut()
@@ -92,8 +92,8 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     /// # Returns
     /// 返回是否形成有效分型
     fn treat_third_ele(&mut self, bi: Handle<T>) -> bool {
-        assert!(self.ele[0].is_some());
-        assert!(self.ele[1].is_some());
+        debug_assert!(self.ele[0].is_some());
+        debug_assert!(self.ele[1].is_some());
 
         self.last_evidence_bi = Some(bi);
 
@@ -234,7 +234,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
                 }
             }
         } else {
-            assert!(self.ele[1].is_some());
+            debug_assert!(self.ele[1].is_some());
             let ele2_begin_idx = self.ele[1].as_ref().unwrap().lst[0].index();
 
             self.ele[0] = self.ele[1].take();
@@ -257,10 +257,10 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     /// # Returns
     /// 返回是否可以作为线段的结束
     pub fn can_be_end(&mut self, bi_lst: &[T]) -> Option<bool> {
-        assert!(self.ele[1].is_some());
+        debug_assert!(self.ele[1].is_some());
 
         if self.ele[1].as_ref().unwrap().gap {
-            assert!(self.ele[0].is_some());
+            debug_assert!(self.ele[0].is_some());
 
             let end_bi_idx = self.get_peak_bi_idx();
             let thred_value = bi_lst[end_bi_idx].get_end_val();
@@ -297,7 +297,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     /// # Returns
     /// 返回峰值笔的索引
     pub fn get_peak_bi_idx(&self) -> usize {
-        assert!(self.ele[1].is_some());
+        debug_assert!(self.ele[1].is_some());
 
         self.ele[1].as_ref().unwrap().get_peak_bi_idx()
     }
@@ -307,7 +307,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
     /// # Returns
     /// 返回是否所有笔都已确定
     pub fn all_bi_is_sure(&self) -> bool {
-        assert!(self.last_evidence_bi.is_some());
+        debug_assert!(self.last_evidence_bi.is_some());
 
         //for bi in &self.lst {
         //    if !bi.is_sure() {
@@ -334,7 +334,7 @@ impl<T: LineType + ToHandle> CEigenFx<T> {
             return true;
         }
 
-        assert!(self.ele[2].is_some() && self.ele[1].is_some());
+        debug_assert!(self.ele[2].is_some() && self.ele[1].is_some());
 
         if (self.is_up()
             && self.ele[2].as_ref().unwrap().low

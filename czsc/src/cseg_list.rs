@@ -61,8 +61,8 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         }
 
         if !self.lst.is_empty() {
-            assert!(self.lst.last().unwrap().eigen_fx.is_some());
-            assert!(self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2].is_some());
+            debug_assert!(self.lst.last().unwrap().eigen_fx.is_some());
+            debug_assert!(self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2].is_some());
 
             let last_bi = self.lst.last().unwrap().eigen_fx.as_ref().unwrap().ele[2]
                 .as_ref()

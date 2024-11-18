@@ -99,8 +99,8 @@ impl CBi {
     // 已完备
     fn check(&self) {
         match self._is_down() {
-            true => assert!(self.begin_klc.high > self.end_klc.low),
-            false => assert!(self.begin_klc.low < self.end_klc.high),
+            true => debug_assert!(self.begin_klc.high > self.end_klc.low),
+            false => debug_assert!(self.begin_klc.low < self.end_klc.high),
         }
     }
 

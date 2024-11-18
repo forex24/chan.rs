@@ -36,7 +36,7 @@ pub struct BollModel {
 
 impl BollModel {
     pub fn new(n: usize) -> BollModel {
-        assert!(n > 1);
+        debug_assert!(n > 1);
         BollModel {
             n,
             arr: VecDeque::new(),

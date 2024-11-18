@@ -33,7 +33,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         lst: &[Handle<T>],
         is_sure: bool,
     ) -> Self {
-        assert!(!lst.is_empty());
+        debug_assert!(!lst.is_empty());
         let mut zs = Self {
             handle: Handle::new(box_vec, zs_index),
             is_sure,
@@ -224,7 +224,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
     // 已完备
     pub fn out_bi_is_peak(&self, end_bi_idx: usize) -> (bool, Option<f64>) {
         //返回 (是否最低点，bi_out与中枢里面尾部最接近它的差距比例)
-        assert!(!self.bi_lst.is_empty());
+        debug_assert!(!self.bi_lst.is_empty());
 
         if let Some(bi_out) = self.bi_out {
             let mut peak_rate = f64::INFINITY;
@@ -250,14 +250,14 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
 
     // 已完备
     pub fn get_bi_in(&self) -> &T {
-        assert!(self.bi_in.is_some());
+        debug_assert!(self.bi_in.is_some());
 
         self.bi_in.as_ref().unwrap()
     }
 
     // 已完备
     pub fn get_bi_out(&self) -> &T {
-        assert!(self.bi_out.is_some());
+        debug_assert!(self.bi_out.is_some());
 
         self.bi_out.as_ref().unwrap()
     }
@@ -281,7 +281,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
 impl<T> CZs<T> {
     // 已完备
     pub fn is_one_bi_zs(&self) -> bool {
-        assert!(self.end_bi.is_some());
+        debug_assert!(self.end_bi.is_some());
 
         self.begin_bi.index() == self.end_bi.unwrap().index()
     }

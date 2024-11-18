@@ -186,7 +186,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             }
 
             CPivotAlgo::OverSeg => {
-                assert!(!self.config.one_bi_zs);
+                debug_assert!(!self.config.one_bi_zs);
 
                 self.clear_free_lst();
 

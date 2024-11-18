@@ -98,7 +98,7 @@ impl Candle {
     /// 返回是否存在缺口
     pub fn has_gap_with_next(&self) -> bool {
         let next = self.as_handle().next();
-        assert!(next.is_some());
+        debug_assert!(next.is_some());
         //相同也算重叠，也就是没有gap
         !has_overlap(
             self.get_klu_min_low(),
@@ -125,12 +125,12 @@ impl Candle {
         method: FxCheckMethod,
         for_virtual: bool, // 虚笔时使用
     ) -> bool {
-        assert!(lhs.next().is_some() && rhs.prev().is_some());
-        assert!(lhs.prev().is_some());
-        assert!(rhs.index() > lhs.index());
+        debug_assert!(lhs.next().is_some() && rhs.prev().is_some());
+        debug_assert!(lhs.prev().is_some());
+        debug_assert!(rhs.index() > lhs.index());
         match lhs.fx_type {
             FxType::Top => {
-                assert!(for_virtual || rhs.fx_type == FxType::Bottom);
+                debug_assert!(for_virtual || rhs.fx_type == FxType::Bottom);
                 if for_virtual && rhs.dir != KlineDir::Down {
                     return false;
                 }
@@ -152,7 +152,7 @@ impl Candle {
                                     .min(lhs.next().unwrap().low),
                             )
                         } else {
-                            assert!(rhs.next().is_some());
+                            debug_assert!(rhs.next().is_some());
                             (
                                 rhs.prev()
                                     .unwrap()
@@ -176,7 +176,7 @@ impl Candle {
                 }
             }
             FxType::Bottom => {
-                assert!(for_virtual || rhs.fx_type == FxType::Top);
+                debug_assert!(for_virtual || rhs.fx_type == FxType::Top);
                 if for_virtual && rhs.dir != KlineDir::Up {
                     return false;
                 }
@@ -197,7 +197,7 @@ impl Candle {
                                     .max(lhs.next().unwrap().high),
                             )
                         } else {
-                            assert!(rhs.next().is_some());
+                            debug_assert!(rhs.next().is_some());
                             (
                                 rhs.prev()
                                     .unwrap()

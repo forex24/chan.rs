@@ -29,7 +29,7 @@ fn check_kltype_order(type_list: Vec<KlType>) {
     let mut last_lv = i32::MAX;
     for kl_type in type_list {
         let cur_lv = *kl_type_order.get(&kl_type).expect("Invalid KlType");
-        assert!(
+        debug_assert!(
             cur_lv < last_lv,
             "Type list must be ordered from higher to lower levels"
         );

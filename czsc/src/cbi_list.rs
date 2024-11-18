@@ -41,8 +41,8 @@ impl CBiList {
     /// # Returns
     /// 返回是否成功创建第一笔
     fn try_create_first_bi(&mut self, klc: &Candle) -> bool {
-        assert!(self.bi_list.is_empty());
-        assert!(klc.fx_type != FxType::Unknown);
+        debug_assert!(self.bi_list.is_empty());
+        debug_assert!(klc.fx_type != FxType::Unknown);
 
         for exist_free_klc in &self.free_klc_lst {
             if exist_free_klc.fx_type == klc.fx_type {

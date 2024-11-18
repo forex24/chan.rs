@@ -26,7 +26,7 @@ impl<T: LineType + ToHandle> CEigen<T> {
     }
 
     pub fn get_peak_bi_idx(&self) -> usize {
-        assert!(self.fx_type != FxType::Unknown);
+        debug_assert!(self.fx_type != FxType::Unknown);
         let bi_dir = self.lst.first().unwrap().direction();
         match bi_dir {
             Direction::Up => self.get_peak_klu(false).to_handle().index() - 1,
