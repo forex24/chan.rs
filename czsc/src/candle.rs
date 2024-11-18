@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::fmt::Display;
 
 use chrono::DateTime;
@@ -234,7 +233,7 @@ impl Candle {
     /// # Returns
     /// 返回合并方向（上涨、下跌或合并）
     fn test_combine(&self, item: &Bar) -> KlineDir {
-        let high_cmp = f64::total_cmp(&self.high, &item.high);
+        /*let high_cmp = f64::total_cmp(&self.high, &item.high);
         let low_cmp = f64::total_cmp(&self.low, &item.low);
         match (high_cmp, low_cmp) {
             (Ordering::Greater | Ordering::Equal, Ordering::Less | Ordering::Equal) => {
@@ -245,6 +244,20 @@ impl Candle {
             }
             (Ordering::Greater, Ordering::Greater) => KlineDir::Down,
             (Ordering::Less, Ordering::Less) => KlineDir::Up,
+        }*/
+        if self.high >= item.high && self.low <= item.low {
+            return KlineDir::Combine;
+        }
+        if self.high <= item.high && self.low >= item.low {
+            return KlineDir::Combine;
+        }
+        if self.high > item.high && self.low > item.low {
+            return KlineDir::Down;
+        }
+        if self.high < item.high && self.low < item.low {
+            KlineDir::Up
+        } else {
+            panic!("combine type unknown");
         }
     }
 
