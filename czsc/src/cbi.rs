@@ -24,15 +24,8 @@ pub struct CBi {
     //pub next: Option<Handle<CBi>>,
     //pub pre: Option<Handle<CBi>>,
     // 缓存相关字段
-    cached_begin_val: RefCell<Option<f64>>,
-    cached_end_val: RefCell<Option<f64>>,
     cached_begin_klu: RefCell<Option<Handle<Bar>>>,
     cached_end_klu: RefCell<Option<Handle<Bar>>>,
-    cached_amp: RefCell<Option<f64>>,
-    cached_klu_cnt: RefCell<Option<usize>>,
-    cached_klc_cnt: RefCell<Option<usize>>,
-    cached_high: RefCell<Option<f64>>,
-    cached_low: RefCell<Option<f64>>,
 }
 
 impl CBi {
@@ -65,15 +58,8 @@ impl CBi {
             //next: None,
             //pre: None,
             // Initialize cache fields
-            cached_begin_val: RefCell::new(None),
-            cached_end_val: RefCell::new(None),
             cached_begin_klu: RefCell::new(None),
             cached_end_klu: RefCell::new(None),
-            cached_amp: RefCell::new(None),
-            cached_klu_cnt: RefCell::new(None),
-            cached_klc_cnt: RefCell::new(None),
-            cached_high: RefCell::new(None),
-            cached_low: RefCell::new(None),
         };
         bi.check();
         bi
@@ -81,15 +67,8 @@ impl CBi {
 
     /// Clean all cached values
     pub fn clean_cache(&mut self) {
-        self.cached_begin_val = RefCell::new(None);
-        self.cached_end_val = RefCell::new(None);
         self.cached_begin_klu = RefCell::new(None);
         self.cached_end_klu = RefCell::new(None);
-        self.cached_amp = RefCell::new(None);
-        self.cached_klu_cnt = RefCell::new(None);
-        self.cached_klc_cnt = RefCell::new(None);
-        self.cached_high = RefCell::new(None);
-        self.cached_low = RefCell::new(None);
     }
 
     pub fn set_seg_idx(&mut self, idx: usize) {
@@ -106,28 +85,18 @@ impl CBi {
 
     // 已完备
     pub fn _get_begin_val(&self) -> f64 {
-        if let Some(val) = self.cached_begin_val.borrow().as_ref() {
-            return *val;
-        }
-        let val = match self._is_up() {
+        match self._is_up() {
             true => self.begin_klc.low,
             false => self.begin_klc.high,
-        };
-        self.cached_begin_val.borrow_mut().replace(val);
-        val
+        }
     }
 
     // 已完备
     pub fn _get_end_val(&self) -> f64 {
-        if let Some(val) = self.cached_end_val.borrow().as_ref() {
-            return *val;
-        }
-        let val = match self._is_up() {
+        match self._is_up() {
             true => self.end_klc.high,
             false => self.end_klc.low,
-        };
-        self.cached_end_val.borrow_mut().replace(val);
-        val
+        }
     }
 
     // 已完备
@@ -159,23 +128,12 @@ impl CBi {
 
     // 已完备
     pub fn _amp(&self) -> f64 {
-        if let Some(amp) = self.cached_amp.borrow().as_ref() {
-            return *amp;
-        }
-        let amp = (self._get_end_val() - self._get_begin_val()).abs();
-        self.cached_amp.borrow_mut().replace(amp);
-        amp
+        (self._get_end_val() - self._get_begin_val()).abs()
     }
 
     // 已完备
     pub fn _get_klu_cnt(&self) -> usize {
-        if let Some(cnt) = self.cached_klu_cnt.borrow().as_ref() {
-            return *cnt;
-        }
-        let cnt =
-            self._get_end_klu().as_handle().index() - self._get_begin_klu().as_handle().index() + 1;
-        self.cached_klu_cnt.borrow_mut().replace(cnt);
-        cnt
+        self._get_end_klu().as_handle().index() - self._get_begin_klu().as_handle().index() + 1
     }
 
     // 已完备
@@ -188,39 +146,24 @@ impl CBi {
             self.begin_klc.as_handle().index(),
             self._get_begin_klu().klc.unwrap().index()
         );
-        if let Some(cnt) = self.cached_klc_cnt.borrow().as_ref() {
-            return *cnt;
-        }
-        let cnt = self.end_klc.index() - self.begin_klc.index() + 1;
-        self.cached_klc_cnt.borrow_mut().replace(cnt);
-        cnt
+
+        self.end_klc.index() - self.begin_klc.index() + 1
     }
 
     // 已完备
     pub fn _high(&self) -> f64 {
-        if let Some(high) = self.cached_high.borrow().as_ref() {
-            return *high;
-        }
-
-        let high = match self._is_up() {
+        match self._is_up() {
             true => self.end_klc.high,
             false => self.begin_klc.high,
-        };
-        self.cached_high.borrow_mut().replace(high);
-        high
+        }
     }
 
     // 已完备
     pub fn _low(&self) -> f64 {
-        if let Some(low) = self.cached_low.borrow().as_ref() {
-            return *low;
-        }
-        let low = match self._is_up() {
+        match self._is_up() {
             true => self.begin_klc.low,
             false => self.end_klc.low,
-        };
-        self.cached_low.borrow_mut().replace(low);
-        low
+        }
     }
 
     // 已完备
