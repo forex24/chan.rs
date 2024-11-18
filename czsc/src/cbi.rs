@@ -69,20 +69,18 @@ impl CBi {
 
     // 已完备
     pub fn _get_begin_val(&self) -> f64 {
-        let val = match self._is_up() {
+        match self._is_up() {
             true => self.begin_klc.low,
             false => self.begin_klc.high,
-        };
-        val
+        }
     }
 
     // 已完备
     pub fn _get_end_val(&self) -> f64 {
-        let val = match self._is_up() {
+        match self._is_up() {
             true => self.end_klc.high,
             false => self.end_klc.low,
-        };
-        val
+        }
     }
 
     // 已完备
@@ -106,15 +104,12 @@ impl CBi {
 
     // 已完备
     pub fn _amp(&self) -> f64 {
-        let amp = (self._get_end_val() - self._get_begin_val()).abs();
-        amp
+        (self._get_end_val() - self._get_begin_val()).abs()
     }
 
     // 已完备
     pub fn _get_klu_cnt(&self) -> usize {
-        let cnt =
-            self._get_end_klu().as_handle().index() - self._get_begin_klu().as_handle().index() + 1;
-        cnt
+        self._get_end_klu().as_handle().index() - self._get_begin_klu().as_handle().index() + 1
     }
 
     // 已完备
@@ -127,26 +122,24 @@ impl CBi {
             self.begin_klc.as_handle().index(),
             self._get_begin_klu().klc.unwrap().index()
         );
-        let cnt = self.end_klc.index() - self.begin_klc.index() + 1;
-        cnt
+
+        self.end_klc.index() - self.begin_klc.index() + 1
     }
 
     // 已完备
     pub fn _high(&self) -> f64 {
-        let high = match self._is_up() {
+        match self._is_up() {
             true => self.end_klc.high,
             false => self.begin_klc.high,
-        };
-        high
+        }
     }
 
     // 已完备
     pub fn _low(&self) -> f64 {
-        let low = match self._is_up() {
+        match self._is_up() {
             true => self.begin_klc.low,
             false => self.end_klc.low,
-        };
-        low
+        }
     }
 
     // 已完备
