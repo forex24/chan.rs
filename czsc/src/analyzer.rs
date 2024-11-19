@@ -26,6 +26,8 @@ pub struct Analyzer {
     pub seg_bs_point_history: Vec<IndexMap<String, String>>,
     pub last_bsp: Option<Handle<CBspPoint<CBi>>>,
     pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
+
+    pub step_calculation: bool,
 }
 
 pub type CBiSeg = CSeg<CBi>;
@@ -56,6 +58,7 @@ impl Analyzer {
             seg_bs_point_history: Vec::new(),
             last_bsp: None,
             last_seg_bsp: None,
+            step_calculation: true,
         }
     }
 
@@ -151,13 +154,15 @@ impl Analyzer {
             if self.bi_list.update_bi(
                 &self.candle_list[self.candle_list.len() - 2],
                 &self.candle_list[self.candle_list.len() - 1],
-                true,
-            ) {
+                self.step_calculation,
+            ) && self.step_calculation
+            {
                 self.cal_seg_and_zs();
             }
-        } else if self
-            .bi_list
-            .try_add_virtual_bi(&self.candle_list[self.candle_list.len() - 1], true)
+        } else if self.step_calculation
+            && self
+                .bi_list
+                .try_add_virtual_bi(&self.candle_list[self.candle_list.len() - 1], true)
         {
             self.cal_seg_and_zs();
         }
@@ -216,7 +221,12 @@ impl Analyzer {
     /// 计算线段和中枢
     ///
     /// 综合计算所有线段、中枢和买卖点
-    fn cal_seg_and_zs(&mut self) {
+    pub fn cal_seg_and_zs(&mut self) {
+        if !self.step_calculation {
+            self.bi_list
+                .try_add_virtual_bi(&self.candle_list[self.candle_list.len() - 1], false);
+        }
+
         self.cal_bi_seg_and_zs();
 
         self.cal_seg_seg_and_zs();

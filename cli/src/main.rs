@@ -22,6 +22,10 @@ fn parse(opt: &Opt) {
         Analyzer::new(0, CChanConfig::default())
     };
 
+    if opt.batch {
+        analyzer.step_calculation = false;
+    }
+
     let output_dir = PathBuf::from(&opt.csv)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -46,6 +50,11 @@ fn czsc_parse(ca: &mut Analyzer, klines: &[Kline], output_dir: &str) {
         ca.add_k(k);
         pb.inc(1);
     });
+
+    if ca.step_calculation {
+        ca.cal_seg_and_zs();
+    }
+
     let duration = start_time.elapsed();
     pb.finish_with_message("done");
 
@@ -88,6 +97,9 @@ struct Opt {
 
     #[arg(short, long, help = "Path to JSON config file")]
     config: Option<String>,
+
+    #[arg(short, long, help = "Batch")]
+    batch: bool,
 }
 
 fn main() {
