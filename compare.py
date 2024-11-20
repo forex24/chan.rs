@@ -7,11 +7,10 @@ from datetime import datetime
 # 定义要比较的列
 COMPARE_COLS = {
     'kline_list.csv': ['begin_time', 'end_time', 'idx','dir', 'high', 'low', 'fx'],
-    #'bi_list.csv': ['begin_time', 'end_time','idx', 'dir', 'high', 'low', 'is_sure','seg_idx', 'parent_seg_idx','parent_seg_dir', 'begin_klc', 'end_klc', 'begin_val', 'end_val', 'klu_cnt', 'klc_cnt','parent_seg_idx','parent_seg_dir'],
     'bi_list.csv':['begin_time','end_time','idx','dir','high','low','is_sure','seg_idx','begin_klc','end_klc','begin_val','end_val','klu_cnt','klc_cnt','parent_seg_idx','parent_seg_dir'],
-    'seg_list.csv': ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_bi_idx','end_bi_idx', 'zs_count', 'bi_count','reason','parent_seg_idx', 'parent_seg_dir'],
-    'zs_list.csv': ['begin_time', 'end_time','high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_bi_idx', 'end_bi_idx','bi_in', 'bi_out'],
-    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time'],
+    'seg_list.csv':['begin_time','end_time','idx','dir','high','low','is_sure','start_bi_idx','end_bi_idx','zs_count','bi_count','reason','parent_seg_idx','parent_seg_dir'],
+    'zs_list.csv':['begin_time','end_time','high','low','peak_high','peak_low','is_sure','begin_bi_idx','end_bi_idx','bi_in','bi_out','sub_zs_count'],
+    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time'],#'relate_bsp1_time'],
     'bs_point_history.csv':['begin_time', 'bsp_type', 'is_buy', 'bi_idx', 'bi_begin_time','bi_end_time'], #'relate_bsp1',
     
     'seg_seg_list.csv':  ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_seg_idx','end_seg_idx', 'zs_count', 'bi_count','reason'],
