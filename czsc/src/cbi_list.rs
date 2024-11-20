@@ -1,3 +1,6 @@
+use chrono::DateTime;
+use chrono::Utc;
+
 use crate::AsHandle;
 use crate::BiAlgo;
 use crate::CBi;
@@ -40,7 +43,7 @@ impl CBiList {
     ///
     /// # Returns
     /// 返回是否成功创建第一笔
-    fn try_create_first_bi(&mut self, klc: &Candle) -> bool {
+    fn try_create_first_bi(&mut self, klc: &Candle, clock: &DateTime<Utc>) -> bool {
         debug_assert!(self.bi_list.is_empty());
         debug_assert!(klc.fx_type != FxType::Unknown);
 
@@ -49,7 +52,7 @@ impl CBiList {
                 continue;
             }
             if self.can_make_bi(klc.as_handle(), *exist_free_klc, false) {
-                self.add_new_bi(exist_free_klc.as_handle(), klc.as_handle(), true);
+                self.add_new_bi(exist_free_klc.as_handle(), klc.as_handle(), true, clock);
                 self.last_end = Some(klc.as_handle());
                 return true;
             }
@@ -69,12 +72,18 @@ impl CBiList {
     ///
     /// # Returns
     /// 返回是否有新笔生成
-    pub fn update_bi(&mut self, klc: &Candle, last_klc: &Candle, cal_virtual: bool) -> bool {
+    pub fn update_bi(
+        &mut self,
+        klc: &Candle,
+        last_klc: &Candle,
+        cal_virtual: bool,
+        clock: &DateTime<Utc>,
+    ) -> bool {
         // klc:倒数第二根klc
         // last_klc: 倒数第1根klc
-        let flag1 = self.update_bi_sure(klc);
+        let flag1 = self.update_bi_sure(klc, clock);
         if cal_virtual {
-            let flag2 = self.try_add_virtual_bi(last_klc, false);
+            let flag2 = self.try_add_virtual_bi(last_klc, false, clock);
             flag1 || flag2
         } else {
             flag1
@@ -159,10 +168,10 @@ impl CBiList {
     ///
     /// # Returns
     /// 返回是否有新笔生成
-    fn update_bi_sure(&mut self, klc: &Candle) -> bool {
+    fn update_bi_sure(&mut self, klc: &Candle, clock: &DateTime<Utc>) -> bool {
         // klc:倒数第二根klc
         let _tmp_end = self.get_last_klu_of_last_bi();
-        self.delete_virtual_bi();
+        self.delete_virtual_bi(clock);
 
         // 返回值：是否出现新笔
         if klc.fx_type == FxType::Unknown {
@@ -170,7 +179,7 @@ impl CBiList {
         }
 
         if self.last_end.is_none() || self.bi_list.is_empty() {
-            return self.try_create_first_bi(klc);
+            return self.try_create_first_bi(klc, clock);
         }
 
         if klc.fx_type == self.last_end.unwrap().fx_type {
@@ -178,7 +187,7 @@ impl CBiList {
         }
 
         if self.can_make_bi(klc.as_handle(), self.last_end.unwrap(), false) {
-            self.add_new_bi(self.last_end.unwrap(), klc.as_handle(), true);
+            self.add_new_bi(self.last_end.unwrap(), klc.as_handle(), true, clock);
             self.last_end = Some(klc.as_handle());
             return true;
         }
@@ -192,7 +201,7 @@ impl CBiList {
     /// 删除虚笔
     ///
     /// 删除列表末尾的虚笔，并根据情况恢复或重置相关状态
-    pub fn delete_virtual_bi(&mut self) {
+    pub fn delete_virtual_bi(&mut self, clock: &DateTime<Utc>) {
         if !self.bi_list.is_empty() && !self.bi_list.last().unwrap().is_sure {
             let sure_end_list = self.bi_list.last().unwrap().sure_end.clone();
 
@@ -202,7 +211,7 @@ impl CBiList {
                 self.last_end = Some(last_bi.end_klc);
 
                 for sure_end in &sure_end_list[1..] {
-                    self.add_new_bi(self.last_end.unwrap(), *sure_end, true);
+                    self.add_new_bi(self.last_end.unwrap(), *sure_end, true, clock);
                     self.last_end = Some(self.bi_list.last().unwrap().end_klc);
                 }
             } else {
@@ -238,9 +247,14 @@ impl CBiList {
     ///
     /// # Returns
     /// 返回是否成功添加虚笔
-    pub fn try_add_virtual_bi(&mut self, klc: &Candle, need_del_end: bool) -> bool {
+    pub fn try_add_virtual_bi(
+        &mut self,
+        klc: &Candle,
+        need_del_end: bool,
+        clock: &DateTime<Utc>,
+    ) -> bool {
         if need_del_end {
-            self.delete_virtual_bi();
+            self.delete_virtual_bi(clock);
         }
         if self.bi_list.is_empty() {
             return false;
@@ -270,7 +284,7 @@ impl CBiList {
 
             if self.can_make_bi(current_klc, self.bi_list.last().unwrap().end_klc, true) {
                 // 新增一笔
-                self.add_new_bi(self.last_end.unwrap(), current_klc, false);
+                self.add_new_bi(self.last_end.unwrap(), current_klc, false, clock);
                 return true;
             }
 
@@ -291,13 +305,20 @@ impl CBiList {
     /// * `start_fx` - 起始分型
     /// * `end_fx` - 结束分型
     /// * `is_sure` - 是否为确定笔
-    fn add_new_bi(&mut self, start_fx: Handle<Candle>, end_fx: Handle<Candle>, is_sure: bool) {
+    fn add_new_bi(
+        &mut self,
+        start_fx: Handle<Candle>,
+        end_fx: Handle<Candle>,
+        is_sure: bool,
+        clock: &DateTime<Utc>,
+    ) {
         self.bi_list.push(CBi::new(
             &self.bi_list,
             start_fx,
             end_fx,
             self.bi_list.len(),
             is_sure,
+            *clock,
         ));
     }
 

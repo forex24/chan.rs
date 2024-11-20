@@ -1,4 +1,5 @@
 use crate::csv_util::read_kline_from_csv;
+use chrono::Utc;
 use clap::Parser;
 use czsc::{Analyzer, CChanConfig};
 use std::path::PathBuf;
@@ -56,7 +57,7 @@ fn czsc_parse(ca: &mut Analyzer, klines: &[Kline], output_dir: &str) {
     });
 
     if ca.step_calculation {
-        ca.cal_seg_and_zs();
+        ca.cal_seg_and_zs(&Utc::now());
     }
 
     let duration = start_time.elapsed();

@@ -1,6 +1,9 @@
 // 已完备
 use std::collections::VecDeque;
 
+use chrono::DateTime;
+use chrono::Utc;
+
 use crate::AsHandle;
 use crate::Bar;
 use crate::CBspPoint;
@@ -24,7 +27,7 @@ use crate::{Direction, MacdAlgo};
 #[derive(Debug)]
 pub struct CSeg<T> {
     handle: Handle<Self>,
-    //pub idx: usize,
+    pub clock: DateTime<Utc>,
     pub start_bi: Handle<T>,
     pub end_bi: Handle<T>,
     pub is_sure: bool,
@@ -52,6 +55,7 @@ impl<T: LineType> CSeg<T> {
         is_sure: bool,
         seg_dir: Option<Direction>,
         reason: &str,
+        clock: DateTime<Utc>,
     ) -> Result<Self, CChanException> {
         //debug_assert!(
         //    start_bi.index() == 0 || start_bi.direction() == end_bi.direction() || !is_sure,
@@ -68,6 +72,7 @@ impl<T: LineType> CSeg<T> {
         };
         let mut seg = Self {
             handle: Handle::new(boxed_vec, idx),
+            clock,
             start_bi,
             end_bi,
             is_sure,

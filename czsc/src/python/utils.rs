@@ -1,8 +1,7 @@
+use chrono::{DateTime, NaiveDateTime, Utc};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyDateTime};
+use pyo3::types::{PyDateTime, PyDict, PyList};
 use std::collections::HashMap;
-use chrono::{NaiveDateTime, DateTime, Utc};
-use crate::common::KLine;
 
 /// 将 Python 字典转换为 Rust HashMap
 pub fn py_dict_to_hashmap(dict: &PyDict) -> PyResult<HashMap<String, f64>> {
@@ -36,33 +35,41 @@ pub fn naive_to_py_datetime(py: Python, dt: NaiveDateTime) -> PyResult<PyObject>
     let timestamp = dt.timestamp();
     let datetime_type = py.import("datetime")?.getattr("datetime")?;
     let args = (timestamp,);
-    datetime_type.call_method1("fromtimestamp", args)?.into_py(py)
+    datetime_type
+        .call_method1("fromtimestamp", args)?
+        .into_py(py)
 }
 
 /// 将 Python K线数据字典转换为 Rust KLine 结构
 pub fn py_dict_to_kline(dict: &PyDict) -> PyResult<KLine> {
-    let time_str = dict.get_item("time")
+    let time_str = dict
+        .get_item("time")
         .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'time' field"))?
         .extract::<String>()?;
-    
+
     let time = NaiveDateTime::parse_from_str(&time_str, "%Y-%m-%d %H:%M:%S")
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
     Ok(KLine {
         time,
-        open: dict.get_item("open")
+        open: dict
+            .get_item("open")
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'open' field"))?
             .extract()?,
-        high: dict.get_item("high")
+        high: dict
+            .get_item("high")
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'high' field"))?
             .extract()?,
-        low: dict.get_item("low")
+        low: dict
+            .get_item("low")
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'low' field"))?
             .extract()?,
-        close: dict.get_item("close")
+        close: dict
+            .get_item("close")
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'close' field"))?
             .extract()?,
-        volume: dict.get_item("volume")
+        volume: dict
+            .get_item("volume")
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'volume' field"))?
             .extract()?,
     })
@@ -104,22 +111,22 @@ where
 pub fn validate_kline(kline: &KLine) -> PyResult<()> {
     if kline.high < kline.low {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            "High price cannot be lower than low price"
+            "High price cannot be lower than low price",
         ));
     }
     if kline.open < kline.low || kline.open > kline.high {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            "Open price must be between high and low prices"
+            "Open price must be between high and low prices",
         ));
     }
     if kline.close < kline.low || kline.close > kline.high {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            "Close price must be between high and low prices"
+            "Close price must be between high and low prices",
         ));
     }
     if kline.volume < 0.0 {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            "Volume cannot be negative"
+            "Volume cannot be negative",
         ));
     }
     Ok(())
@@ -135,10 +142,10 @@ mod tests {
         Python::with_gil(|py| {
             let mut map = HashMap::new();
             map.insert("test".to_string(), 1.0);
-            
+
             let py_dict = hashmap_to_py_dict(py, &map).unwrap();
             let dict = py_dict.downcast::<PyDict>(py).unwrap();
-            
+
             let converted_map = py_dict_to_hashmap(dict).unwrap();
             assert_eq!(map, converted_map);
         });
@@ -157,7 +164,7 @@ mod tests {
 
             let kline = py_dict_to_kline(dict).unwrap();
             let converted_dict = kline_to_py_dict(py, &kline).unwrap();
-            
+
             assert!(converted_dict.is_instance_of::<PyDict>());
         });
     }
@@ -165,7 +172,8 @@ mod tests {
     #[test]
     fn test_validate_kline() {
         let valid_kline = KLine {
-            time: NaiveDateTime::parse_from_str("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+            time: NaiveDateTime::parse_from_str("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                .unwrap(),
             open: 100.0,
             high: 105.0,
             low: 95.0,
@@ -175,9 +183,10 @@ mod tests {
         assert!(validate_kline(&valid_kline).is_ok());
 
         let invalid_kline = KLine {
-            time: NaiveDateTime::parse_from_str("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+            time: NaiveDateTime::parse_from_str("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                .unwrap(),
             open: 100.0,
-            high: 95.0,  // Invalid: high < low
+            high: 95.0, // Invalid: high < low
             low: 105.0,
             close: 103.0,
             volume: 1000.0,

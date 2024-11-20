@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use chrono::{DateTime, Utc};
+
 use crate::{
     has_overlap, AsHandle, Bar, CPivotCombineMode, CPointConfig, CSeg, Handle, ICalcMetric,
     IParent, LineType, ToHandle,
@@ -8,6 +10,7 @@ use crate::{
 #[derive(Debug)]
 pub struct CZs<T> {
     handle: Handle<Self>,
+    pub clock: DateTime<Utc>,
     pub is_sure: bool,
     pub sub_zs_lst: Vec<CZs<T>>,
     pub begin: Handle<Bar>,
@@ -31,10 +34,12 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
         zs_index: usize,
         lst: &[Handle<T>],
         is_sure: bool,
+        clock: DateTime<Utc>,
     ) -> Self {
         debug_assert!(!lst.is_empty());
         let mut zs = Self {
             handle: Handle::new(box_vec, zs_index),
+            clock,
             is_sure,
             sub_zs_lst: Vec::new(),
             begin: lst[0].get_begin_klu().as_handle(),
@@ -117,6 +122,7 @@ impl<T: LineType + IParent + ICalcMetric + ToHandle> CZs<T> {
                 ptr: self.handle.ptr,
                 index: 0,
             },
+            clock: self.clock,
             is_sure: self.is_sure,
             sub_zs_lst: Vec::new(),
             begin: self.begin,

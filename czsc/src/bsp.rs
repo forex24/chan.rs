@@ -4,6 +4,9 @@ use std::option::Option;
 
 use std::vec::Vec;
 
+use chrono::DateTime;
+use chrono::Utc;
+
 use crate::AsHandle;
 use crate::Bar;
 use crate::BspType;
@@ -17,6 +20,7 @@ use crate::LineType;
 #[derive(Debug)]
 pub struct CBspPoint<T> {
     pub handle: Handle<Self>,
+    pub clock: DateTime<Utc>,
     pub bi: Handle<T>,
     pub klu: Handle<Bar>,
     pub is_buy: bool,
@@ -38,9 +42,11 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
         bs_type: BspType,
         relate_bsp1: Option<Handle<CBspPoint<T>>>,
         feature_dict: Option<HashMap<String, Option<f64>>>,
+        clock: DateTime<Utc>,
     ) -> Self {
         let bsp = Self {
             handle: Handle::new(boxed_vec, idx),
+            clock,
             bi,
             klu: bi.get_end_klu(),
             is_buy,

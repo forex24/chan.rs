@@ -1,3 +1,6 @@
+use chrono::DateTime;
+use chrono::Utc;
+
 use crate::CChanException;
 // 已完备
 use crate::CEigenFx;
@@ -85,7 +88,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     ///
     /// # Arguments
     /// * `bi_lst` - 笔列表，用于计算新的线段
-    pub fn update(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+    pub fn update(&mut self, bi_lst: &[T], clock: &DateTime<Utc>) -> Result<(), CChanException> {
         self.do_init(bi_lst);
         //self.do_init();
 
@@ -95,9 +98,9 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
             self.lst.last().unwrap().end_bi.index() + 1
         };
 
-        self.cal_seg_sure(bi_lst, begin_idx)?;
+        self.cal_seg_sure(bi_lst, begin_idx, clock)?;
 
-        self.collect_left_seg(bi_lst)?;
+        self.collect_left_seg(bi_lst, clock)?;
         Ok(())
     }
 
@@ -106,10 +109,15 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     /// # Arguments
     /// * `bi_lst` - 笔列表
     /// * `begin_idx` - 开始计算的笔索引
-    fn cal_seg_sure(&mut self, bi_lst: &[T], begin_idx: usize) -> Result<(), CChanException> {
+    fn cal_seg_sure(
+        &mut self,
+        bi_lst: &[T],
+        begin_idx: usize,
+        clock: &DateTime<Utc>,
+    ) -> Result<(), CChanException> {
         let fx_eigen = self.cal_eigen_fx(bi_lst, begin_idx)?;
         if let Some(fx_eigen) = fx_eigen {
-            self.treat_fx_eigen(fx_eigen, bi_lst)?;
+            self.treat_fx_eigen(fx_eigen, bi_lst, clock)?;
         }
 
         Ok(())
@@ -196,6 +204,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         &mut self,
         mut fx_eigen: CEigenFx<T>,
         bi_lst: &[T],
+        clock: &DateTime<Utc>,
     ) -> Result<(), CChanException> {
         let test = fx_eigen.can_be_end(bi_lst);
         let end_bi_idx = fx_eigen.get_peak_bi_idx();
@@ -211,20 +220,21 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
                     None,
                     true,
                     "normal",
+                    clock,
                 )? {
                     // 防止第一根线段的方向与首尾值异常
-                    self.cal_seg_sure(bi_lst, end_bi_idx + 1)?;
+                    self.cal_seg_sure(bi_lst, end_bi_idx + 1, clock)?;
                     return Ok(());
                 }
 
                 self.lst.last_mut().unwrap().eigen_fx = Some(fx_eigen);
 
                 if is_true {
-                    self.cal_seg_sure(bi_lst, end_bi_idx + 1)?;
+                    self.cal_seg_sure(bi_lst, end_bi_idx + 1, clock)?;
                 }
             }
             Some(false) => {
-                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].index())?;
+                self.cal_seg_sure(bi_lst, fx_eigen.lst[1].index(), clock)?;
             }
         }
 

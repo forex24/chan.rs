@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 
+use chrono::{DateTime, Utc};
+
 use crate::{
     AsHandle, Bar, CBspPoint, Candle, Handle, IBspInfo, ICalcMetric, IHighLow, IParent, LineType,
     ToHandle,
@@ -10,6 +12,7 @@ use crate::{BiType, Direction, FxType, MacdAlgo};
 #[derive(Debug)]
 pub struct CBi {
     handle: Handle<Self>,
+    pub clock: DateTime<Utc>,
     pub begin_klc: Handle<Candle>,
     pub end_klc: Handle<Candle>,
     pub is_sure: bool,
@@ -36,6 +39,7 @@ impl CBi {
         end_klc: Handle<Candle>,
         idx: usize,
         is_sure: bool,
+        clock: DateTime<Utc>,
     ) -> Self {
         let dir = match begin_klc.fx_type {
             FxType::Bottom => Direction::Up,
@@ -44,6 +48,7 @@ impl CBi {
         };
         let bi = Self {
             handle: Handle::new(boxed_vec, idx),
+            clock,
             begin_klc,
             end_klc,
             is_sure,

@@ -1,5 +1,7 @@
 use std::vec::Vec;
 
+use chrono::{DateTime, Utc};
+
 use crate::{
     CPivotAlgo, CSeg, CSegListChan, CZs, CZsConfig, Direction, Handle, ICalcMetric, IParent,
     LineType, ToHandle,
@@ -70,7 +72,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     /// * `item` - 待添加的元素
     /// * `is_sure` - 是否确定
     /// * `zs_algo` - 中枢算法
-    fn add_to_free_lst(&mut self, item: Handle<T>, is_sure: bool, zs_algo: CPivotAlgo) {
+    fn add_to_free_lst(
+        &mut self,
+        item: Handle<T>,
+        is_sure: bool,
+        zs_algo: CPivotAlgo,
+        clock: &DateTime<Utc>,
+    ) {
         if !self.free_item_lst.is_empty()
             && item.index() == self.free_item_lst.last().unwrap().index()
         {
@@ -80,7 +88,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
         self.free_item_lst.push(item);
 
-        let res = self.try_construct_zs(is_sure, zs_algo);
+        let res = self.try_construct_zs(is_sure, zs_algo, clock);
         if let Some(res) = res {
             if res.begin_bi.index() > 0 {
                 // 禁止第一笔就是中枢的起点
@@ -103,13 +111,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     /// # Arguments
     /// * `bi` - 笔
     /// * `is_sure` - 是否确定
-    fn update(&mut self, bi: Handle<T>, is_sure: bool) {
+    fn update(&mut self, bi: Handle<T>, is_sure: bool, clock: &DateTime<Utc>) {
         if self.free_item_lst.is_empty() && self.try_add_to_end(bi) {
             // zs_combine_mode=peak合并模式下会触发生效，=zs合并一定无效返回
             self.try_combine(); // 新形成的中枢尝试和之前的中枢合并
             return;
         }
-        self.add_to_free_lst(bi, is_sure, CPivotAlgo::Normal);
+        self.add_to_free_lst(bi, is_sure, CPivotAlgo::Normal, clock);
     }
 
     /// 尝试将笔添加到最后一个中枢
@@ -132,7 +140,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     /// * `seg_bi_lst` - 线段包含的笔列表
     /// * `seg_dir` - 线段方向
     /// * `seg_is_sure` - 线段是否确定
-    fn add_zs_from_bi_range(&mut self, seg_bi_lst: &[T], seg_dir: Direction, seg_is_sure: bool) {
+    fn add_zs_from_bi_range(
+        &mut self,
+        seg_bi_lst: &[T],
+        seg_dir: Direction,
+        seg_is_sure: bool,
+        clock: &DateTime<Utc>,
+    ) {
         let mut deal_bi_cnt = 0;
         for bi in seg_bi_lst {
             if bi.direction() == seg_dir {
@@ -141,10 +155,10 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
 
             if deal_bi_cnt < 1 {
                 // 防止try_add_to_end执行到上一个线段中枢里面去
-                self.add_to_free_lst(bi.to_handle(), seg_is_sure, CPivotAlgo::Normal);
+                self.add_to_free_lst(bi.to_handle(), seg_is_sure, CPivotAlgo::Normal, clock);
                 deal_bi_cnt += 1;
             } else {
-                self.update(bi.to_handle(), seg_is_sure);
+                self.update(bi.to_handle(), seg_is_sure, clock);
             }
         }
     }
@@ -157,7 +171,12 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     ///
     /// # Returns
     /// 返回可能构建的中枢
-    fn try_construct_zs(&mut self, is_sure: bool, zs_algo: CPivotAlgo) -> Option<CZs<T>> {
+    fn try_construct_zs(
+        &mut self,
+        is_sure: bool,
+        zs_algo: CPivotAlgo,
+        clock: &DateTime<Utc>,
+    ) -> Option<CZs<T>> {
         let lst = &self.free_item_lst;
 
         let lst = match zs_algo {
@@ -199,7 +218,13 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
             .unwrap();
 
         if min_high > max_low {
-            Some(CZs::new(&self.zs_lst, self.zs_lst.len(), lst, is_sure))
+            Some(CZs::new(
+                &self.zs_lst,
+                self.zs_lst.len(),
+                lst,
+                is_sure,
+                *clock,
+            ))
         } else {
             None
         }
@@ -211,7 +236,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     /// # Arguments
     /// * `bi_lst` - 笔列表
     /// * `seg_lst` - 线段列表
-    pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>) {
+    pub fn cal_bi_zs(&mut self, bi_lst: &[T], seg_lst: &CSegListChan<T>, clock: &DateTime<Utc>) {
         while let Some(last) = self.zs_lst.last() {
             // 检查 last_sure_pos 是否有值
             if let Some(last_sure_pos) = self.last_sure_pos {
@@ -234,7 +259,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                     }
                     self.clear_free_lst();
                     let seg_bi_lst = &bi_lst[seg.start_bi.index()..=seg.end_bi.index()];
-                    self.add_zs_from_bi_range(seg_bi_lst, seg.dir, seg.is_sure);
+                    self.add_zs_from_bi_range(seg_bi_lst, seg.dir, seg.is_sure, clock);
                 }
 
                 // 处理未生成新线段的部分
@@ -244,6 +269,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                         &bi_lst[seg_lst.last().unwrap().end_bi.index() + 1..],
                         seg_lst.last().unwrap().dir.flip(),
                         false,
+                        clock,
                     );
                 }
             }
@@ -256,7 +282,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                     0
                 };
                 for bi in &bi_lst[begin_bi_idx..] {
-                    self.update_overseg_zs(bi.to_handle());
+                    self.update_overseg_zs(bi.to_handle(), clock);
                 }
             }
             CPivotAlgo::Auto => {
@@ -275,11 +301,12 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
                             &bi_lst[seg.start_bi.index()..=seg.end_bi.index()],
                             seg.dir,
                             seg.is_sure,
+                            clock,
                         );
                     } else {
                         self.clear_free_lst();
                         for bi in &bi_lst[seg.start_bi.index()..] {
-                            self.update_overseg_zs(bi.to_handle());
+                            self.update_overseg_zs(bi.to_handle(), clock);
                         }
                         break;
                     }
@@ -294,7 +321,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
     ///
     /// # Arguments
     /// * `bi` - 笔
-    fn update_overseg_zs(&mut self, bi: Handle<T>) {
+    fn update_overseg_zs(&mut self, bi: Handle<T>, clock: &DateTime<Utc>) {
         if !self.zs_lst.is_empty() && self.free_item_lst.is_empty() {
             if bi.to_handle().next().is_none() {
                 return;
@@ -317,7 +344,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CZsList<T> {
         {
             return;
         }
-        self.add_to_free_lst(bi.to_handle(), bi.is_sure(), CPivotAlgo::OverSeg);
+        self.add_to_free_lst(bi.to_handle(), bi.is_sure(), CPivotAlgo::OverSeg, clock);
     }
 
     // 已完备

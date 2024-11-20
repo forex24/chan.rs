@@ -1,3 +1,6 @@
+use arrow::ipc::Date;
+use chrono::{DateTime, Utc};
+
 use crate::{
     CChanException, CSeg, CSegListChan, Direction, ErrCode, Handle, IParent, LeftSegMethod,
     LineType, ToHandle,
@@ -30,7 +33,11 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     ///
     /// # Arguments
     /// * `bi_lst` - 笔列表
-    pub(crate) fn collect_first_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+    pub(crate) fn collect_first_seg(
+        &mut self,
+        bi_lst: &[T],
+        clock: &DateTime<Utc>,
+    ) -> Result<(), CChanException> {
         if bi_lst.len() < 3 {
             return Ok(());
         }
@@ -49,6 +56,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(Direction::Up),
                         false,
                         "0seg_find_high",
+                        clock,
                     )?;
                 } else {
                     let peak_bi = Self::find_peak_bi(bi_lst, false).expect("Peak bi sould exist");
@@ -59,9 +67,10 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(Direction::Down),
                         false,
                         "0seg_find_low",
+                        clock,
                     )?;
                 }
-                self.collect_left_as_seg(bi_lst)?;
+                self.collect_left_as_seg(bi_lst, clock)?;
             }
 
             LeftSegMethod::All => {
@@ -77,6 +86,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(_dir),
                     false,
                     "0seg_collect_all",
+                    clock,
                 )?;
             }
         }
@@ -94,6 +104,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         &mut self,
         last_seg_end_bi: &Handle<T>,
         bi_lst: &[T],
+        clock: &DateTime<Utc>,
     ) -> Result<(), CChanException> {
         if last_seg_end_bi.is_down() {
             if let Some(peak_bi) = Self::find_peak_bi(&bi_lst[last_seg_end_bi.index() + 3..], true)
@@ -106,6 +117,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(Direction::Up),
                         true,
                         "collectleft_find_high",
+                        clock,
                     )?;
                 }
             }
@@ -120,12 +132,13 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Down),
                     true,
                     "collectleft_find_low",
+                    clock,
                 )?;
             }
         }
         // FIXME:这里修改了入参
         let _last_seg_end_bi = &self.lst[self.lst.len() - 1].end_bi;
-        self.collect_left_as_seg(bi_lst)?;
+        self.collect_left_as_seg(bi_lst, clock)?;
 
         Ok(())
     }
@@ -135,7 +148,11 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     ///
     /// # Arguments
     /// * `bi_lst` - 笔列表
-    pub(crate) fn collect_segs(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+    pub(crate) fn collect_segs(
+        &mut self,
+        bi_lst: &[T],
+        clock: &DateTime<Utc>,
+    ) -> Result<(), CChanException> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().end_bi;
 
@@ -153,8 +170,9 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Up),
                     true,
                     "collectleft_find_high_force",
+                    clock,
                 )?;
-                self.collect_left_seg(bi_lst)?;
+                self.collect_left_seg(bi_lst, clock)?;
             }
         } else if last_seg_end_bi.is_up() && last_bi.get_end_val() >= last_seg_end_bi.get_end_val()
         {
@@ -167,8 +185,9 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                     Some(Direction::Down),
                     true,
                     "collectleft_find_low_force",
+                    clock,
                 )?;
-                self.collect_left_seg(bi_lst)?;
+                self.collect_left_seg(bi_lst, clock)?;
             }
         }
         // 剩下线段的尾部相比于最后一个线段的尾部，高低关系和最后一个虚线段的方向一致
@@ -176,10 +195,10 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             match self.config.left_method {
                 LeftSegMethod::All => {
                     //容易找不到二类买卖点！！
-                    self.collect_left_as_seg(bi_lst)?;
+                    self.collect_left_as_seg(bi_lst, clock)?;
                 }
                 LeftSegMethod::Peak => {
-                    self.collect_left_seg_peak_method(&last_seg_end_bi, bi_lst)?;
+                    self.collect_left_seg_peak_method(&last_seg_end_bi, bi_lst, clock)?;
                 }
             }
         }
@@ -192,11 +211,15 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     ///
     /// # Arguments
     /// * `bi_lst` - 笔列表
-    pub(crate) fn collect_left_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+    pub(crate) fn collect_left_seg(
+        &mut self,
+        bi_lst: &[T],
+        clock: &DateTime<Utc>,
+    ) -> Result<(), CChanException> {
         if self.lst.is_empty() {
-            self.collect_first_seg(bi_lst)?;
+            self.collect_first_seg(bi_lst, clock)?;
         } else {
-            self.collect_segs(bi_lst)?;
+            self.collect_segs(bi_lst, clock)?;
         }
 
         Ok(())
@@ -207,7 +230,11 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
     ///
     /// # Arguments
     /// * `bi_lst` - 笔列表
-    pub(crate) fn collect_left_as_seg(&mut self, bi_lst: &[T]) -> Result<(), CChanException> {
+    pub(crate) fn collect_left_as_seg(
+        &mut self,
+        bi_lst: &[T],
+        clock: &DateTime<Utc>,
+    ) -> Result<(), CChanException> {
         let last_bi = bi_lst.last().unwrap();
         let last_seg_end_bi = self.lst.last().unwrap().end_bi;
 
@@ -223,6 +250,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                 None,
                 true,
                 "collect_left_1",
+                clock,
             )?;
         } else {
             self.add_new_seg(
@@ -232,6 +260,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                 None,
                 true,
                 "collect_left_0",
+                clock,
             )?;
         }
 
@@ -289,6 +318,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         seg_dir: Option<Direction>,
         split_first_seg: bool,
         reason: &str,
+        clock: &DateTime<Utc>,
     ) -> Result<(), CChanException> {
         if self.lst.is_empty() && split_first_seg && end_bi_idx >= 3 {
             if let Some(peak_bi) = Self::find_peak_bi(
@@ -307,8 +337,17 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
                         Some(peak_bi.direction()),
                         true,
                         "split_first_1st",
+                        clock,
                     )?;
-                    self.add_new_seg(bi_lst, end_bi_idx, false, None, true, "split_first_2nd")?;
+                    self.add_new_seg(
+                        bi_lst,
+                        end_bi_idx,
+                        false,
+                        None,
+                        true,
+                        "split_first_2nd",
+                        clock,
+                    )?;
                     return Ok(());
                 }
             }
@@ -333,6 +372,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             is_sure,
             seg_dir,
             reason,
+            *clock,
         )?;
 
         //self.check_seg_valid(&new_seg)?;
@@ -367,6 +407,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
         seg_dir: Option<Direction>,
         split_first_seg: bool,
         reason: &str,
+        clock: &DateTime<Utc>,
     ) -> Result<bool, CChanException> {
         match self.try_add_new_seg(
             bi_lst,
@@ -375,6 +416,7 @@ impl<T: LineType + IParent + ToHandle> CSegListChan<T> {
             seg_dir,
             split_first_seg,
             reason,
+            clock,
         ) {
             Ok(_) => Ok(true),
             //Err(e) => !(e == TestSegError::SegEndValueErr && self.lst.is_empty()),

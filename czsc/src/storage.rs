@@ -91,6 +91,8 @@ impl Analyzer {
                     bi.parent_seg_dir()
                         .map_or("".to_string(), |idx| idx.to_string()),
                 );
+                map.insert("clock".to_string(), bi.clock.to_string());
+
                 map
             })
             .collect();
@@ -137,6 +139,7 @@ impl Analyzer {
                     seg.parent_seg_dir()
                         .map_or("".to_string(), |dir| dir.to_string()),
                 );
+                map.insert("clock".to_string(), seg.clock.to_string());
                 map
             })
             .collect();
@@ -195,6 +198,7 @@ impl Analyzer {
                         .map_or("".to_string(), |bi| bi.index().to_string()),
                 );
                 map.insert("sub_zs_count".to_string(), zs.sub_zs_lst.len().to_string());
+                map.insert("clock".to_string(), zs.clock.to_string());
                 map
             })
             .collect();
@@ -226,6 +230,7 @@ impl Analyzer {
                         bsp.klu.time.format(TIME_FORMAT).to_string()
                     }),
                 );
+                map.insert("clock".to_string(), bsp.clock.to_string());
                 map
             })
             .collect();
@@ -265,6 +270,7 @@ impl Analyzer {
                 map.insert("zs_count".to_string(), seg.zs_lst.len().to_string());
                 map.insert("bi_count".to_string(), seg.bi_list.len().to_string());
                 map.insert("reason".to_string(), seg.reason.clone());
+                map.insert("clock".to_string(), seg.clock.to_string());
                 map
             })
             .collect();
@@ -323,6 +329,7 @@ impl Analyzer {
                         .map_or("".to_string(), |bi| bi.index().to_string()),
                 );
                 map.insert("sub_zs_count".to_string(), zs.sub_zs_lst.len().to_string());
+                map.insert("clock".to_string(), zs.clock.to_string());
                 map
             })
             .collect();
@@ -354,6 +361,7 @@ impl Analyzer {
                         bsp.klu.time.format(TIME_FORMAT).to_string()
                     }),
                 );
+                map.insert("clock".to_string(), bsp.clock.to_string());
                 map
             })
             .collect();

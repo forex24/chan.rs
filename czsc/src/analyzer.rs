@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 
 use crate::{
@@ -26,7 +27,9 @@ pub struct Analyzer {
     pub seg_bs_point_history: Vec<IndexMap<String, String>>,
     pub last_bsp: Option<Handle<CBspPoint<CBi>>>,
     pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
+    // clock
 
+    // options
     pub step_calculation: bool,
     pub no_bsp: bool, //要不要计算bsp，确认是false
 }
@@ -59,6 +62,7 @@ impl Analyzer {
             seg_bs_point_history: Vec::new(),
             last_bsp: None,
             last_seg_bsp: None,
+
             step_calculation: true,
             no_bsp: false,
         }
@@ -151,34 +155,38 @@ impl Analyzer {
     ///
     /// 主要入口方法，处理新的K线数据并更新所有分析结果
     pub fn add_k(&mut self, k: &Kline) {
+        let clock = k.time;
         let klu = self.bar_list.add_kline(k);
         if self.candle_list.update_candle(klu) {
             if self.bi_list.update_bi(
                 &self.candle_list[self.candle_list.len() - 2],
                 &self.candle_list[self.candle_list.len() - 1],
                 self.step_calculation,
+                &clock,
             ) && self.step_calculation
             {
-                self.cal_seg_and_zs();
+                self.cal_seg_and_zs(&clock);
             }
         } else if self.step_calculation
-            && self
-                .bi_list
-                .try_add_virtual_bi(&self.candle_list[self.candle_list.len() - 1], true)
+            && self.bi_list.try_add_virtual_bi(
+                &self.candle_list[self.candle_list.len() - 1],
+                true,
+                &clock,
+            )
         {
-            self.cal_seg_and_zs();
+            self.cal_seg_and_zs(&clock);
         }
     }
 
     /// 计算笔的线段和中枢
     ///
     /// 更新笔的线段列表和中枢列表
-    fn cal_bi_seg_and_zs(&mut self) {
+    fn cal_bi_seg_and_zs(&mut self, clock: &DateTime<Utc>) {
         // bi
-        cal_seg(self.bi_list.as_mut_slice(), &mut self.seg_list);
+        cal_seg(self.bi_list.as_mut_slice(), &mut self.seg_list, clock);
 
         self.zs_list
-            .cal_bi_zs(self.bi_list.as_slice(), &self.seg_list);
+            .cal_bi_zs(self.bi_list.as_slice(), &self.seg_list, clock);
 
         // 计算seg的zs_lst，以及中枢的bi_in, bi_out
         update_zs_in_seg(
@@ -191,12 +199,12 @@ impl Analyzer {
     /// 计算线段的线段和中枢
     ///
     /// 更新线段的线段列表和中枢列表
-    fn cal_seg_seg_and_zs(&mut self) {
+    fn cal_seg_seg_and_zs(&mut self, clock: &DateTime<Utc>) {
         // seg
-        cal_seg(self.seg_list.as_mut_slice(), &mut self.segseg_list);
+        cal_seg(self.seg_list.as_mut_slice(), &mut self.segseg_list, clock);
 
         self.segzs_list
-            .cal_bi_zs(self.seg_list.as_slice(), &self.segseg_list);
+            .cal_bi_zs(self.seg_list.as_slice(), &self.segseg_list, clock);
 
         // 计算segseg的zs_lst，以及中枢的bi_in, bi_out
         update_zs_in_seg(
@@ -209,34 +217,37 @@ impl Analyzer {
     /// 计算买卖点
     ///
     /// 计算线段和笔的买卖点
-    fn cal_bsp(&mut self) {
+    fn cal_bsp(&mut self, clock: &DateTime<Utc>) {
         // 计算买卖点
         // 线段线段买卖点
         self.seg_bs_point_lst
-            .cal(self.seg_list.as_slice(), &self.segseg_list);
+            .cal(self.seg_list.as_slice(), &self.segseg_list, clock);
 
         // 再算笔买卖点
         self.bs_point_lst
-            .cal(self.bi_list.as_slice(), &self.seg_list);
+            .cal(self.bi_list.as_slice(), &self.seg_list, clock);
     }
 
     /// 计算线段和中枢
     ///
     /// 综合计算所有线段、中枢和买卖点
-    pub fn cal_seg_and_zs(&mut self) {
+    pub fn cal_seg_and_zs(&mut self, clock: &DateTime<Utc>) {
         if !self.step_calculation {
-            self.bi_list
-                .try_add_virtual_bi(&self.candle_list[self.candle_list.len() - 1], false);
+            self.bi_list.try_add_virtual_bi(
+                &self.candle_list[self.candle_list.len() - 1],
+                false,
+                clock,
+            );
         }
 
-        self.cal_bi_seg_and_zs();
+        self.cal_bi_seg_and_zs(clock);
 
-        self.cal_seg_seg_and_zs();
+        self.cal_seg_seg_and_zs(clock);
         // 计算每一笔里面的 klc列表
         //self.update_klc_in_bi();
 
         if !self.no_bsp {
-            self.cal_bsp();
+            self.cal_bsp(clock);
 
             self.record_last_bs_points();
             self.record_last_seg_bs_points();
@@ -311,8 +322,9 @@ fn update_bi_seg_idx<T: LineType + IParent>(bi_list: &mut [T], seg_list: &mut CS
 fn cal_seg<T: LineType + IParent + ToHandle + ICalcMetric>(
     bi_list: &mut [T],
     seg_list: &mut CSegListChan<T>,
+    clock: &DateTime<Utc>,
 ) {
-    if seg_list.update(bi_list).is_err() {
+    if seg_list.update(bi_list, clock).is_err() {
         panic!("seg_list update failed");
     }
 

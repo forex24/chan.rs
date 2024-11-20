@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use chrono::DateTime;
+use chrono::Utc;
 use hashmap_macro::hashmap;
 
 use crate::has_overlap;
@@ -78,13 +80,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// * `seg_list` - 线段列表
     ///
     /// 依次计算一类、二类、三类买卖点，并更新最后确定位置
-    pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
+    pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>, clock: &DateTime<Utc>) {
         self.remove_unsure_bsp();
 
-        self.cal_seg_bs1point(seg_list, bi_list);
+        self.cal_seg_bs1point(seg_list, bi_list, clock);
         // 可以优化的地方，bsp1_bi_idx_dict，2类和3类都需要，因此可以仅仅计算一次
-        self.cal_seg_bs2point(seg_list, bi_list);
-        self.cal_seg_bs3point(seg_list, bi_list);
+        self.cal_seg_bs2point(seg_list, bi_list, clock);
+        self.cal_seg_bs3point(seg_list, bi_list, clock);
         self.update_last_pos(seg_list);
     }
 
@@ -140,6 +142,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         relate_bsp1: Option<Handle<CBspPoint<T>>>,
         is_target_bsp: bool,
         feature_dict: Option<HashMap<String, Option<f64>>>,
+        clock: &DateTime<Utc>,
     ) {
         let is_buy = bi.is_down();
         for exist_bsp in self.lst.iter() {
@@ -185,6 +188,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 bs_type,
                 relate_bsp1,
                 feature_dict,
+                *clock,
             );
             let bsp_handle = bsp.as_handle();
             self.history.push(bsp);
@@ -218,12 +222,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// # Arguments
     /// * `seg_list` - 线段列表
     /// * `bi_list` - 笔列表
-    pub fn cal_seg_bs1point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
+    pub fn cal_seg_bs1point(
+        &mut self,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[T],
+        clock: &DateTime<Utc>,
+    ) {
         for seg in seg_list.iter() {
             if !self.seg_need_cal(seg) {
                 continue;
             }
-            self.cal_single_bs1point(seg, bi_list);
+            self.cal_single_bs1point(seg, bi_list, clock);
         }
     }
 
@@ -233,7 +242,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// # Arguments
     /// * `seg` - 待计算的线段
     /// * `bi_list` - 笔列表
-    pub fn cal_single_bs1point(&mut self, seg: &CSeg<T>, bi_list: &[T]) {
+    pub fn cal_single_bs1point(&mut self, seg: &CSeg<T>, bi_list: &[T], clock: &DateTime<Utc>) {
         let is_buy = seg.is_down();
         let bsp_conf = self.config.get_bs_config(is_buy);
 
@@ -255,9 +264,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 && seg.end_bi.index() - last_zs.get_bi_in().to_handle().index() > 2;
 
             if valid_last_zs {
-                self.treat_bsp1(seg, is_buy, is_target_bsp);
+                self.treat_bsp1(seg, is_buy, is_target_bsp, clock);
             } else {
-                self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp);
+                self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp, clock);
             }
         }
     }
@@ -268,7 +277,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// * `seg` - 线段
     /// * `is_buy` - 是否为买点
     /// * `is_target_bsp` - 是否为目标买卖点
-    pub fn treat_bsp1(&mut self, seg: &CSeg<T>, is_buy: bool, is_target_bsp: bool) {
+    pub fn treat_bsp1(
+        &mut self,
+        seg: &CSeg<T>,
+        is_buy: bool,
+        is_target_bsp: bool,
+        clock: &DateTime<Utc>,
+    ) {
         let mut is_target_bsp = is_target_bsp;
         let bsp_conf = self.config.get_bs_config(is_buy);
 
@@ -290,7 +305,14 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             "divergence_rate".to_string() => divergence_rate,
         });
 
-        self.add_bs(BspType::T1, seg.end_bi, None, is_target_bsp, feature_dict);
+        self.add_bs(
+            BspType::T1,
+            seg.end_bi,
+            None,
+            is_target_bsp,
+            feature_dict,
+            clock,
+        );
     }
 
     /// 处理盘整一类买卖点
@@ -306,6 +328,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         is_buy: bool,
         bi_list: &[T],
         is_target_bsp: bool,
+        clock: &DateTime<Utc>,
     ) {
         let mut is_target_bsp = is_target_bsp;
         let bsp_conf = self.config.get_bs_config(is_buy);
@@ -361,6 +384,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             None,
             is_target_bsp,
             feature_dict,
+            clock,
         );
     }
 
@@ -370,7 +394,12 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// # Arguments
     /// * `seg_list` - 线段列表
     /// * `bi_list` - 笔列表
-    pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
+    pub fn cal_seg_bs2point(
+        &mut self,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[T],
+        clock: &DateTime<Utc>,
+    ) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
 
         for seg in seg_list.iter() {
@@ -382,7 +411,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 continue;
             }
 
-            self.treat_bsp2(seg, &bsp1_bi_idx_dict, seg_list, bi_list);
+            self.treat_bsp2(seg, &bsp1_bi_idx_dict, seg_list, bi_list, clock);
         }
     }
 
@@ -400,6 +429,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         bsp1_bi_idx_dict: &FxHashMap<isize, Handle<CBspPoint<T>>>,
         seg_list: &CSegListChan<T>,
         bi_list: &[T],
+        clock: &DateTime<Utc>,
     ) {
         if !self.seg_need_cal(seg) {
             return;
@@ -463,6 +493,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 real_bsp1,
                 true,
                 feature_dict,
+                clock,
             );
         } else if bsp_conf.bsp2s_follow_2 {
             return;
@@ -477,7 +508,9 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             return;
         }
 
-        self.treat_bsp2s(seg_list, bi_list, bsp2_bi, break_bi, real_bsp1, is_buy);
+        self.treat_bsp2s(
+            seg_list, bi_list, bsp2_bi, break_bi, real_bsp1, is_buy, clock,
+        );
     }
 
     // 已完备
@@ -498,6 +531,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         break_bi: &T,
         real_bsp1: Option<Handle<CBspPoint<T>>>,
         is_buy: bool,
+        clock: &DateTime<Utc>,
     ) {
         // 1. 提前获取常用值
         let bsp_conf = self.config.get_bs_config(is_buy);
@@ -589,6 +623,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 real_bsp1,
                 true,
                 feature_dict,
+                clock,
             );
             bias += 2;
         }
@@ -600,7 +635,12 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// # Arguments
     /// * `seg_list` - 线段列表
     /// * `bi_list` - 笔列表
-    pub fn cal_seg_bs3point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
+    pub fn cal_seg_bs3point(
+        &mut self,
+        seg_list: &CSegListChan<T>,
+        bi_list: &[T],
+        clock: &DateTime<Utc>,
+    ) {
         // 1. 提前获取一类买卖点字典
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
 
@@ -663,6 +703,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                     real_bsp1,
                     bsp1_bi_idx,
                     next_seg_idx,
+                    clock,
                 );
             }
 
@@ -676,6 +717,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 bi_list,
                 real_bsp1,
                 next_seg_idx,
+                clock,
             );
         }
     }
@@ -700,6 +742,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         real_bsp1: Option<Handle<CBspPoint<T>>>,
         bsp1_bi_idx: Option<usize>,
         next_seg_idx: usize,
+        clock: &DateTime<Utc>,
     ) {
         // 1. 提前获取并检查first_zs
         let first_zs = match next_seg.get_first_multi_bi_zs() {
@@ -785,6 +828,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             real_bsp1,
             true,
             feature_dict,
+            clock,
         );
     }
 
@@ -810,6 +854,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         bi_list: &[T],
         real_bsp1: Option<Handle<CBspPoint<T>>>,
         next_seg_idx: usize,
+        clock: &DateTime<Utc>,
     ) {
         let cmp_zs = seg.get_final_multi_bi_zs();
         if cmp_zs.is_none() {
@@ -853,6 +898,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 real_bsp1,
                 true,
                 feature_dict,
+                clock,
             );
             break;
         }
