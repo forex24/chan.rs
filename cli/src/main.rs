@@ -26,6 +26,10 @@ fn parse(opt: &Opt) {
         analyzer.step_calculation = false;
     }
 
+    if opt.nobsp {
+        analyzer.no_bsp = true;
+    }
+
     let output_dir = PathBuf::from(&opt.csv)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -100,6 +104,9 @@ struct Opt {
 
     #[arg(short, long, help = "Batch")]
     batch: bool,
+
+    #[arg(short, long, help = "Batch")]
+    nobsp: bool,
 }
 
 fn main() {

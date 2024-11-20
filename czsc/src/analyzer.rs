@@ -28,6 +28,7 @@ pub struct Analyzer {
     pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
 
     pub step_calculation: bool,
+    pub no_bsp: bool, //要不要计算bsp，确认是false
 }
 
 pub type CBiSeg = CSeg<CBi>;
@@ -59,6 +60,7 @@ impl Analyzer {
             last_bsp: None,
             last_seg_bsp: None,
             step_calculation: true,
+            no_bsp: false,
         }
     }
 
@@ -233,10 +235,12 @@ impl Analyzer {
         // 计算每一笔里面的 klc列表
         //self.update_klc_in_bi();
 
-        self.cal_bsp();
+        if !self.no_bsp {
+            self.cal_bsp();
 
-        self.record_last_bs_points();
-        self.record_last_seg_bs_points();
+            self.record_last_bs_points();
+            self.record_last_seg_bs_points();
+        }
 
         // 这里有点问题，是因为klu.time是相同的，但是bsp_type不同
         // 同时也是不改python代码
