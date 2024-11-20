@@ -3,6 +3,10 @@ name = "czsc"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "czsc"
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 strum = "0.26.3"
 strum_macros = "0.26.4"
@@ -28,3 +32,8 @@ micromap = "0.0.15"
 indexmap="2.6.0"
 rustc-hash = "2.0"
 serde_with= "3.11.0"
+pyo3 = { version = "0.19", features = ["extension-module"] }
+
+[features]
+default = ["python"]
+python = ["pyo3/extension-module"]
