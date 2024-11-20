@@ -115,14 +115,70 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
         begin_idx: usize,
         clock: &DateTime<Utc>,
     ) -> Result<(), CChanException> {
-        let fx_eigen = self.cal_eigen_fx(bi_lst, begin_idx)?;
-        if let Some(fx_eigen) = fx_eigen {
-            self.treat_fx_eigen(fx_eigen, bi_lst, clock)?;
-        }
+        let mut current_idx = begin_idx;
 
+        while current_idx < bi_lst.len() {
+            let fx_eigen = self.cal_eigen_fx(bi_lst, current_idx)?;
+
+            if let Some(fx_eigen) = fx_eigen {
+                match self.treat_fx_eigen_non_recursive(fx_eigen, bi_lst, clock)? {
+                    Some(next_id) => current_idx = next_id,
+                    None => break,
+                }
+            } else {
+                break;
+            }
+        }
+        //let fx_eigen = self.cal_eigen_fx(bi_lst, begin_idx)?;
+        //if let Some(fx_eigen) = fx_eigen {
+        //    self.treat_fx_eigen(fx_eigen, bi_lst, clock)?;
+        //}
+        //
         Ok(())
     }
 
+    fn treat_fx_eigen_non_recursive(
+        &mut self,
+        mut fx_eigen: CEigenFx<T>,
+        bi_lst: &[T],
+        clock: &DateTime<Utc>,
+    ) -> Result<Option<usize>, CChanException> {
+        let test = fx_eigen.can_be_end(bi_lst);
+        let end_bi_idx = fx_eigen.get_peak_bi_idx();
+
+        match test {
+            Some(true) | None => {
+                // None表示反向分型找到尾部也没找到
+                let is_true = test.is_some(); // 如果是正常结束
+                if !self.add_new_seg(
+                    bi_lst,
+                    end_bi_idx,
+                    is_true && fx_eigen.all_bi_is_sure(),
+                    None,
+                    true,
+                    "normal",
+                    clock,
+                )? {
+                    // 防止第一根线段的方向与首尾值异常
+                    //self.cal_seg_sure(bi_lst, end_bi_idx + 1, clock)?;
+                    return Ok(Some(end_bi_idx + 1));
+                }
+
+                self.lst.last_mut().unwrap().eigen_fx = Some(fx_eigen);
+
+                if is_true {
+                    //self.cal_seg_sure(bi_lst, end_bi_idx + 1, clock)?;
+                    return Ok(Some(end_bi_idx + 1));
+                }
+            }
+            Some(false) => {
+                //self.cal_seg_sure(bi_lst, fx_eigen.lst[1].index(), clock)?;
+                return Ok(Some(fx_eigen.lst[1].index()));
+            }
+        }
+
+        Ok(None)
+    }
     // 99% 完备
     /// 计算特征分型
     ///
@@ -200,7 +256,7 @@ impl<T: LineType + IParent + ToHandle + ICalcMetric> CSegListChan<T> {
     /// # Arguments
     /// * `fx_eigen` - 特征分型
     /// * `bi_lst` - 笔列表
-    fn treat_fx_eigen(
+    fn _treat_fx_eigen(
         &mut self,
         mut fx_eigen: CEigenFx<T>,
         bi_lst: &[T],

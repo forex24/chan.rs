@@ -524,6 +524,7 @@ impl Analyzer {
                         .format(TIME_FORMAT)
                         .to_string(),
                 ),
+                ("clock".to_string(), latest_bsp.clock.to_string()),
             ]));
         }
     }
@@ -566,6 +567,7 @@ impl Analyzer {
                         .format(TIME_FORMAT)
                         .to_string(),
                 ),
+                ("clock".to_string(), latest_seg_bsp.clock.to_string()),
             ]));
         }
     }

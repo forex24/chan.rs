@@ -523,6 +523,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     /// * `break_bi` - 突破笔
     /// * `real_bsp1` - 实际的一类买卖点
     /// * `is_buy` - 是否为买点
+    #[allow(clippy::too_many_arguments)]
     pub fn treat_bsp2s(
         &mut self,
         seg_list: &CSegListChan<T>,

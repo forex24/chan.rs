@@ -1,4 +1,3 @@
-use arrow::ipc::Date;
 use chrono::{DateTime, Utc};
 
 use crate::{
