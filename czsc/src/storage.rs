@@ -202,7 +202,7 @@ impl Analyzer {
 
         // BS Point List
         let bs_point_list = self
-            .bs_point_lst
+            .bs_point_lst.lst
             .iter()
             .map(|bsp| {
                 let mut map = IndexMap::new();
@@ -330,7 +330,7 @@ impl Analyzer {
 
         // Seg BS Point List
         let seg_bs_point_list = self
-            .seg_bs_point_lst
+            .seg_bs_point_lst.lst
             .iter()
             .map(|bsp| {
                 let mut map = IndexMap::new();
@@ -479,7 +479,7 @@ impl Analyzer {
     }
 
     pub(crate) fn record_last_bs_points(&mut self) {
-        if let Some(latest_bsp) = self.bs_point_lst.last() {
+        if let Some(latest_bsp) = self.bs_point_lst.lst.last() {
             //let latest_bsp = latest_bsp;
             self.bs_point_history.push(IndexMap::from([
                 (
@@ -521,7 +521,7 @@ impl Analyzer {
     }
 
     pub(crate) fn record_last_seg_bs_points(&mut self) {
-        if let Some(latest_seg_bsp) = self.seg_bs_point_lst.last() {
+        if let Some(latest_seg_bsp) = self.seg_bs_point_lst.lst.last() {
             //let latest_seg_bsp = latest_seg_bsp;
             self.seg_bs_point_history.push(IndexMap::from([
                 (
