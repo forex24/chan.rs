@@ -158,35 +158,18 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             seg.zs_lst.len()
         };
         let is_target_bsp = bsp_conf.min_zs_cnt == 0 || zs_cnt >= bsp_conf.min_zs_cnt;
-        if !seg.zs_lst.is_empty()
-            && !seg.zs_lst.iter().last().unwrap().is_one_bi_zs()
-            && ((seg.zs_lst.iter().last().unwrap().bi_out.is_some()
-                && seg.zs_lst.iter().last().unwrap().bi_out.unwrap().index() >= seg.end_bi.index())
-                || seg
-                    .zs_lst
-                    .iter()
-                    .last()
-                    .unwrap()
-                    .bi_lst
-                    .last()
-                    .unwrap()
-                    .index()
-                    >= seg.end_bi.index())
-            && seg.end_bi.index()
-                - seg
-                    .zs_lst
-                    .iter()
-                    .last()
-                    .unwrap()
-                    .get_bi_in()
-                    .to_handle()
-                    .index()
-                > 2
-        {
-            self.treat_bsp1(seg, is_buy, is_target_bsp);
-        } else {
-            self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp);
+        if !seg.zs_lst.is_empty() {
+            let last_zs = seg.zs_lst.iter().last().unwrap();
+            if !last_zs.is_one_bi_zs()
+                && ((last_zs.bi_out.is_some()
+                    && last_zs.bi_out.unwrap().index() >= seg.end_bi.index())
+                    || last_zs.bi_lst.last().unwrap().index() >= seg.end_bi.index())
+                && seg.end_bi.index() - last_zs.get_bi_in().to_handle().index() > 2
+            {
+                return self.treat_bsp1(seg, is_buy, is_target_bsp);
+            }
         }
+        self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp);
     }
 
     // 已完备
