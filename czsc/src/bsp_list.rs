@@ -1,6 +1,4 @@
-
 use std::collections::HashMap;
-
 
 use hashmap_macro::hashmap;
 
@@ -9,9 +7,9 @@ use crate::AsHandle;
 use crate::BspType;
 use crate::CBSPointConfig;
 use crate::CBspPoint;
-use crate::CZs;
 use crate::CSeg;
 use crate::CSegListChan;
+use crate::CZs;
 use crate::Handle;
 use crate::IBspInfo;
 use crate::ICalcMetric;
@@ -21,31 +19,36 @@ use crate::LineType;
 use crate::ToHandle;
 
 pub struct CBSPointList<T> {
-    pub bsp_history: Box<Vec<CBspPoint<T>>>,
-    pub lst: Vec<Handle<CBspPoint<T>>>,
-    bsp1_lst: Vec<Handle<CBspPoint<T>>>,
-    pub config: CBSPointConfig,
-    pub last_sure_pos: isize,
+    pub history: Box<Vec<CBspPoint<T>>>, // 历史买卖点记录
+    pub lst: Vec<Handle<CBspPoint<T>>>,  // 当前有效的买卖点列表
+    //bsp_dict: FxHashMap<usize, Handle<CBspPoint<T>>>,
+    bsp1_lst: Vec<Handle<CBspPoint<T>>>, // 一类买卖点列表
+    pub config: CBSPointConfig,          // 买卖点配置
+    pub last_sure_pos: Option<usize>,    // 最后确定位置的索引
 }
 
 impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> {
     pub fn new(bs_point_config: CBSPointConfig) -> Self {
         CBSPointList {
-            bsp_history: Box::new(Vec::new()),
-            lst:Vec::new(),
+            history: Box::new(Vec::new()),
+            lst: Vec::new(),
             bsp1_lst: Vec::new(),
             config: bs_point_config,
-            last_sure_pos: -1,
+            last_sure_pos: None,
         }
     }
 
     // 99% 完备
     pub fn cal(&mut self, bi_list: &[T], seg_list: &CSegListChan<T>) {
-        self.lst
-            .retain(|bsp| bsp.klu.index() as isize <= self.last_sure_pos);
+        self.lst.retain(|bsp| match self.last_sure_pos {
+            Some(pos) => bsp.klu.index() <= pos,
+            None => false,
+        });
 
-        self.bsp1_lst
-            .retain(|bsp| bsp.klu.index() as isize <= self.last_sure_pos);
+        self.bsp1_lst.retain(|bsp| match self.last_sure_pos {
+            Some(pos) => bsp.klu.index() <= pos,
+            None => false,
+        });
 
         self.cal_seg_bs1point(seg_list, bi_list);
         self.cal_seg_bs2point(seg_list, bi_list);
@@ -55,10 +58,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     pub fn update_last_pos(&mut self, seg_list: &CSegListChan<T>) {
-        self.last_sure_pos = -1;
+        self.last_sure_pos = None;
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
-                self.last_sure_pos = seg.end_bi.get_begin_klu().index() as isize;
+                self.last_sure_pos = Some(seg.end_bi.get_begin_klu().index());
                 return;
             }
         }
@@ -66,7 +69,10 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
 
     // 已完备
     pub fn seg_need_cal(&self, seg: &CSeg<T>) -> bool {
-        seg.end_bi.get_end_klu().index() as isize > self.last_sure_pos
+        match self.last_sure_pos {
+            Some(pos) => seg.end_bi.get_end_klu().index() > pos,
+            None => true,
+        }
     }
 
     // 80% 完备
@@ -82,7 +88,8 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         for exist_bsp in self.lst.iter() {
             if exist_bsp.klu.index() == bi.get_end_klu().index() {
                 assert_eq!(exist_bsp.is_buy, is_buy);
-                exist_bsp.as_mut()
+                exist_bsp
+                    .as_mut()
                     .add_another_bsp_prop(bs_type, relate_bsp1);
                 return;
             }
@@ -108,9 +115,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         };
 
         if is_target_bsp || bs_type == BspType::T1 || bs_type == BspType::T1P {
-            let bsp = CBspPoint::new(&self.bsp_history,self.bsp_history.len(),bi, is_buy, bs_type, relate_bsp1, feature_dict);
+            let bsp = CBspPoint::new(
+                &self.history,
+                self.history.len(),
+                bi,
+                is_buy,
+                bs_type,
+                relate_bsp1,
+                feature_dict,
+            );
             let bsp_handle = bsp.as_handle();
-            self.bsp_history.push(bsp);
+            self.history.push(bsp);
 
             if is_target_bsp {
                 self.lst.push(bsp_handle);

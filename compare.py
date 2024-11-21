@@ -16,7 +16,7 @@ COMPARE_COLS = {
     'seg_seg_list.csv':  ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_seg_idx','end_seg_idx', 'zs_count', 'bi_count','reason'],
     'seg_zs_list.csv': ['begin_time', 'end_time','high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_seg_idx', 'end_seg_idx','bi_in', 'bi_out'],
     'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'seg_idx', 'bi_begin_time', 'bi_end_time'],
-    'seg_bs_point_history.csv':['begin_time','bsp_type','is_buy','relate_bsp1','seg_idx','bi_begin_time','bi_end_time']
+    #'seg_bs_point_history.csv':['begin_time','bsp_type','is_buy','relate_bsp1','seg_idx','bi_begin_time','bi_end_time']
 }
 
 
