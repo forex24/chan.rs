@@ -264,6 +264,13 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     pub fn cal_seg_bs2point(&mut self, seg_list: &CSegListChan<T>, bi_list: &[T]) {
         let bsp1_bi_idx_dict = self.bsp1_idx_dict();
         for seg in seg_list.iter() {
+            let is_buy = seg.is_down();
+            let config = self.config.get_bs_config(is_buy);
+            if !config.target_types.contains(&BspType::T2)
+                && !config.target_types.contains(&BspType::T2S)
+            {
+                continue;
+            }
             self.treat_bsp2(seg, &bsp1_bi_idx_dict, seg_list, bi_list);
         }
     }
@@ -323,14 +330,29 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         let retrace_rate = bsp2_bi.amp() / break_bi.amp();
         let bsp2_flag = retrace_rate <= bsp_conf.max_bs2_rate;
         if bsp2_flag {
+            let feature_dict = Some(hashmap! {
+                "bsp2_retrace_rate".to_string() => Some(retrace_rate),
+                "bsp2_break_bi_amp".to_string() => Some(break_bi.amp()),
+                "bsp2_bi_amp".to_string() => Some(bsp2_bi.amp()),
+            });
+
             self.add_bs(
                 BspType::T2,
                 bsp2_bi.to_handle(),
                 real_bsp1.clone(),
                 true,
-                None,
+                feature_dict,
             );
         } else if bsp_conf.bsp2s_follow_2 {
+            return;
+        }
+
+        if !self
+            .config
+            .get_bs_config(seg.is_down())
+            .target_types
+            .contains(&BspType::T2S)
+        {
             return;
         }
 
@@ -404,13 +426,19 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             if retrace_rate > bsp_conf.max_bs2_rate {
                 break;
             }
+            let feature_dict = Some(hashmap! {
+                "bsp2_retrace_rate".to_string() => Some(retrace_rate),
+                "bsp2_break_bi_amp".to_string() => Some(break_bi.amp()),
+                "bsp2_bi_amp".to_string() => Some(bsp2_bi.amp()),
+                "bsp2s_lv".to_string() => Some(bias as f64 / 2.0),
+            });
 
             self.add_bs(
                 BspType::T2S,
                 bsp2s_bi.to_handle(),
                 real_bsp1.clone(),
                 true,
-                None,
+                feature_dict,
             );
             bias += 2;
         }
@@ -465,7 +493,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                     next_seg,
                     is_buy,
                     bi_list,
-                    real_bsp1.clone(),
+                    real_bsp1,
                     bsp1_bi_idx,
                     next_seg_idx,
                 );
@@ -550,7 +578,22 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         if bsp_conf.bsp3_peak && !bsp3_peak_zs {
             return;
         }
-        self.add_bs(BspType::T3A, bsp3_bi.to_handle(), real_bsp1, true, None);
+
+        let zs_height = (first_zs.unwrap().high - first_zs.unwrap().low) / first_zs.unwrap().low;
+        let bsp3_bi_amp = bsp3_bi.amp();
+
+        let feature_dict = Some(hashmap! {
+            "bsp3_zs_height".to_string() => Some(zs_height),
+            "bsp3_bi_amp".to_string() => Some(bsp3_bi_amp),
+        });
+
+        self.add_bs(
+            BspType::T3A,
+            bsp3_bi.to_handle(),
+            real_bsp1,
+            true,
+            feature_dict,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -596,7 +639,17 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
             if bsp3_back2zs(bsp3_bi, cmp_zs.unwrap()) {
                 continue;
             }
-            self.add_bs(BspType::T3B, bsp3_bi.to_handle(), real_bsp1, true, None);
+            let feature_dict = Some(hashmap! {
+                "bsp3_zs_height".to_string() => Some((cmp_zs.unwrap().high - cmp_zs.unwrap().low)/cmp_zs.unwrap().low),
+                "bsp3_bi_amp".to_string() => Some(bsp3_bi.amp()),
+            });
+            self.add_bs(
+                BspType::T3B,
+                bsp3_bi.to_handle(),
+                real_bsp1,
+                true,
+                feature_dict,
+            );
             break;
         }
     }
