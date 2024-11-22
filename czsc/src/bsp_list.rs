@@ -264,11 +264,11 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
                 && seg.end_bi.index() - last_zs.get_bi_in().to_handle().index() > 2;
 
             if valid_last_zs {
-                self.treat_bsp1(seg, is_buy, is_target_bsp, clock);
-            } else {
-                self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp, clock);
+                return self.treat_bsp1(seg, is_buy, is_target_bsp, clock);
             }
         }
+
+        self.treat_pz_bsp1(seg, is_buy, bi_list, is_target_bsp, clock);
     }
 
     /// 处理一类买卖点
