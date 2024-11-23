@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use crate::{Analyzer, IParent, Indexable, LineType};
 use std::io::Write;
 
-pub const TIME_FORMAT: &str = "%Y-%m-%d %H:%M";
+pub const TIME_FORMAT: &str = "%Y/%m/%d %H:%M";
 
 impl Analyzer {
     // storage funciton
@@ -588,39 +588,50 @@ impl Analyzer {
     }
 
     pub(crate) fn record_last_segseg_list(&mut self, clock: &DateTime<Utc>) {
-        if let Some(seg) = self.segseg_list.last() {
-            self.segseg_history.push(IndexMap::from([
-                ("clock".to_string(), clock.to_string()),
-                (
-                    "begin_time".to_string(),
-                    seg.get_begin_klu().time.format(TIME_FORMAT).to_string(),
-                ),
-                (
-                    "end_time".to_string(),
-                    seg.get_end_klu().time.format(TIME_FORMAT).to_string(),
-                ),
-                ("idx".to_string(), seg.index().to_string()),
-                ("dir".to_string(), seg.dir.to_string()),
-                ("high".to_string(), seg._high().to_string()),
-                ("low".to_string(), seg._low().to_string()),
-                (
-                    "is_sure".to_string(),
-                    if seg.is_sure {
-                        "True".to_string()
-                    } else {
-                        "False".to_string()
-                    },
-                ),
-                (
-                    "start_seg_idx".to_string(),
-                    seg.start_bi.index().to_string(),
-                ),
-                ("end_seg_idx".to_string(), seg.end_bi.index().to_string()),
-                ("zs_count".to_string(), seg.zs_lst.len().to_string()),
-                ("bi_count".to_string(), seg.bi_list.len().to_string()),
-                ("reason".to_string(), seg.reason.clone()),
-                ("seg_clock".to_string(), seg.clock.to_string()),
-            ]));
+        for seg in self.segseg_list.iter().rev() {
+            if seg.is_sure {
+                self.segseg_history.push(IndexMap::from([
+                    ("clock".to_string(), clock.format(TIME_FORMAT).to_string()),
+                    (
+                        "end_bi_begin_klu_time".to_string(),
+                        seg.end_bi
+                            .get_begin_klu()
+                            .time
+                            .format(TIME_FORMAT)
+                            .to_string(),
+                    ),
+                    (
+                        "begin_time".to_string(),
+                        seg.get_begin_klu().time.format(TIME_FORMAT).to_string(),
+                    ),
+                    (
+                        "end_time".to_string(),
+                        seg.get_end_klu().time.format(TIME_FORMAT).to_string(),
+                    ),
+                    ("idx".to_string(), seg.index().to_string()),
+                    ("dir".to_string(), seg.dir.to_string()),
+                    ("high".to_string(), seg._high().to_string()),
+                    ("low".to_string(), seg._low().to_string()),
+                    (
+                        "is_sure".to_string(),
+                        if seg.is_sure {
+                            "True".to_string()
+                        } else {
+                            "False".to_string()
+                        },
+                    ),
+                    (
+                        "start_seg_idx".to_string(),
+                        seg.start_bi.index().to_string(),
+                    ),
+                    ("end_seg_idx".to_string(), seg.end_bi.index().to_string()),
+                    ("zs_count".to_string(), seg.zs_lst.len().to_string()),
+                    ("bi_count".to_string(), seg.bi_list.len().to_string()),
+                    ("reason".to_string(), seg.reason.clone()),
+                    ("seg_clock".to_string(), seg.clock.to_string()),
+                ]));
+                break;
+            }
         }
     }
 }
