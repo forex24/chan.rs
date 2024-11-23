@@ -7,16 +7,16 @@ from datetime import datetime
 # 定义要比较的列
 COMPARE_COLS = {
     'kline_list.csv': ['begin_time', 'end_time', 'idx','dir', 'high', 'low', 'fx'],
-    'bi_list.csv': ['begin_time', 'end_time','idx', 'dir', 'high', 'low', 'is_sure','seg_idx', 'parent_seg_idx','parent_seg_dir', 'begin_klc', 'end_klc', 'begin_val', 'end_val', 'klu_cnt', 'klc_cnt'],
-    'seg_list.csv': ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_bi_idx','end_bi_idx', 'zs_count', 'bi_count','reason','parent_seg_idx', 'parent_seg_dir'],
-    'zs_list.csv': ['begin_time', 'end_time','high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_bi_idx', 'end_bi_idx','bi_in', 'bi_out'],
-    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time'],
-    'bs_point_history.csv':['begin_time', 'bsp_type'],
+    'bi_list.csv':['begin_time','end_time','idx','dir','high','low','is_sure','seg_idx','begin_klc','end_klc','begin_val','end_val','klu_cnt','klc_cnt','parent_seg_idx','parent_seg_dir'],
+    'seg_list.csv':['begin_time','end_time','idx','dir','high','low','is_sure','start_bi_idx','end_bi_idx','zs_count','bi_count','reason','parent_seg_idx','parent_seg_dir'],
+    'zs_list.csv':['begin_time','end_time','high','low','peak_high','peak_low','is_sure','begin_bi_idx','end_bi_idx','bi_in','bi_out','sub_zs_count'],
+    'bs_point_lst.csv': ['begin_time', 'bsp_type', 'bi_idx', 'bi_begin_time', 'bi_end_time','relate_bsp1_time'],
+    'bs_point_history.csv':['begin_time', 'bsp_type', 'is_buy', 'bi_idx', 'bi_begin_time','bi_end_time','relate_bsp1'],
     
     'seg_seg_list.csv':  ['begin_time', 'end_time','idx','dir', 'high', 'low', 'is_sure','start_seg_idx','end_seg_idx', 'zs_count', 'bi_count','reason'],
     'seg_zs_list.csv': ['begin_time', 'end_time','high', 'low', 'peak_high', 'peak_low', 'is_sure', 'begin_seg_idx', 'end_seg_idx','bi_in', 'bi_out'],
     'seg_bs_point_lst.csv': ['begin_time', 'bsp_type', 'seg_idx', 'bi_begin_time', 'bi_end_time'],
-    #'seg_bs_point_history.csv':['begin_time'] #, 'bsp_type'],
+    'seg_bs_point_history.csv':['begin_time','bsp_type','is_buy','relate_bsp1','seg_idx','bi_begin_time','bi_end_time']
 }
 
 
@@ -112,7 +112,7 @@ def compare_files(dir1: str, dir2: str):
             df2 = df2[compare_cols]
             
             # 标准化时间列
-            time_cols = [col for col in compare_cols if 'time' in col.lower()]
+            time_cols = [col for col in compare_cols if ('time' in col.lower()) or col.lower() == 'relate_bsp1' or col.lower() == 'clock']
             for col in time_cols:
                 df1[col] = df1[col].apply(normalize_datetime)
                 df2[col] = df2[col].apply(normalize_datetime)
@@ -141,7 +141,7 @@ def compare_files(dir1: str, dir2: str):
                     val2 = row2[col]
                     
                     # 对不同类型的列进行特殊处理
-                    if col in ['parent_seg_idx', 'parent_seg_dir']:  # 添加这些特殊列
+                    if col in ['parent_seg_idx', 'parent_seg_dir', 'relate_bsp1', 'relate_bsp1_time']:  # 添加这些特殊列
                         if is_nan_equal(val1, val2):
                             continue
                     elif col == 'is_sure':
