@@ -3,6 +3,7 @@ use std::{
     path::Path,
 };
 
+use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 
 use crate::{Analyzer, IParent, Indexable, LineType};
@@ -444,6 +445,8 @@ impl Analyzer {
             self.seg_bs_point_history.clone(),
         );
 
+        dataframes.insert("segseg_history".to_string(), self.segseg_history.clone());
+
         //dataframes.insert(
         //    "bs_point_history_no_dup".to_string(),
         //    bs_point_history_no_dup,
@@ -580,6 +583,43 @@ impl Analyzer {
                         .last_sure_pos
                         .map_or("-1".to_string(), |pos| pos.to_string()),
                 ),
+            ]));
+        }
+    }
+
+    pub(crate) fn record_last_segseg_list(&mut self, clock: &DateTime<Utc>) {
+        if let Some(seg) = self.segseg_list.last() {
+            self.segseg_history.push(IndexMap::from([
+                ("clock".to_string(), clock.to_string()),
+                (
+                    "begin_time".to_string(),
+                    seg.get_begin_klu().time.format(TIME_FORMAT).to_string(),
+                ),
+                (
+                    "end_time".to_string(),
+                    seg.get_end_klu().time.format(TIME_FORMAT).to_string(),
+                ),
+                ("idx".to_string(), seg.index().to_string()),
+                ("dir".to_string(), seg.dir.to_string()),
+                ("high".to_string(), seg._high().to_string()),
+                ("low".to_string(), seg._low().to_string()),
+                (
+                    "is_sure".to_string(),
+                    if seg.is_sure {
+                        "True".to_string()
+                    } else {
+                        "False".to_string()
+                    },
+                ),
+                (
+                    "start_seg_idx".to_string(),
+                    seg.start_bi.index().to_string(),
+                ),
+                ("end_seg_idx".to_string(), seg.end_bi.index().to_string()),
+                ("zs_count".to_string(), seg.zs_lst.len().to_string()),
+                ("bi_count".to_string(), seg.bi_list.len().to_string()),
+                ("reason".to_string(), seg.reason.clone()),
+                ("seg_clock".to_string(), seg.clock.to_string()),
             ]));
         }
     }

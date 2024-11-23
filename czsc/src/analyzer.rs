@@ -25,6 +25,8 @@ pub struct Analyzer {
     // history bsp
     pub bs_point_history: Vec<IndexMap<String, String>>,
     pub seg_bs_point_history: Vec<IndexMap<String, String>>,
+    pub segseg_history: Vec<IndexMap<String, String>>,
+    //
     pub last_bsp: Option<Handle<CBspPoint<CBi>>>,
     pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
     // clock
@@ -60,6 +62,7 @@ impl Analyzer {
             seg_bs_point_lst: CBSPointList::new(conf.seg_bs_point_conf),
             bs_point_history: Vec::new(),
             seg_bs_point_history: Vec::new(),
+            segseg_history: Vec::new(),
             last_bsp: None,
             last_seg_bsp: None,
 
@@ -245,6 +248,7 @@ impl Analyzer {
         self.cal_seg_seg_and_zs(clock);
         // 计算每一笔里面的 klc列表
         //self.update_klc_in_bi();
+        self.record_last_segseg_list(clock);
 
         if !self.no_bsp {
             self.cal_bsp(clock);

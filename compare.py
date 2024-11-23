@@ -175,6 +175,12 @@ def compare_files(dir1: str, dir2: str):
             print(f"比较 {filename} 时发生错误: {str(e)}")
 
 def main():
+    if os.name == 'posix':
+        root_directory = '/'
+    # 对于Windows系统
+    elif os.name == 'nt':
+        root_directory = os.path.splitdrive(os.getcwd())[0] + '\\'
+    default_path = os.path.join(root_directory, 'opt', 'data','dump_data')
     parser = argparse.ArgumentParser(description='比较两个目录下的CSV文件')
     parser.add_argument('--dir1', default='output', help='第一个目录路径 (默认: output)')
     parser.add_argument('--dir2', default='python_result', help='第二个目录路径 (默认: python_result)')
@@ -183,7 +189,7 @@ def main():
     args = parser.parse_args()
 
     if args.symbol is not None:
-        compare_files(f'{args.symbol}_output', f'/opt/data/dump_data/{args.symbol}')
+        compare_files(f'{args.symbol}_output', os.path.join(default_path, f'{args.symbol}'))
     else:
         compare_files(args.dir1, args.dir2)
 
