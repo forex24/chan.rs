@@ -525,6 +525,12 @@ impl Analyzer {
                         .to_string(),
                 ),
                 ("clock".to_string(), latest_bsp.clock.to_string()),
+                (
+                    "last_sure_pos".to_string(),
+                    self.seg_bs_point_lst
+                        .last_sure_pos
+                        .map_or("-1".to_string(), |pos| pos.to_string()),
+                ),
             ]));
         }
     }
@@ -568,6 +574,12 @@ impl Analyzer {
                         .to_string(),
                 ),
                 ("clock".to_string(), latest_seg_bsp.clock.to_string()),
+                (
+                    "last_sure_pos".to_string(),
+                    self.seg_bs_point_lst
+                        .last_sure_pos
+                        .map_or("-1".to_string(), |pos| pos.to_string()),
+                ),
             ]));
         }
     }

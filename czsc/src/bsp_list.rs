@@ -55,6 +55,15 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
     ///
     /// 根据last_sure_pos移除所有不确定的买卖点，包括lst和bsp1_lst中的点
     pub fn remove_unsure_bsp(&mut self) {
+        //self.lst.retain(|bsp| bsp.klu.idx <= self.last_sure_pos);
+        //self.bsp_dict = self
+        //    .lst
+        //    .iter()
+        //    .map(|bsp| (bsp.bi.get_end_klu().idx, bsp.clone()))
+        //    .collect::<HashMap<i32, Bsp>>();
+        //self.bsp1_lst
+        //    .retain(|bsp| bsp.klu.idx <= self.last_sure_pos);
+
         self.lst.retain(|bsp| match self.last_sure_pos {
             Some(pos) => bsp.klu.index() <= pos,
             None => false,
@@ -102,7 +111,7 @@ impl<T: LineType + IParent + IBspInfo + ToHandle + ICalcMetric> CBSPointList<T> 
         for seg in seg_list.iter().rev() {
             if seg.is_sure {
                 self.last_sure_pos = Some(seg.end_bi.get_begin_klu().index());
-                return;
+                break;
             }
         }
     }
