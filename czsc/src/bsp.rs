@@ -12,6 +12,7 @@ use crate::Handle;
 use crate::IBspInfo;
 use crate::IParent;
 use crate::LineType;
+use smallvec::{smallvec, SmallVec};
 
 // 买卖点
 #[derive(Debug)]
@@ -20,7 +21,7 @@ pub struct CBspPoint<T> {
     pub bi: Handle<T>,
     pub klu: Handle<Bar>,
     pub is_buy: bool,
-    pub types: Vec<BspType>,
+    pub types: SmallVec<[BspType; 4]>,
 
     pub relate_bsp1: Option<Handle<CBspPoint<T>>>,
     pub features: CFeatures,
@@ -44,7 +45,7 @@ impl<T: LineType + IBspInfo> CBspPoint<T> {
             bi,
             klu: bi.get_end_klu(),
             is_buy,
-            types: vec![bs_type],
+            types: smallvec![bs_type],
             relate_bsp1,
             features: CFeatures::new(feature_dict),
             is_segbsp: false,
