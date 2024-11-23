@@ -56,7 +56,7 @@ fn czsc_parse(ca: &mut Analyzer, klines: &[Kline], output_dir: &str) {
         pb.inc(1);
     });
 
-    if ca.step_calculation {
+    if !ca.step_calculation {
         ca.cal_seg_and_zs(&Utc::now());
     }
 
