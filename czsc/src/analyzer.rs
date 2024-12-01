@@ -30,7 +30,7 @@ pub struct Analyzer {
     pub last_bsp: Option<Handle<CBspPoint<CBi>>>,
     pub last_seg_bsp: Option<Handle<CBspPoint<CSeg<CBi>>>>,
     // clock
-
+    pub step: usize,
     // options
     pub step_calculation: bool,
     pub no_bsp: bool, //要不要计算bsp，确认是false
@@ -63,6 +63,7 @@ impl Analyzer {
             bs_point_history: Vec::new(),
             seg_bs_point_history: Vec::new(),
             segseg_history: Vec::new(),
+            step: 0,
             last_bsp: None,
             last_seg_bsp: None,
 
@@ -179,6 +180,7 @@ impl Analyzer {
         {
             self.cal_seg_and_zs(&clock);
         }
+        self.step += 1;
     }
 
     /// 计算笔的线段和中枢

@@ -593,6 +593,11 @@ impl Analyzer {
                 self.segseg_history.push(IndexMap::from([
                     ("clock".to_string(), clock.format(TIME_FORMAT).to_string()),
                     (
+                        "segseg_list_len".to_string(),
+                        self.segseg_list.len().to_string(),
+                    ),
+                    ("step".to_string(), self.step.to_string()),
+                    (
                         "end_bi_begin_klu_time".to_string(),
                         seg.end_bi
                             .get_begin_klu()
